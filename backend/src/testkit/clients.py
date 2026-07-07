@@ -186,13 +186,22 @@ class BrowserClient:
             return
         try:
             from playwright.sync_api import sync_playwright
+            import playwright.sync_api._context_manager as ctx_mgr
+            original_get_running_loop = ctx_mgr.asyncio.get_running_loop
+            
+            def fake_get_running_loop():
+                raise RuntimeError("No running event loop")
+            ctx_mgr.asyncio.get_running_loop = fake_get_running_loop
         except Exception as e:  # pragma: no cover - depends on image
             raise RuntimeError(
                 "playwright is not installed in this worker image; use a "
                 "Playwright-enabled image to run browser scenarios"
             ) from e
-        self._pw = sync_playwright().start()
-        self._browser = self._pw.chromium.launch(headless=True)
+        try:
+            self._pw = sync_playwright().start()
+            self._browser = self._pw.chromium.launch(headless=True)
+        finally:
+            ctx_mgr.asyncio.get_running_loop = original_get_running_loop
 
     def visit(self, path: str = "/") -> "PageResult":
         self._ensure()

@@ -1,3 +1,7 @@
+import json
+
+import requests
+
 from src.testkit import PythonTest, TYPE_PYTHON, TestMetadata
 
 class QtpSelfPythonTest1(PythonTest):
@@ -50,7 +54,30 @@ class QtpSelfPythonTest4(PythonTest):
 
     def test(self, ctx):
         ctx.log('info', 'Running Python')
-        ctx.assert_that('test', 'equals', True, True, True, message='always pass')
+
+        response = requests.get(
+            'https://dogapi.dog/api/v2/breeds',
+            headers={
+                'accept': 'application/json'
+            },
+            timeout=10
+        )
+
+        try:
+            response_body = response.json()
+        except ValueError:
+            response_body = response.text
+
+        ctx.log('info', json.dumps(response_body, indent=2, ensure_ascii=False))
+
+        ctx.assert_that(
+            'status_code',
+            'equals',
+            response.status_code,
+            200,
+            True,
+            message='Dog API breeds endpoint should return 200'
+        )
 
 class QtpSelfPythonTest5(PythonTest):
     metadata = TestMetadata(

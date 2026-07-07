@@ -10,7 +10,7 @@ class QtpSelfPlaywrightTest1(PlaywrightTest):
     )
 
     def test(self, ctx):
-        page = ctx.browser.visit('http://qtp-frontend:5173/overview').page
+        page = ctx.browser.visit('http://qtp-frontend/overview').page
         page.wait_for_selector('body', timeout=5000)
         page.wait_for_timeout(2000) # Wait a bit for React to render
         info = page.locator('body').inner_text()[:200].replace('\\n', ' ')
@@ -28,7 +28,7 @@ class QtpSelfPlaywrightTest2(PlaywrightTest):
     )
 
     def test(self, ctx):
-        page = ctx.browser.visit('http://qtp-frontend:5173/overview').page
+        page = ctx.browser.visit('http://qtp-frontend/overview').page
         page.wait_for_selector('body', timeout=5000)
         page.wait_for_timeout(2000) # Wait a bit for React to render
         info = page.locator('body').inner_text()[:200].replace('\\n', ' ')
@@ -46,7 +46,7 @@ class QtpSelfPlaywrightTest3(PlaywrightTest):
     )
 
     def test(self, ctx):
-        page = ctx.browser.visit('http://qtp-frontend:5173/overview').page
+        page = ctx.browser.visit('http://qtp-frontend/overview').page
         page.wait_for_selector('body', timeout=5000)
         page.wait_for_timeout(2000) # Wait a bit for React to render
         info = page.locator('body').inner_text()[:200].replace('\\n', ' ')
@@ -64,7 +64,7 @@ class QtpSelfPlaywrightTest4(PlaywrightTest):
     )
 
     def test(self, ctx):
-        page = ctx.browser.visit('http://qtp-frontend:5173/overview').page
+        page = ctx.browser.visit('http://qtp-frontend/overview').page
         page.wait_for_selector('body', timeout=5000)
         page.wait_for_timeout(2000) # Wait a bit for React to render
         info = page.locator('body').inner_text()[:200].replace('\\n', ' ')
@@ -82,7 +82,7 @@ class QtpSelfPlaywrightTest5(PlaywrightTest):
     )
 
     def test(self, ctx):
-        page = ctx.browser.visit('http://qtp-frontend:5173/overview').page
+        page = ctx.browser.visit('http://qtp-frontend/overview').page
         page.wait_for_selector('body', timeout=5000)
         page.wait_for_timeout(2000) # Wait a bit for React to render
         info = page.locator('body').inner_text()[:200].replace('\\n', ' ')
@@ -100,7 +100,7 @@ class QtpSelfPlaywrightTest6(PlaywrightTest):
     )
 
     def test(self, ctx):
-        page = ctx.browser.visit('http://qtp-frontend:5173/overview').page
+        page = ctx.browser.visit('http://qtp-frontend/overview').page
         page.wait_for_selector('body', timeout=5000)
         page.wait_for_timeout(2000) # Wait a bit for React to render
         info = page.locator('body').inner_text()[:200].replace('\\n', ' ')
@@ -118,7 +118,7 @@ class QtpSelfPlaywrightTest7(PlaywrightTest):
     )
 
     def test(self, ctx):
-        page = ctx.browser.visit('http://qtp-frontend:5173/overview').page
+        page = ctx.browser.visit('http://qtp-frontend/overview').page
         page.wait_for_selector('body', timeout=5000)
         page.wait_for_timeout(2000) # Wait a bit for React to render
         info = page.locator('body').inner_text()[:200].replace('\\n', ' ')
@@ -136,7 +136,7 @@ class QtpSelfPlaywrightTest8(PlaywrightTest):
     )
 
     def test(self, ctx):
-        page = ctx.browser.visit('http://qtp-frontend:5173/overview').page
+        page = ctx.browser.visit('http://qtp-frontend/overview').page
         page.wait_for_selector('body', timeout=5000)
         page.wait_for_timeout(2000) # Wait a bit for React to render
         info = page.locator('body').inner_text()[:200].replace('\\n', ' ')
@@ -154,7 +154,7 @@ class QtpSelfPlaywrightTest9(PlaywrightTest):
     )
 
     def test(self, ctx):
-        page = ctx.browser.visit('http://qtp-frontend:5173/overview').page
+        page = ctx.browser.visit('http://qtp-frontend/overview').page
         page.wait_for_selector('body', timeout=5000)
         page.wait_for_timeout(2000) # Wait a bit for React to render
         info = page.locator('body').inner_text()[:200].replace('\\n', ' ')
@@ -172,7 +172,7 @@ class QtpSelfPlaywrightTest10(PlaywrightTest):
     )
 
     def test(self, ctx):
-        page = ctx.browser.visit('http://qtp-frontend:5173/overview').page
+        page = ctx.browser.visit('http://qtp-frontend/overview').page
         page.wait_for_selector('body', timeout=5000)
         page.wait_for_timeout(2000) # Wait a bit for React to render
         info = page.locator('body').inner_text()[:200].replace('\\n', ' ')

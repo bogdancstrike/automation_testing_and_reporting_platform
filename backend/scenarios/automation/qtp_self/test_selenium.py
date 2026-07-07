@@ -23,7 +23,7 @@ class QtpSelfSeleniumTest1(SeleniumTest):
         options.add_argument('--disable-dev-shm-usage')
         driver = webdriver.Chrome(options=options)
         try:
-            driver.get('http://qtp-frontend:5173/overview')
+            driver.get('http://qtp-frontend/overview')
             WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.TAG_NAME, "body")))
             time.sleep(2) # Wait a bit for React to render
             info = driver.find_element(By.TAG_NAME, "body").text[:200].replace('\n', ' ')
@@ -56,7 +56,7 @@ class QtpSelfSeleniumTest2(SeleniumTest):
         options.add_argument('--disable-dev-shm-usage')
         driver = webdriver.Chrome(options=options)
         try:
-            driver.get('http://qtp-frontend:5173/overview')
+            driver.get('http://qtp-frontend/overview')
             WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.TAG_NAME, "body")))
             time.sleep(2) # Wait a bit for React to render
             info = driver.find_element(By.TAG_NAME, "body").text[:200].replace('\n', ' ')
@@ -89,7 +89,7 @@ class QtpSelfSeleniumTest3(SeleniumTest):
         options.add_argument('--disable-dev-shm-usage')
         driver = webdriver.Chrome(options=options)
         try:
-            driver.get('http://qtp-frontend:5173/overview')
+            driver.get('http://qtp-frontend/overview')
             WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.TAG_NAME, "body")))
             time.sleep(2) # Wait a bit for React to render
             info = driver.find_element(By.TAG_NAME, "body").text[:200].replace('\n', ' ')
@@ -122,7 +122,7 @@ class QtpSelfSeleniumTest4(SeleniumTest):
         options.add_argument('--disable-dev-shm-usage')
         driver = webdriver.Chrome(options=options)
         try:
-            driver.get('http://qtp-frontend:5173/overview')
+            driver.get('http://qtp-frontend/overview')
             WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.TAG_NAME, "body")))
             time.sleep(2) # Wait a bit for React to render
             info = driver.find_element(By.TAG_NAME, "body").text[:200].replace('\n', ' ')
@@ -155,7 +155,7 @@ class QtpSelfSeleniumTest5(SeleniumTest):
         options.add_argument('--disable-dev-shm-usage')
         driver = webdriver.Chrome(options=options)
         try:
-            driver.get('http://qtp-frontend:5173/overview')
+            driver.get('http://qtp-frontend/overview')
             WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.TAG_NAME, "body")))
             time.sleep(2) # Wait a bit for React to render
             info = driver.find_element(By.TAG_NAME, "body").text[:200].replace('\n', ' ')
@@ -188,7 +188,7 @@ class QtpSelfSeleniumTest6(SeleniumTest):
         options.add_argument('--disable-dev-shm-usage')
         driver = webdriver.Chrome(options=options)
         try:
-            driver.get('http://qtp-frontend:5173/overview')
+            driver.get('http://qtp-frontend/overview')
             WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.TAG_NAME, "body")))
             time.sleep(2) # Wait a bit for React to render
             info = driver.find_element(By.TAG_NAME, "body").text[:200].replace('\n', ' ')
@@ -221,7 +221,7 @@ class QtpSelfSeleniumTest7(SeleniumTest):
         options.add_argument('--disable-dev-shm-usage')
         driver = webdriver.Chrome(options=options)
         try:
-            driver.get('http://qtp-frontend:5173/overview')
+            driver.get('http://qtp-frontend/overview')
             WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.TAG_NAME, "body")))
             time.sleep(2) # Wait a bit for React to render
             info = driver.find_element(By.TAG_NAME, "body").text[:200].replace('\n', ' ')
@@ -254,7 +254,7 @@ class QtpSelfSeleniumTest8(SeleniumTest):
         options.add_argument('--disable-dev-shm-usage')
         driver = webdriver.Chrome(options=options)
         try:
-            driver.get('http://qtp-frontend:5173/overview')
+            driver.get('http://qtp-frontend/overview')
             WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.TAG_NAME, "body")))
             time.sleep(2) # Wait a bit for React to render
             info = driver.find_element(By.TAG_NAME, "body").text[:200].replace('\n', ' ')
@@ -287,7 +287,7 @@ class QtpSelfSeleniumTest9(SeleniumTest):
         options.add_argument('--disable-dev-shm-usage')
         driver = webdriver.Chrome(options=options)
         try:
-            driver.get('http://qtp-frontend:5173/overview')
+            driver.get('http://qtp-frontend/overview')
             WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.TAG_NAME, "body")))
             time.sleep(2) # Wait a bit for React to render
             info = driver.find_element(By.TAG_NAME, "body").text[:200].replace('\n', ' ')
@@ -320,7 +320,7 @@ class QtpSelfSeleniumTest10(SeleniumTest):
         options.add_argument('--disable-dev-shm-usage')
         driver = webdriver.Chrome(options=options)
         try:
-            driver.get('http://qtp-frontend:5173/overview')
+            driver.get('http://qtp-frontend/overview')
             WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.TAG_NAME, "body")))
             time.sleep(2) # Wait a bit for React to render
             info = driver.find_element(By.TAG_NAME, "body").text[:200].replace('\n', ' ')
