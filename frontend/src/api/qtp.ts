@@ -31,7 +31,7 @@ export const qtp = {
   targetTests: (id: string, params: QueryParams = {}) => api.get<Page<TestDef>>(`/api/targets/${id}/tests${qs(params)}`),
   targetRuns: (id: string, params: QueryParams = {}) => api.get<Page<RunSummary>>(`/api/targets/${id}/runs${qs(params)}`),
   createTarget: (b: Partial<Target>) => api.post<Target>("/api/targets", b),
-  runAllTargetTests: (id: string, environment = "default") => api.post<any>(`/api/targets/${id}/run-all`, { environment }),
+  runAllTargetTests: (id: string, environment = "default", sync = false) => api.post<any>(`/api/targets/${id}/run-all${sync ? "?sync=true" : ""}`, { environment }),
 
   testsPage: (params: QueryParams = {}) => api.get<Page<TestDef>>(`/api/tests${qs(params)}`),
   tests: (query = "") => api.get<Page<TestDef>>(`/api/tests${qs({ page_size: 100, ...fromLegacyQuery(query) })}`).then(list<TestDef>()),

@@ -1,4 +1,4 @@
-import { Table, Typography, Button, Space, Modal, Form, Input, App, Tag } from "antd";
+import { Table, Typography, Button, Space, Modal, Form, Input, App, Tag, Dropdown } from "antd";
 import { PlusOutlined, PlayCircleOutlined } from "@ant-design/icons";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -13,6 +13,7 @@ export default function TargetsPage() {
   const nav = useNavigate();
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
+  const [runTarget, setRunTarget] = useState<any>(null);
   const [form] = Form.useForm();
   const [params, setParams] = useState<QueryParams>({ page: 1, page_size: 20, sort: "name", order: "asc" });
   const { data: page, isLoading } = useQuery({ queryKey: ["targetsPage", params], queryFn: () => qtp.targetsPage(params) });
@@ -54,10 +55,7 @@ export default function TargetsPage() {
             title: "Actions", key: "actions", width: 120, render: (_, r: any) => (
               <Button type="primary" size="small" icon={<PlayCircleOutlined />} onClick={(e) => {
                 e.stopPropagation();
-                qtp.runAllTargetTests(r.id).then((res) => {
-                  message.success(`Queued ${res.items.length} tests`);
-                  nav("/runs");
-                }).catch((err) => message.error(err.message || "Failed to run tests"));
+                setRunTarget(r);
               }}>Run all</Button>
             )
           }
@@ -72,6 +70,40 @@ export default function TargetsPage() {
           <Form.Item name="environment" label="Environment" initialValue="default"><Input /></Form.Item>
           <Form.Item name="tags" label="Tags (comma separated)"><Input placeholder="api, staging" /></Form.Item>
         </Form>
+      </Modal>
+
+      <Modal
+        title={`Run all tests for ${runTarget?.name}`}
+        open={!!runTarget}
+        onCancel={() => setRunTarget(null)}
+        footer={[
+          <Button key="cancel" onClick={() => setRunTarget(null)}>Cancel</Button>,
+          <Button key="async" type="default" onClick={() => {
+            const r = runTarget;
+            setRunTarget(null);
+            qtp.runAllTargetTests(r.id, "default", false).then((res) => {
+              message.success(`Queued ${res.items.length} tests`);
+              nav("/runs");
+            }).catch((err) => message.error(err.message || "Failed to run tests"));
+          }}>Run Async</Button>,
+          <Button key="sync" type="primary" onClick={() => {
+            const r = runTarget;
+            setRunTarget(null);
+            const hide = message.loading(`Running tests synchronously...`, 0);
+            qtp.runAllTargetTests(r.id, "default", true).then((res) => {
+              hide();
+              const passed = res.items.filter((i: any) => i.status === "passed").length;
+              const failed = res.items.filter((i: any) => i.status === "failed").length;
+              message.success(`Completed ${res.items.length} tests (Passed: ${passed}, Failed: ${failed})`);
+            }).catch((err) => { hide(); message.error(err.message || "Failed to run tests") });
+          }}>Run Sync</Button>
+        ]}
+      >
+        <p>Choose how you would like to run the tests for this target:</p>
+        <ul>
+          <li><strong>Async:</strong> Queues the tests and redirects you to the Runs dashboard.</li>
+          <li><strong>Sync:</strong> Blocks the UI and waits for all tests to complete, returning the final results directly.</li>
+        </ul>
       </Modal>
     </div>
   );

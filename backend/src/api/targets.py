@@ -56,12 +56,40 @@ def update_target(app, operation, request, target_id=None, principal=None, **kwa
 
 @require_role(ROLE_OPERATOR)
 def run_all_target_tests(app, operation, request, target_id=None, principal=None, **kwargs):
+    from src.api._helpers import query_args
+    import time
+    from src.execution.models import TestRun
+    from src.execution import serializers
+
+    sync_mode = query_args(request).get("sync", "").lower() == "true"
+
     with session_scope() as db:
         target = db.get(Target, target_id)
         if not target:
             return {"error": "target not found"}, 404
         tests = db.scalars(select(TestDefinition).where(TestDefinition.target_key == target.key)).all()
         queued = []
+        test_map = {}
         for t in tests:
+            test_map[t.id] = t
             queued.append(exec_service.run_now(db, t.id, environment="default"))
-        return {"items": queued}, 202
+        
+        if not sync_mode:
+            return {"items": queued}, 202
+
+    # Sync mode: Wait for completion
+    run_ids = [r["id"] for r in queued]
+    timeout = time.time() + 120  # 2 minutes max wait for API boundary
+    
+    while time.time() < timeout:
+        with session_scope() as db:
+            runs = db.scalars(select(TestRun).where(TestRun.id.in_(run_ids))).all()
+            all_done = all(r.status not in ("queued", "running") for r in runs)
+            if all_done:
+                return {"items": [serializers.run_summary(r, test_name=test_map[r.test_definition_id].name, target_key=target.key, tags=test_map[r.test_definition_id].tags) for r in runs]}, 200
+        time.sleep(1)
+
+    # Timeout reached, return current statuses
+    with session_scope() as db:
+        runs = db.scalars(select(TestRun).where(TestRun.id.in_(run_ids))).all()
+        return {"items": [serializers.run_summary(r, test_name=test_map[r.test_definition_id].name, target_key=target.key, tags=test_map[r.test_definition_id].tags) for r in runs]}, 207
