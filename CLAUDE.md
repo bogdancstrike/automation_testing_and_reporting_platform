@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-QTP (QSINT Testing Platform) merges two ideas into one modulith: **Testkube-style
+QTP (Quality Testing Platform) merges two ideas into one modulith: **Testkube-style
 execution** (test definitions, schedules, a durable PostgreSQL run queue, capability-aware
 workers) and **ReportPortal-style reporting** (run history, dashboards, failure-signature
 grouping, defect-type triage). It tests **any target application by URL** — never itself

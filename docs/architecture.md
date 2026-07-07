@@ -1,8 +1,8 @@
-# QSINT Testing Platform Architecture
+# Quality Testing Platform Architecture
 
 _Last updated: 2026-07-07._
 
-QSINT Testing Platform, short name QTP, is an automation testing platform and
+Quality Testing Platform, short name QTP, is an automation testing platform and
 test framework for running, scheduling, observing, and analyzing automated tests
 against **any target application**. It combines two ideas that today live in two
 separate tools:

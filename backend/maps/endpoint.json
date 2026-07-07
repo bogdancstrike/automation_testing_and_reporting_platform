@@ -2,7 +2,7 @@
   "namespaces": [
     {
       "name": "qtp",
-      "description": "QSINT Testing Platform API"
+      "description": "Quality Testing Platform API"
     }
   ],
   "models": {

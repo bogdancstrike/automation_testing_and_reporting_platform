@@ -2,7 +2,7 @@
 
 ## Goal
 
-Improve the QSINT Testing Platform frontend structure and visual quality, add platform-wide dark mode, add a user profile page, support soft reset of target execution statistics, expose test discovery time in the catalog, and expand bundled automation scenarios.
+Improve the Quality Testing Platform frontend structure and visual quality, add platform-wide dark mode, add a user profile page, support soft reset of target execution statistics, expose test discovery time in the catalog, and expand bundled automation scenarios.
 
 ## App Shell And Visual Direction
 

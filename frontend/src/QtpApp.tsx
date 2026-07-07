@@ -97,7 +97,7 @@ function AppShell({ mode, setMode }: { mode: ThemeMode; setMode: (mode: ThemeMod
           <span className="qtp-logo-mark">Q</span>
           {!collapsed && (
             <span>
-              <strong>QSINT</strong>
+              <strong>Quality</strong>
               <small>Testing Platform</small>
             </span>
           )}

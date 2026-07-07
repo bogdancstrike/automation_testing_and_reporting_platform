@@ -47,7 +47,7 @@ def _build_app():
         api_host="0.0.0.0",
         api_port=Config.API_PORT,
         api_version="1.0",
-        api_title="QSINT Testing Platform API",
+        api_title="Quality Testing Platform API",
         api_description="QTP — automation testing, request builder, scheduling, dashboards",
         endpoint_json_path="maps/endpoint.json",
         enable_tracing=Config.ENABLE_TRACING,

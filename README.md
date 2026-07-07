@@ -1,5 +1,5 @@
 <div align="center">
-  <h1>🎯 QSINT Testing Platform (QTP)</h1>
+  <h1>🎯 Quality Testing Platform (QTP)</h1>
   <p><b>An automation testing control plane + framework for running, scheduling, observing, and analyzing automated tests against any target application.</b></p>
   
   ![Python](https://img.shields.io/badge/Python-3.12+-blue.svg?logo=python)
