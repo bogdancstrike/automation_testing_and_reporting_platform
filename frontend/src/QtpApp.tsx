@@ -18,6 +18,7 @@ import RunsPage from "./pages/RunsPage";
 import RunDetailPage from "./pages/RunDetailPage";
 import SchedulesPage from "./pages/SchedulesPage";
 import TargetsPage from "./pages/TargetsPage";
+import TargetDetailPage from "./pages/TargetDetailPage";
 import WorkersPage from "./pages/WorkersPage";
 import DocsPage from "./pages/DocsPage";
 
@@ -47,8 +48,8 @@ export default function QtpApp() {
       .sort((a, b) => b.length - a.length)[0] || "/";
 
   return (
-    <Layout style={{ minHeight: "100vh" }}>
-      <Sider collapsible collapsed={collapsed} onCollapse={setCollapsed} theme="dark">
+    <Layout className="qtp-shell">
+      <Sider className="qtp-sider" collapsible collapsed={collapsed} onCollapse={setCollapsed} theme="dark">
         <div className="qtp-logo">{collapsed ? "QTP" : "QSINT · QTP"}</div>
         <Menu
           theme="dark"
@@ -87,6 +88,7 @@ export default function QtpApp() {
             <Route path="/runs/:id" element={<RunDetailPage />} />
             <Route path="/schedules" element={<SchedulesPage />} />
             <Route path="/targets" element={<TargetsPage />} />
+            <Route path="/targets/:id" element={<TargetDetailPage />} />
             <Route path="/workers" element={<WorkersPage />} />
             <Route path="/docs" element={<DocsPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />

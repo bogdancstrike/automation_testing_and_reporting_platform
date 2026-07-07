@@ -91,16 +91,16 @@ _Last updated: 2026-07-07._
 ## Next increment — multi-step tests, target observability, backend-driven tables
 - [ ] Multi-step UI request tests (`config.steps[]`) with sequential execution, per-step assertions, captures, and single-request backward compatibility
 - [ ] Automatic code-test discovery by recursively scanning `backend/tests/automations/` for `BaseAutomationTest` subclasses; no manual module registration
-- [ ] Backend pagination/search/filter/sort contract for table endpoints (tests, runs, targets, target detail tables, schedules/workers where applicable)
-- [ ] Target detail API + `/targets/{id}` page with target metadata, tests, runs, pass/fail ratio, charts, and failure information
+- [~] Backend pagination/search/filter/sort contract for table endpoints (tests, runs, targets, target detail tests/runs, schedules done; workers and remaining linked tables still to review)
+- [x] Target detail API + `/targets/{id}` page with target metadata, tests, runs, pass/fail ratio, charts, and failure information
 - [ ] React Flow step visualization on `/tests/{id}` with run-context coloring from `?runId=...`
 - [ ] Overview enrichment, including clickable Recent Failures rows that route to the failed test detail page
 - [ ] Request Builder Flow mode for add/duplicate/reorder/delete steps, captures, send-flow results, save/update/schedule
 - [ ] Developer Docs enrichment for multi-step tests, code-test auto-discovery, target pages, and backend-driven table APIs
-- [ ] Sticky sidebar/app shell: sidebar remains fixed/sticky while the page content scrolls
-- [ ] Runs page backend-driven filtering/search/sorting for status, trigger, target, defect type, failure category, and test name/key
+- [x] Sticky sidebar/app shell: sidebar remains fixed/sticky while the page content scrolls
+- [x] Runs page backend-driven filtering/search/sorting for status, trigger, target, defect type, failure category, and test name/key
 - [ ] Reusable user tags for tests, created on demand and suggested for reuse
 - [ ] Test detail comments with optional tags
 - [ ] Run detail comments with optional tags
-- [ ] Backend tracing spans for run execution, flow execution, HTTP steps, discovery, target stats, comments, and tags
+- [~] Backend tracing spans for run execution, flow execution, HTTP steps, discovery, target stats, comments, and tags (core spans added; final trace coverage review remains)
 - [ ] Keep this TODO updated as items move to done, partial, or deferred during the implementation
