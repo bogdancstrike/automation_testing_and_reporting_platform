@@ -32,7 +32,7 @@ const NAV_GROUPS = [
     key: "monitor",
     label: "Monitor",
     children: [
-      { key: "/", icon: <DashboardOutlined />, label: "Overview" },
+      { key: "/overview", icon: <DashboardOutlined />, label: "Overview" },
       { key: "/runs", icon: <PlayCircleOutlined />, label: "Runs" },
       { key: "/schedules", icon: <ClockCircleOutlined />, label: "Schedules" },
     ],
@@ -41,7 +41,7 @@ const NAV_GROUPS = [
     key: "test-design",
     label: "Test Design",
     children: [
-      { key: "/tests", icon: <ExperimentOutlined />, label: "Test Catalog" },
+      { key: "/scenarios", icon: <ExperimentOutlined />, label: "Scenarios" },
       { key: "/request-builder", icon: <SendOutlined />, label: "Request Builder" },
     ],
   },
@@ -80,8 +80,8 @@ function AppShell({ mode, setMode }: { mode: ThemeMode; setMode: (mode: ThemeMod
 
   const selectedKey =
     NAV.map((n) => n.key)
-      .filter((k) => k === "/" ? location.pathname === "/" : location.pathname.startsWith(k))
-      .sort((a, b) => b.length - a.length)[0] || "/";
+      .filter((k) => location.pathname.startsWith(k))
+      .sort((a, b) => b.length - a.length)[0] || "/overview";
   const darkMode = mode === "dark";
   const menuItems: MenuProps["items"] = NAV_GROUPS.map((group) => ({
     type: "group",
@@ -145,9 +145,12 @@ function AppShell({ mode, setMode }: { mode: ThemeMode; setMode: (mode: ThemeMod
         </Header>
         <Content className="qtp-content">
           <Routes>
-            <Route path="/" element={<OverviewPage />} />
-            <Route path="/tests" element={<CatalogPage />} />
-            <Route path="/tests/:id" element={<TestDetailPage />} />
+            <Route path="/" element={<Navigate to="/overview" replace />} />
+            <Route path="/overview" element={<OverviewPage />} />
+            <Route path="/tests" element={<Navigate to="/scenarios" replace />} />
+            <Route path="/tests/:id" element={<NavigateToScenario />} />
+            <Route path="/scenarios" element={<CatalogPage />} />
+            <Route path="/scenarios/:id" element={<TestDetailPage />} />
             <Route path="/request-builder" element={<RequestBuilderPage />} />
             <Route path="/runs" element={<RunsPage />} />
             <Route path="/runs/:id" element={<RunDetailPage />} />
@@ -158,12 +161,19 @@ function AppShell({ mode, setMode }: { mode: ThemeMode; setMode: (mode: ThemeMod
             <Route path="/workers" element={<WorkersPage />} />
             <Route path="/docs" element={<DocsPage />} />
             <Route path="/profile" element={<ProfilePage />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
+            <Route path="*" element={<Navigate to="/overview" replace />} />
           </Routes>
         </Content>
       </Layout>
     </Layout>
   );
+}
+
+function NavigateToScenario() {
+  const location = useLocation();
+  const parts = location.pathname.split("/").filter(Boolean);
+  const id = parts[parts.length - 1];
+  return <Navigate to={id ? `/scenarios/${id}` : "/scenarios"} replace />;
 }
 
 export default function QtpApp() {

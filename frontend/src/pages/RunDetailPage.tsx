@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Card, Descriptions, Button, Typography, Table, Space, Tabs, App, Tag, Select, Row, Col, List, Form, Input } from "antd";
-import { ArrowLeftOutlined, StopOutlined } from "@ant-design/icons";
+import { ArrowLeftOutlined, ExperimentOutlined, StopOutlined } from "@ant-design/icons";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { qtp } from "../api/qtp";
@@ -56,6 +56,7 @@ export default function RunDetailPage() {
     <div>
       <Space style={{ marginBottom: 12 }}>
         <Button icon={<ArrowLeftOutlined />} onClick={() => nav("/runs")}>Runs</Button>
+        <Button icon={<ExperimentOutlined />} onClick={() => nav(`/scenarios/${run.test_definition_id}`)}>Open scenario</Button>
         {active(run.status) && <Button danger icon={<StopOutlined />} loading={cancel.isPending} onClick={() => cancel.mutate()}>Cancel</Button>}
       </Space>
       <Typography.Title level={3}>

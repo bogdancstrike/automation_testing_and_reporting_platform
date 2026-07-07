@@ -118,7 +118,7 @@ export default function TargetDetailPage() {
         <Col xs={24} xl={12}>
           <Card size="small" title="Tests for this target">
             <Table rowKey="id" size="small" dataSource={testsPage?.items || []}
-              onRow={(r) => ({ onClick: () => nav(`/tests/${r.id}`), style: { cursor: "pointer" } })}
+              onRow={(r) => ({ onClick: () => nav(`/scenarios/${r.id}`), style: { cursor: "pointer" } })}
               pagination={{ current: testsPage?.page || 1, pageSize: testsPage?.page_size || 10, total: testsPage?.total || 0 }}
               onChange={(pagination, _filters, sorter: any) => setTestParams((p) => ({ ...p, page: pagination.current || 1, page_size: pagination.pageSize || 10, sort: sorter?.field || p.sort, order: sortOrder(sorter?.order) || p.order }))}
               columns={[

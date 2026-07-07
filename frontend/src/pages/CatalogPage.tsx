@@ -34,7 +34,7 @@ export default function CatalogPage() {
     <div>
       <Space style={{ marginBottom: 16, justifyContent: "space-between", width: "100%" }}>
         <div>
-          <Typography.Title level={3} style={{ margin: 0 }}>Test Catalog</Typography.Title>
+          <Typography.Title level={3} style={{ margin: 0 }}>Scenarios</Typography.Title>
           <Typography.Text type="secondary">Backend-driven search, filters, sorting, and pagination.</Typography.Text>
         </div>
         <Button icon={<ReloadOutlined />} loading={discover.isPending} onClick={() => discover.mutate()}>Discover code tests</Button>
@@ -61,7 +61,7 @@ export default function CatalogPage() {
         rowKey="id"
         loading={isLoading}
         dataSource={tests}
-        onRow={(r) => ({ onClick: () => nav(`/tests/${r.id}`), style: { cursor: "pointer" } })}
+        onRow={(r) => ({ onClick: () => nav(`/scenarios/${r.id}`), style: { cursor: "pointer" } })}
         pagination={{ current: page?.page || 1, pageSize: page?.page_size || 20, total: page?.total || 0, showSizeChanger: true }}
         onChange={(pagination, _filters, sorter: any) => setParams((p) => ({
           ...p, page: pagination.current || 1, page_size: pagination.pageSize || 20,

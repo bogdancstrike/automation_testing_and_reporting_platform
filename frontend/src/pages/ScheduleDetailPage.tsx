@@ -49,7 +49,7 @@ export default function ScheduleDetailPage() {
                 {s.target_key ? <Tag color="geekblue">{s.target_key}</Tag> : "—"}
               </Descriptions.Item>
               <Descriptions.Item label="Test">
-                <a onClick={() => nav(`/tests/${s.test_definition_id}`)}>{s.test_name || s.test_definition_id}</a>
+                <a onClick={() => nav(`/scenarios/${s.test_definition_id}`)}>{s.test_name || s.test_definition_id}</a>
               </Descriptions.Item>
               <Descriptions.Item label="Environment">{s.environment}</Descriptions.Item>
               <Descriptions.Item label="Next Run At">{s.next_run_at?.replace("T", " ").slice(0, 19) || "—"}</Descriptions.Item>

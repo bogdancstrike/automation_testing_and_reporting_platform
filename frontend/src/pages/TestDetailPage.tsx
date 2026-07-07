@@ -82,7 +82,7 @@ export default function TestDetailPage() {
   return (
     <div>
       <Space style={{ marginBottom: 12 }}>
-        <Button icon={<ArrowLeftOutlined />} onClick={() => nav("/tests")}>Catalog</Button>
+        <Button icon={<ArrowLeftOutlined />} onClick={() => nav("/scenarios")}>Scenarios</Button>
         <Button type="primary" icon={<PlayCircleOutlined />} loading={run.isPending} onClick={() => run.mutate()}>Run now</Button>
       </Space>
       <Typography.Title level={3} style={{ marginBottom: 4 }}>{t.name} <TypeTag type={t.type} /></Typography.Title>
