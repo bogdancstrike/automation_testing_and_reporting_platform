@@ -2,7 +2,7 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ConfigProvider, App as AntApp, Spin } from "antd";
+import { Spin } from "antd";
 import "antd/dist/reset.css";
 import "./index.css";
 
@@ -25,15 +25,11 @@ initKeycloak()
     if (!authenticated) return;
     root.render(
       <React.StrictMode>
-        <ConfigProvider theme={{ token: { colorPrimary: "#1677ff", borderRadius: 6 } }}>
-          <AntApp>
-            <QueryClientProvider client={queryClient}>
-              <BrowserRouter>
-                <QtpApp />
-              </BrowserRouter>
-            </QueryClientProvider>
-          </AntApp>
-        </ConfigProvider>
+        <QueryClientProvider client={queryClient}>
+          <BrowserRouter>
+            <QtpApp />
+          </BrowserRouter>
+        </QueryClientProvider>
       </React.StrictMode>,
     );
   })

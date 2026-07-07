@@ -1,9 +1,10 @@
-import { useState } from "react";
-import { Layout, Menu, Dropdown, Avatar, Typography, theme } from "antd";
+import { useEffect, useMemo, useState } from "react";
+import { App as AntApp, Avatar, Button, ConfigProvider, Dropdown, Layout, Menu, Space, Tooltip, Typography, theme } from "antd";
+import type { MenuProps } from "antd";
 import {
   DashboardOutlined, ExperimentOutlined, SendOutlined, PlayCircleOutlined,
   ClockCircleOutlined, AimOutlined, ClusterOutlined, BookOutlined,
-  UserOutlined, LogoutOutlined,
+  UserOutlined, LogoutOutlined, MoonOutlined, SunOutlined,
 } from "@ant-design/icons";
 import { Routes, Route, useNavigate, useLocation, Navigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -22,21 +23,55 @@ import TargetsPage from "./pages/TargetsPage";
 import TargetDetailPage from "./pages/TargetDetailPage";
 import WorkersPage from "./pages/WorkersPage";
 import DocsPage from "./pages/DocsPage";
+import ProfilePage from "./pages/ProfilePage";
 
 const { Header, Sider, Content } = Layout;
 
-const NAV = [
-  { key: "/", icon: <DashboardOutlined />, label: "Overview" },
-  { key: "/tests", icon: <ExperimentOutlined />, label: "Test Catalog" },
-  { key: "/request-builder", icon: <SendOutlined />, label: "Request Builder" },
-  { key: "/runs", icon: <PlayCircleOutlined />, label: "Runs" },
-  { key: "/schedules", icon: <ClockCircleOutlined />, label: "Schedules" },
-  { key: "/targets", icon: <AimOutlined />, label: "Targets" },
-  { key: "/workers", icon: <ClusterOutlined />, label: "Workers" },
-  { key: "/docs", icon: <BookOutlined />, label: "Developer Docs" },
+const NAV_GROUPS = [
+  {
+    key: "monitor",
+    label: "Monitor",
+    children: [
+      { key: "/", icon: <DashboardOutlined />, label: "Overview" },
+      { key: "/runs", icon: <PlayCircleOutlined />, label: "Runs" },
+      { key: "/schedules", icon: <ClockCircleOutlined />, label: "Schedules" },
+    ],
+  },
+  {
+    key: "test-design",
+    label: "Test Design",
+    children: [
+      { key: "/tests", icon: <ExperimentOutlined />, label: "Test Catalog" },
+      { key: "/request-builder", icon: <SendOutlined />, label: "Request Builder" },
+    ],
+  },
+  {
+    key: "assets",
+    label: "Assets",
+    children: [
+      { key: "/targets", icon: <AimOutlined />, label: "Targets" },
+      { key: "/workers", icon: <ClusterOutlined />, label: "Workers" },
+    ],
+  },
+  {
+    key: "knowledge",
+    label: "Knowledge",
+    children: [
+      { key: "/docs", icon: <BookOutlined />, label: "Developer Docs" },
+    ],
+  },
 ];
 
-export default function QtpApp() {
+const NAV = NAV_GROUPS.flatMap((group) => group.children);
+const THEME_STORAGE_KEY = "qtp-theme-mode";
+
+type ThemeMode = "light" | "dark";
+
+function storedTheme(): ThemeMode {
+  return window.localStorage.getItem(THEME_STORAGE_KEY) === "dark" ? "dark" : "light";
+}
+
+function AppShell({ mode, setMode }: { mode: ThemeMode; setMode: (mode: ThemeMode) => void }) {
   const [collapsed, setCollapsed] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
@@ -47,37 +82,66 @@ export default function QtpApp() {
     NAV.map((n) => n.key)
       .filter((k) => k === "/" ? location.pathname === "/" : location.pathname.startsWith(k))
       .sort((a, b) => b.length - a.length)[0] || "/";
+  const darkMode = mode === "dark";
+  const menuItems: MenuProps["items"] = NAV_GROUPS.map((group) => ({
+    type: "group",
+    key: group.key,
+    label: collapsed ? "" : group.label,
+    children: group.children,
+  }));
 
   return (
-    <Layout className="qtp-shell">
-      <Sider className="qtp-sider" collapsible collapsed={collapsed} onCollapse={setCollapsed} theme="dark">
-        <div className="qtp-logo">{collapsed ? "QTP" : "QSINT · QTP"}</div>
+    <Layout className="qtp-shell" data-theme={mode}>
+      <Sider className="qtp-sider" collapsible collapsed={collapsed} onCollapse={setCollapsed} theme="dark" width={248}>
+        <div className="qtp-logo">
+          <span className="qtp-logo-mark">Q</span>
+          {!collapsed && (
+            <span>
+              <strong>QSINT</strong>
+              <small>Testing Platform</small>
+            </span>
+          )}
+        </div>
         <Menu
           theme="dark"
           mode="inline"
           selectedKeys={[selectedKey]}
-          items={NAV}
+          items={menuItems}
           onClick={(e) => navigate(e.key)}
         />
       </Sider>
       <Layout>
-        <Header style={{ background: token.colorBgContainer, display: "flex",
-          alignItems: "center", justifyContent: "flex-end", paddingInline: 20 }}>
+        <Header className="qtp-header" style={{ background: token.colorBgContainer }}>
+          <div className="qtp-header-title">
+            <Typography.Text strong>Automation control plane</Typography.Text>
+            <Typography.Text type="secondary">Tests, targets, schedules, and execution telemetry</Typography.Text>
+          </div>
+          <Space size={10}>
+            <Tooltip title={darkMode ? "Switch to light mode" : "Switch to dark mode"}>
+              <Button
+                aria-label={darkMode ? "Switch to light mode" : "Switch to dark mode"}
+                shape="circle"
+                icon={darkMode ? <SunOutlined /> : <MoonOutlined />}
+                onClick={() => setMode(darkMode ? "light" : "dark")}
+              />
+            </Tooltip>
           <Dropdown
             menu={{
               items: [
                 { key: "who", label: `${me?.username || "…"} (${(me?.roles || []).join(", ") || "—"})`, disabled: true },
+                { key: "profile", icon: <UserOutlined />, label: "Profile", onClick: () => navigate("/profile") },
                 { type: "divider" },
                 { key: "logout", icon: <LogoutOutlined />, label: "Log out",
                   onClick: () => keycloak.logout({ redirectUri: window.location.origin }) },
               ],
             }}
           >
-            <span style={{ cursor: "pointer" }}>
+            <span className="qtp-user-menu">
               <Avatar size="small" icon={<UserOutlined />} style={{ marginRight: 8 }} />
               <Typography.Text strong>{me?.username || "user"}</Typography.Text>
             </span>
           </Dropdown>
+          </Space>
         </Header>
         <Content className="qtp-content">
           <Routes>
@@ -93,10 +157,48 @@ export default function QtpApp() {
             <Route path="/targets/:id" element={<TargetDetailPage />} />
             <Route path="/workers" element={<WorkersPage />} />
             <Route path="/docs" element={<DocsPage />} />
+            <Route path="/profile" element={<ProfilePage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Content>
       </Layout>
     </Layout>
+  );
+}
+
+export default function QtpApp() {
+  const [mode, setMode] = useState<ThemeMode>(storedTheme);
+
+  useEffect(() => {
+    window.localStorage.setItem(THEME_STORAGE_KEY, mode);
+    document.documentElement.dataset.theme = mode;
+  }, [mode]);
+
+  const appTheme = useMemo(() => ({
+    algorithm: mode === "dark" ? theme.darkAlgorithm : theme.defaultAlgorithm,
+    token: {
+      colorPrimary: "#2563eb",
+      borderRadius: 6,
+      fontFamily: "Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+    },
+    components: {
+      Layout: {
+        headerHeight: 64,
+      },
+      Menu: {
+        itemBorderRadius: 6,
+      },
+      Card: {
+        borderRadiusLG: 8,
+      },
+    },
+  }), [mode]);
+
+  return (
+    <ConfigProvider theme={appTheme}>
+      <AntApp>
+        <AppShell mode={mode} setMode={setMode} />
+      </AntApp>
+    </ConfigProvider>
   );
 }
