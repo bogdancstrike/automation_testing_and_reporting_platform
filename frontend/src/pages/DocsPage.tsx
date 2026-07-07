@@ -15,6 +15,11 @@ import {
   SafetyOutlined,
   ScheduleOutlined,
   ToolOutlined,
+  ReadOutlined,
+  AppstoreAddOutlined,
+  GlobalOutlined,
+  DashboardOutlined,
+  DesktopOutlined,
 } from "@ant-design/icons";
 import { Callout } from "fumadocs-ui/components/callout";
 import { Card as FumaCard, Cards } from "fumadocs-ui/components/card";
@@ -24,25 +29,30 @@ const { Paragraph, Text } = Typography;
 
 const sections = [
   { id: "overview", title: "Overview" },
-  { id: "mental-model", title: "Mental model" },
-  { id: "quickstart", title: "Developer quickstart" },
-  { id: "targets", title: "Targets and environments" },
-  { id: "authoring", title: "Authoring scenarios" },
-  { id: "scenario-types", title: "Scenario types" },
-  { id: "assertions", title: "Assertions and captures" },
+  { id: "scope-use-cases", title: "Scope & Use Cases" },
+  { id: "architecture", title: "Architecture & Integration" },
+  { id: "mental-model", title: "Mental Model" },
+  { id: "quickstart", title: "Developer Quickstart" },
+  { id: "targets", title: "Targets & Environments" },
+  { id: "authoring-http", title: "Authoring: HTTP APIs" },
+  { id: "authoring-python", title: "Authoring: Python Logic" },
+  { id: "authoring-browser", title: "Authoring: Browser Tests" },
+  { id: "authoring-cli", title: "Authoring: CLI Tools" },
+  { id: "assertions", title: "Assertions & Captures" },
   { id: "request-builder", title: "Request Builder" },
   { id: "scheduling", title: "Scheduling" },
-  { id: "execution", title: "Execution and results" },
-  { id: "ci", title: "CI integration" },
-  { id: "api", title: "API reference" },
+  { id: "execution", title: "Execution & Results" },
+  { id: "ci", title: "CI Integration" },
+  { id: "api", title: "API Reference" },
   { id: "extend", title: "Extending QTP" },
   { id: "troubleshooting", title: "Troubleshooting" },
 ];
 
 const navGroups = [
-  { title: "Start", items: ["overview", "mental-model", "quickstart", "targets"] },
-  { title: "Build", items: ["authoring", "scenario-types", "assertions", "request-builder"] },
-  { title: "Operate", items: ["scheduling", "execution", "ci", "api"] },
+  { title: "Introduction", items: ["overview", "scope-use-cases", "architecture", "mental-model"] },
+  { title: "Getting Started", items: ["quickstart", "targets"] },
+  { title: "Authoring Scenarios", items: ["authoring-http", "authoring-python", "authoring-browser", "authoring-cli", "assertions", "request-builder"] },
+  { title: "Operations", items: ["scheduling", "execution", "ci", "api"] },
   { title: "Advanced", items: ["extend", "troubleshooting"] },
 ];
 
@@ -63,11 +73,11 @@ const apiEndpoints = [
 ];
 
 const scenarioTypes = [
-  ["HttpTest", "HTTP API and service checks", "Use ctx.http and fluent response assertions."],
-  ["PythonTest", "Custom Python logic", "Use any Python control flow and record explicit assertions."],
-  ["CliTest", "Command-line tools", "Run shell commands, CLIs, or lightweight contract tools."],
-  ["PlaywrightTest", "Browser checks", "Use Chromium for page-level workflows and UI smoke tests."],
-  ["SeleniumTest", "Selenium-compatible suites", "Run WebDriver-oriented browser scenarios."],
+  ["HttpTest", "HTTP API and service checks", "Use ctx.http and fluent response assertions. Best for REST/GraphQL endpoints."],
+  ["PythonTest", "Custom Python logic", "Use any Python control flow, external libraries (e.g., DB drivers) and record explicit assertions."],
+  ["CliTest", "Command-line tools", "Run shell commands, CLIs, or lightweight contract tools locally within the worker."],
+  ["PlaywrightTest", "Browser checks", "Use Chromium for page-level workflows and UI smoke tests. Supports modern SPA checks."],
+  ["SeleniumTest", "Selenium-compatible suites", "Run WebDriver-oriented browser scenarios (legacy support or specific grid needs)."],
 ];
 
 function slugTitle(id: string) {
@@ -80,40 +90,41 @@ function scrollToHash(hash: string) {
   if (element) element.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
-function Code({ children }: { children: string }) {
-  return <pre className="qtp-code qtp-docs-code">{children}</pre>;
+function Code({ children, language = "plaintext" }: { children: string; language?: string }) {
+  return <pre className={`qtp-code qtp-docs-code language-${language}`}>{children}</pre>;
 }
 
-function H2({ id, children }: { id: string; children: React.ReactNode }) {
+function H2({ id, icon, children }: { id: string; icon?: React.ReactNode; children: React.ReactNode }) {
   return (
-    <h2 id={id} className="qtp-docs-heading">
-      <a href={`#${id}`} aria-label={`Link to ${id}`}>#</a>
+    <h2 id={id} className="qtp-docs-heading" style={{ marginTop: '3em', paddingBottom: '0.5em', borderBottom: '1px solid #eaeaea' }}>
+      <a href={`#${id}`} aria-label={`Link to ${id}`} style={{ marginRight: '8px', color: '#ccc', textDecoration: 'none' }}>#</a>
+      {icon && <span style={{ marginRight: '12px' }}>{icon}</span>}
       {children}
     </h2>
   );
 }
 
 function H3({ children }: { children: React.ReactNode }) {
-  return <h3 className="qtp-docs-subheading">{children}</h3>;
+  return <h3 className="qtp-docs-subheading" style={{ marginTop: '2em' }}>{children}</h3>;
 }
 
 function ApiTable() {
   return (
-    <div className="qtp-docs-table">
-      <table>
+    <div className="qtp-docs-table" style={{ overflowX: 'auto', marginTop: '1em' }}>
+      <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
         <thead>
-          <tr>
-            <th>Method</th>
-            <th>Endpoint</th>
-            <th>Use</th>
+          <tr style={{ borderBottom: '2px solid #f0f0f0' }}>
+            <th style={{ padding: '12px 8px' }}>Method</th>
+            <th style={{ padding: '12px 8px' }}>Endpoint</th>
+            <th style={{ padding: '12px 8px' }}>Use</th>
           </tr>
         </thead>
         <tbody>
           {apiEndpoints.map(([method, endpoint, use]) => (
-            <tr key={`${method}-${endpoint}`}>
-              <td><Tag>{method}</Tag></td>
-              <td><code>{endpoint}</code></td>
-              <td>{use}</td>
+            <tr key={`${method}-${endpoint}`} style={{ borderBottom: '1px solid #f0f0f0' }}>
+              <td style={{ padding: '12px 8px' }}><Tag color={method === 'GET' ? 'blue' : method === 'POST' ? 'green' : 'default'}>{method}</Tag></td>
+              <td style={{ padding: '12px 8px' }}><code>{endpoint}</code></td>
+              <td style={{ padding: '12px 8px' }}>{use}</td>
             </tr>
           ))}
         </tbody>
@@ -130,246 +141,324 @@ export default function DocsPage() {
   }, [hash]);
 
   return (
-    <div className="qtp-docs-page">
-      <Row gutter={24} align="top" wrap={false}>
-        <Col xs={0} lg={5} className="qtp-docs-nav-col">
+    <div className="qtp-docs-page" style={{ padding: '24px', maxWidth: '1400px', margin: '0 auto' }}>
+      <Row gutter={48} align="top" wrap={false}>
+        <Col xs={0} lg={5} className="qtp-docs-nav-col" style={{ position: 'sticky', top: '24px', height: 'calc(100vh - 48px)', overflowY: 'auto' }}>
           <aside className="qtp-docs-side-nav" aria-label="Documentation navigation">
-            <div className="qtp-docs-brand">QTP Developer Guide</div>
+            <div className="qtp-docs-brand" style={{ fontSize: '1.2rem', fontWeight: 600, marginBottom: '24px' }}>QTP Developer Guide</div>
             {navGroups.map((group) => (
-              <nav key={group.title}>
-                <div className="qtp-docs-nav-title">{group.title}</div>
-                {group.items.map((id) => (
-                  <a key={id} href={`#${id}`}>{slugTitle(id)}</a>
-                ))}
+              <nav key={group.title} style={{ marginBottom: '24px' }}>
+                <div className="qtp-docs-nav-title" style={{ fontSize: '0.85rem', textTransform: 'uppercase', color: '#888', fontWeight: 600, marginBottom: '8px' }}>{group.title}</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {group.items.map((id) => (
+                    <a key={id} href={`#${id}`} style={{ color: '#444', textDecoration: 'none', fontSize: '0.95rem' }}>{slugTitle(id)}</a>
+                  ))}
+                </div>
               </nav>
             ))}
           </aside>
         </Col>
 
-        <Col xs={24} lg={14}>
-          <article className="qtp-docs-article">
-            <div className="qtp-docs-hero">
-              <Tag color="blue">Developer documentation</Tag>
-              <h1>Build reliable automation scenarios with QTP</h1>
-              <p>
-                QTP is a testing control plane for developers who need to define scenarios,
-                run them on demand or on schedules, and understand failures without stitching
-                together separate execution and reporting tools.
+        <Col xs={24} lg={15}>
+          <article className="qtp-docs-article" style={{ fontSize: '1.05rem', lineHeight: 1.7, color: '#333' }}>
+            <div className="qtp-docs-hero" style={{ marginBottom: '3rem' }}>
+              <Tag color="blue" style={{ marginBottom: '16px' }}>Developer documentation</Tag>
+              <h1 style={{ fontSize: '2.5rem', fontWeight: 800, marginBottom: '16px', lineHeight: 1.2 }}>
+                Build reliable automation scenarios with QTP
+              </h1>
+              <p style={{ fontSize: '1.25rem', color: '#555' }}>
+                QTP (Quality Test Platform) is a testing control plane built for developers. It enables you to define, 
+                orchestrate, and debug test scenarios—from simple HTTP checks to complex UI workflows—across environments, 
+                all within a single unified platform.
               </p>
             </div>
 
-            <Cards className="qtp-docs-cards">
-              <FumaCard icon={<RocketOutlined />} title="Author scenarios" description="Use Python classes, the Request Builder, or browser/CLI scenario types." />
-              <FumaCard icon={<PlayCircleOutlined />} title="Run anywhere" description="Trigger scenarios manually, through schedules, or from CI." />
-              <FumaCard icon={<BugOutlined />} title="Diagnose failures" description="Inspect steps, assertions, responses, logs, signatures, and defect types." />
-              <FumaCard icon={<DeploymentUnitOutlined />} title="Integrate teams" description="Use targets, tags, roles, comments, and APIs to make test ownership explicit." />
+            <Cards className="qtp-docs-cards" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '3rem' }}>
+              <FumaCard icon={<CodeOutlined />} title="Author Anywhere" description="Write scenarios in Python, use the UI Request Builder, or bring Playwright/CLI tests." />
+              <FumaCard icon={<CloudServerOutlined />} title="Environment Agnostic" description="Run the same scenario against local, staging, or production seamlessly." />
+              <FumaCard icon={<BugOutlined />} title="Deep Diagnostics" description="Inspect step-by-step executions, exact assertions, full response bodies, and logs." />
+              <FumaCard icon={<DeploymentUnitOutlined />} title="CI/CD Ready" description="Trigger scenarios from pipelines with first-class API support." />
             </Cards>
 
-            <Callout title="Who this guide is for">
-              This page is written for developers who use QTP to author and operate test scenarios.
-              It intentionally avoids infrastructure administration details unless they affect how a
-              developer writes or runs a scenario.
+            <Callout title="Who this guide is for" type="info">
+              This guide is written specifically for <strong>Developers</strong> and <strong>SDETs</strong> who use QTP to write, schedule, and maintain test scenarios. 
+              It covers how to interact with the system, author code-backed tests, and integrate with CI. It intentionally avoids infrastructure setup and administration details (like deploying QTP itself).
             </Callout>
 
-            <H2 id="overview"><RocketOutlined /> Overview</H2>
+            <H2 id="overview" icon={<ReadOutlined />}>Overview</H2>
             <Paragraph>
-              QTP combines two jobs that are usually split across separate products. It acts as a
-              scenario execution control plane, like Testkube, and as a central execution history and
-              failure analysis system, like ReportPortal. Developers register targets, define
-              scenarios, run them, schedule them, and review the exact evidence produced by each run.
+              As software systems grow, verifying behavior becomes scattered. API tests run in Postman, UI tests in a CI job with GitHub Actions, and integration tests as a bash script. When a pipeline fails, developers have to hunt down logs across different systems to figure out what broke.
             </Paragraph>
             <Paragraph>
-              A scenario can be a small HTTP health check, a multi-step API workflow, a Python
-              contract check, a CLI probe, or a browser scenario. All scenario types share the same
-              platform concepts: metadata, target resolution, execution status, steps, assertions,
-              logs, comments, and failure classification.
+              <strong>QTP solves this by providing a centralized testing control plane.</strong> It acts as the single source of truth for both scenario execution and reporting. You can write your scenarios as standard Python code in a repository, and QTP will automatically discover them, run them on targeted environments, and provide a rich UI to inspect exactly what happened during the execution.
             </Paragraph>
 
-            <H2 id="mental-model"><CloudServerOutlined /> Mental model</H2>
+            <H2 id="scope-use-cases" icon={<AppstoreAddOutlined />}>Scope & Use Cases</H2>
             <Paragraph>
-              Think of QTP as a set of stable nouns. A <Text strong>target</Text> is the system under
-              test. A <Text strong>scenario</Text> is the test definition. A <Text strong>revision</Text>
-              is an immutable snapshot of a scenario. A <Text strong>run</Text> is one execution of one
-              revision. A <Text strong>schedule</Text> creates runs automatically. A <Text strong>worker</Text>
-              executes runs that match its capabilities.
-            </Paragraph>
-            <Code>{`Target
-  key: qtp_self
-  base_url: http://api:5100
-
-Scenario
-  key: self.health
-  type: http_request
-  target: qtp_self
-
-Revision
-  code_ref: scenarios.automation.qtp_self.health:SelfHealth
-
-Run
-  status: passed | failed | error | timeout | canceled
-  evidence: steps + assertions + response + logs + metrics`}</Code>
-            <Callout type="info" title="Scenario, not just test">
-              The frontend uses the word scenario because QTP scenarios are often workflows, not only
-              single assertions. The backend API still uses `/api/tests` for compatibility with the
-              existing data model and clients.
-            </Callout>
-
-            <H2 id="quickstart"><ExperimentOutlined /> Developer quickstart</H2>
-            <ol className="qtp-docs-steps">
-              <li>
-                <strong>Choose or create a target.</strong>
-                A target is a service, UI, or environment you want to exercise. Use a stable key like
-                <code>orders_api</code>, <code>qtp_self</code>, or <code>demo</code>.
-              </li>
-              <li>
-                <strong>Author a scenario.</strong>
-                Use a Python class under <code>backend/scenarios/automation</code> or save a request
-                from the Request Builder.
-              </li>
-              <li>
-                <strong>Discover code scenarios.</strong>
-                Open <strong>Scenarios</strong> and click discovery. QTP imports classes by metadata key
-                and creates new revisions only when code or config changes.
-              </li>
-              <li>
-                <strong>Run it.</strong>
-                Click run from the scenario catalog, run all scenarios for a target, or queue a run
-                through the API from CI.
-              </li>
-              <li>
-                <strong>Inspect evidence.</strong>
-                The run page shows assertions, step timing, response body, logs, comments, failure
-                signatures, and a shortcut back to the scenario definition.
-              </li>
-            </ol>
-            <Code>{`# Discover code-backed scenarios
-curl -X POST "$QTP_URL/api/tests/discover" \\
-  -H "Authorization: Bearer $TOKEN"
-
-# Run one scenario
-curl -X POST "$QTP_URL/api/tests/$SCENARIO_ID/run" \\
-  -H "Authorization: Bearer $TOKEN" \\
-  -H "Content-Type: application/json" \\
-  -d '{"environment":"default"}'`}</Code>
-
-            <H2 id="targets"><ApiOutlined /> Targets and environments</H2>
-            <Paragraph>
-              Targets decouple a scenario from the concrete URL it runs against. A scenario references
-              <code>target="orders_api"</code>; QTP resolves the target at execution time and injects
-              <code>{"{{base_url}}"}</code>. This keeps the scenario portable across local, staging, and
-              production-like environments.
+              QTP is highly versatile, supporting a wide range of validation strategies:
             </Paragraph>
             <ul>
-              <li><strong>key:</strong> stable machine identifier used by scenarios and filters.</li>
-              <li><strong>base_url:</strong> the root URL for requests and browser visits.</li>
-              <li><strong>health_url:</strong> optional target health endpoint for dashboards.</li>
-              <li><strong>default_headers:</strong> headers automatically applied to target-bound HTTP calls.</li>
-              <li><strong>tags:</strong> ownership, domain, maturity, or environment labels.</li>
+              <li><strong>Continuous Delivery Gates:</strong> Trigger regression suites automatically from Jenkins, GitLab CI, or GitHub Actions after a deployment.</li>
+              <li><strong>Production Smoke & Sanity:</strong> Schedule lightweight HTTP checks to run every 5 minutes against production APIs to ensure core flows (like login or checkout) are operational.</li>
+              <li><strong>End-to-End Workflows:</strong> Write complex, stateful scenarios that span multiple services (e.g., creating a user via API, modifying data via DB queries, and verifying it in the UI with Playwright).</li>
+              <li><strong>Environment Promotion:</strong> Run the exact same test suite against <code>staging</code> and <code>production</code> by simply swapping the Target definition.</li>
             </ul>
-            <Callout type="warning" title="Keep target keys stable">
-              Renaming a target key is a breaking change for code scenarios and saved request configs.
-              Prefer changing the target URL or environment label while keeping the key stable.
-            </Callout>
 
-            <H2 id="authoring"><CodeOutlined /> Authoring scenarios</H2>
+            <H2 id="architecture" icon={<DeploymentUnitOutlined />}>Architecture & Integration</H2>
             <Paragraph>
-              Code scenarios are Python classes with metadata and a <code>test(self, ctx)</code> method.
-              They are discovered recursively from <code>backend/scenarios/automation</code>. The class
-              name is not the identity; <code>metadata.key</code> is.
+              Understanding QTP's architecture helps you write better scenarios. The platform consists of a few main components:
             </Paragraph>
-            <Code>{`from src.testkit import TYPE_HTTP, HttpTest, TestMetadata
+            <ul>
+              <li><strong>The Control Plane (Backend & UI):</strong> Manages test definitions, schedules, and execution history. It exposes a REST API that the UI and your CI/CD pipelines talk to.</li>
+              <li><strong>Workers (Execution Agents):</strong> The actual runners that execute your scenarios. Workers poll the backend for jobs. They are isolated, scalable, and run the Python test runner.</li>
+              <li><strong>Your Code Repository:</strong> Code-backed scenarios live in your repository (typically under <code>backend/scenarios/automation</code>). QTP discovers these via API triggers.</li>
+            </ul>
+            <Paragraph>
+              <strong>The Integration Flow:</strong> You push a new Python scenario to your Git repo. A CI step calls QTP's <code>/discover</code> endpoint. QTP parses the new metadata. Later, a schedule or CI job calls <code>/run</code>. The backend queues a job. A Worker picks it up, pulls the latest code, executes the steps, and streams the assertions and logs back to the Control Plane in real-time.
+            </Paragraph>
 
-class OrdersHealth(HttpTest):
+            <H2 id="mental-model" icon={<CloudServerOutlined />}>Core Concepts & Mental Model</H2>
+            <Paragraph>
+              To effectively use QTP, you need to understand its five core entities:
+            </Paragraph>
+            <ul>
+              <li><Text strong>Target:</Text> The system you are testing. It defines a <code>base_url</code> (e.g., <code>https://api.staging.example.com</code>). Targets abstract away environment details from your code.</li>
+              <li><Text strong>Scenario (Test):</Text> The logical definition of what you are verifying. It has a unique <code>key</code> (e.g., <code>checkout.success</code>), tags, and belongs to a Target.</li>
+              <li><Text strong>Revision:</Text> An immutable snapshot of a scenario's configuration at a specific point in time. When you change code and run discovery, a new revision is created.</li>
+              <li><Text strong>Run:</Text> A single execution attempt of a specific Revision. It produces evidence (steps, assertions, logs) and ends in a terminal state (<code>passed</code>, <code>failed</code>, <code>error</code>).</li>
+              <li><Text strong>Schedule:</Text> A rule to automatically trigger Runs (e.g., "Run all scenarios tagged 'smoke' against Target 'production_api' every 10 minutes").</li>
+            </ul>
+            <Code language="yaml">{`# A conceptual representation of how entities relate
+Target (staging_api)
+  └── Scenario (login_flow)
+       ├── Revision (v1)
+       │    └── Run (ID: 104, Status: passed)
+       └── Revision (v2)
+            ├── Run (ID: 105, Status: failed)
+            └── Run (ID: 106, Status: passed)`}</Code>
+
+            <H2 id="quickstart" icon={<ExperimentOutlined />}>Developer Quickstart</H2>
+            <Paragraph>
+              Follow these steps to get your first scenario running:
+            </Paragraph>
+            <ol className="qtp-docs-steps" style={{ paddingLeft: '20px', margin: '20px 0' }}>
+              <li style={{ marginBottom: '16px' }}>
+                <strong>Create a Target.</strong>
+                Navigate to <strong>Targets</strong> in the UI. Create one named <code>demo_api</code> with URL <code>https://jsonplaceholder.typicode.com</code>.
+              </li>
+              <li style={{ marginBottom: '16px' }}>
+                <strong>Write the Scenario Code.</strong>
+                In your project repo, create a file at <code>backend/scenarios/automation/demo_test.py</code>:
+                <Code language="python">{`from src.testkit import TYPE_HTTP, HttpTest, TestMetadata
+
+class DemoApiTest(HttpTest):
     metadata = TestMetadata(
-        key="orders.health",
-        name="Orders API health",
+        key="demo.fetch_user",
+        name="Fetch User Data",
         type=TYPE_HTTP,
-        tags=["orders", "smoke"],
-        owner="payments-team",
+        target="demo_api",
+        tags=["demo"]
+    )
+
+    def test(self, ctx):
+        resp = ctx.http.get("/users/1")
+        resp.should.have_status(200)
+        resp.json.should.have_field("email").exists()`}</Code>
+              </li>
+              <li style={{ marginBottom: '16px' }}>
+                <strong>Discover the Scenario.</strong>
+                In the QTP UI, go to <strong>Scenarios</strong> and click the "Discover" button. QTP will scan your codebase and register <code>demo.fetch_user</code>.
+              </li>
+              <li style={{ marginBottom: '16px' }}>
+                <strong>Run and Inspect.</strong>
+                Click "Run" on the newly discovered scenario. Once it finishes, click into the Run ID to view the detailed HTTP request, response payload, and assertion results.
+              </li>
+            </ol>
+
+            <H2 id="targets" icon={<GlobalOutlined />}>Targets & Environments</H2>
+            <Paragraph>
+              Targets are powerful because they allow you to write <strong>environment-agnostic scenarios</strong>. 
+            </Paragraph>
+            <Paragraph>
+              When authoring, you reference the target by its abstract key (e.g., <code>target="payments_service"</code>). At runtime, QTP resolves this key to a concrete Target configuration. The <code>base_url</code> defined in the target is automatically injected into HTTP calls.
+            </Paragraph>
+            <Code language="json">{`// Target configuration payload
+{
+  "key": "payments_service",
+  "name": "Payments API (Staging)",
+  "base_url": "https://payments.staging.internal",
+  "default_headers": {
+    "X-Client-Id": "qtp-automation",
+    "Authorization": "Bearer static-staging-token"
+  }
+}`}</Code>
+            <Paragraph>
+              <strong>Best Practice:</strong> Keep Target keys stable (e.g., <code>users_api</code>). Create separate targets for different environments if needed (e.g., <code>users_api_staging</code>, <code>users_api_prod</code>), or update the <code>base_url</code> dynamically in CI prior to kicking off a run.
+            </Paragraph>
+
+
+            <H2 id="authoring-http" icon={<ApiOutlined />}>Authoring: HTTP APIs</H2>
+            <Paragraph>
+              The <code>HttpTest</code> base class is optimized for REST and GraphQL APIs. It provides a fluent assertion syntax and automatically logs full request/response payloads as evidence.
+            </Paragraph>
+            <Code language="python">{`from src.testkit import TYPE_HTTP, HttpTest, TestMetadata
+
+class CreateOrderTest(HttpTest):
+    metadata = TestMetadata(
+        key="orders.create",
+        name="Create a new order",
+        type=TYPE_HTTP,
         target="orders_api",
     )
 
     def test(self, ctx):
-        response = ctx.http.get("/health")
-        response.should.have_status(200)
-        response.json.should.have_field("status").equal_to("ok")`}</Code>
-            <H3>Lifecycle</H3>
+        payload = {"item_id": 42, "quantity": 1}
+        
+        # ctx.http automatically prefixes the Target's base_url
+        response = ctx.http.post("/api/v1/orders", json=payload)
+        
+        # Fluent assertions automatically log to the Run evidence
+        response.should.have_status(201)
+        response.should.have_header("Content-Type").containing("application/json")
+        response.should.respond_within_ms(500)
+        
+        # JSON body assertions
+        response.json.should.have_field("order_id").exists()
+        response.json.should.have_field("status").equal_to("PENDING")
+        
+        # Capture variables for later steps
+        order_id = response.json.extract("order_id")
+        ctx.set_var("created_order_id", order_id)
+        
+        # Subsequent step using captured variable
+        get_resp = ctx.http.get(f"/api/v1/orders/{order_id}")
+        get_resp.should.have_status(200)`}</Code>
+
+            <H2 id="authoring-python" icon={<CodeOutlined />}>Authoring: Python Logic</H2>
             <Paragraph>
-              For the scenario base classes, the framework executes <code>setup</code>, <code>test</code>,
-              <code>cleanup</code>, and <code>teardown</code>. Use <code>cleanup</code> to undo data created in
-              the application under test. Use <code>teardown</code> for local resources such as browser
-              sessions or temporary files.
+              Sometimes you need to do things outside of HTTP, like querying a database, publishing a Kafka message, or validating complex business logic. The <code>PythonTest</code> class gives you a blank canvas.
             </Paragraph>
-            <H3>Context</H3>
+            <Code language="python">{`from src.testkit import TYPE_PYTHON, PythonTest, TestMetadata
+import psycopg2
+
+class DatabaseReconciliationTest(PythonTest):
+    metadata = TestMetadata(
+        key="db.reconciliation",
+        name="Check DB sync state",
+        type=TYPE_PYTHON,
+        target="backend_services",
+    )
+
+    def test(self, ctx):
+        ctx.log.info("Connecting to primary database...")
+        conn = psycopg2.connect("postgresql://user:pass@db:5432/app")
+        cursor = conn.cursor()
+        
+        cursor.execute("SELECT count(*) FROM async_jobs WHERE status = 'FAILED'")
+        failed_count = cursor.fetchone()[0]
+        
+        # Explicitly record an assertion
+        ctx.assert_true(
+            failed_count < 10,
+            f"Failed job queue too high: {failed_count}"
+        )
+        
+        # Use cleanup block to close resources reliably
+    def cleanup(self, ctx):
+        # Always runs even if test() throws an exception
+        pass`}</Code>
+
+            <H2 id="authoring-browser" icon={<DesktopOutlined />}>Authoring: Browser Tests</H2>
+            <Paragraph>
+              For UI smoke tests, QTP supports Playwright. The <code>PlaywrightTest</code> class provides a managed browser context.
+            </Paragraph>
+            <Code language="python">{`from src.testkit import TYPE_PLAYWRIGHT, PlaywrightTest, TestMetadata
+from playwright.sync_api import expect
+
+class LoginUiTest(PlaywrightTest):
+    metadata = TestMetadata(
+        key="ui.login_flow",
+        name="User Login Flow via Browser",
+        type=TYPE_PLAYWRIGHT,
+        target="webapp",
+    )
+
+    def test(self, ctx):
+        # ctx.browser is a managed playwright Page object
+        page = ctx.browser.page
+        
+        # base_url is applied automatically for relative paths
+        page.goto("/login")
+        
+        page.fill("input[name='username']", "testuser")
+        page.fill("input[name='password']", "secure123")
+        page.click("button[type='submit']")
+        
+        # Playwright assertions are captured in QTP evidence
+        expect(page.locator(".dashboard-header")).to_be_visible()
+        
+        # Capture screenshots on specific steps
+        ctx.browser.screenshot(name="dashboard_loaded")`}</Code>
+
+            <H2 id="authoring-cli" icon={<CodeOutlined />}>Authoring: CLI Tools</H2>
+            <Paragraph>
+              Use <code>CliTest</code> to run shell commands or custom binaries. This is great for infrastructure checks or wrapping existing bash-based scripts.
+            </Paragraph>
+            <Code language="python">{`from src.testkit import TYPE_CLI, CliTest, TestMetadata
+
+class CertCheckTest(CliTest):
+    metadata = TestMetadata(
+        key="infra.cert_check",
+        name="Verify SSL Certificate Expiry",
+        type=TYPE_CLI,
+        target="public_api",
+    )
+
+    def test(self, ctx):
+        domain = "api.example.com"
+        
+        # Runs command inside the worker container
+        result = ctx.cli.run(f"curl -sIv https://{domain} 2>&1 | grep 'expire date'")
+        
+        ctx.assert_true(result.exit_code == 0, "Curl command failed")
+        ctx.log.info(f"Cert output: {result.stdout}")`}</Code>
+
+            <H2 id="assertions" icon={<SafetyOutlined />}>Assertions & Captures</H2>
+            <Paragraph>
+              <strong>Assertions are evidence.</strong> A test failure is useless if you don't know what failed. QTP's assertion library guarantees that both the expected value and the actual value are logged to the backend.
+            </Paragraph>
             <ul>
-              <li><code>ctx.http</code> sends target-bound HTTP requests.</li>
-              <li><code>ctx.cli</code> runs commands for CLI scenarios.</li>
-              <li><code>ctx.browser</code> opens Playwright-backed browser sessions.</li>
-              <li><code>ctx.set_var</code> and <code>ctx.get_var</code> share data across steps.</li>
-              <li><code>ctx.log</code> records structured messages on the run.</li>
+              <li><code>.should.have_status(code)</code>: Validates HTTP response codes.</li>
+              <li><code>.json.should.have_field("path")</code>: Navigates JSON using dot notation.</li>
+              <li><code>.equal_to(val)</code>, <code>.containing(val)</code>, <code>.matching(regex)</code>: Data validation operators.</li>
+              <li><code>.with_length_at_least(n)</code>: Array length checks.</li>
             </ul>
-
-            <H2 id="scenario-types"><BuildOutlined /> Scenario types</H2>
-            <div className="qtp-docs-table">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Base class</th>
-                    <th>Best for</th>
-                    <th>Developer API</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {scenarioTypes.map(([name, best, api]) => (
-                    <tr key={name}>
-                      <td><code>{name}</code></td>
-                      <td>{best}</td>
-                      <td>{api}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <Callout type="success" title="Pick the smallest useful scenario type">
-              Use HTTP scenarios for API checks, Python scenarios for custom logic, CLI scenarios for
-              command output, and browser scenarios only when the user interface itself is the contract.
-            </Callout>
-
-            <H2 id="assertions"><SafetyOutlined /> Assertions and captures</H2>
             <Paragraph>
-              QTP treats assertions as first-class evidence. A run is useful only when it tells you
-              what was checked, what was expected, what was observed, and where the failure happened.
-              HTTP assertions support status codes, headers, body text, JSON paths, response time, and
-              lightweight schema checks.
+              <strong>Captures</strong> allow data to flow between steps. In Request Builder, use the capture UI. In Python:
             </Paragraph>
-            <Code>{`response.should.have_status(201)
-response.should.respond_within_ms(1000)
-response.should.have_header("Content-Type").containing("json")
-response.json.should.have_field("id").exists()
-response.json.should.have_field("status").equal_to("created")
-response.json.should.have_field("items").with_length_at_least(1)`}</Code>
-            <Paragraph>
-              Captures let one step feed another. In Request Builder flows, a capture extracts a value
-              from JSON, headers, or body text and stores it as a variable. In Python scenarios, use
-              <code>ctx.set_var("token", token)</code> and reference it later as <code>{"{{token}}"}</code>.
-            </Paragraph>
+            <Code language="python">{`# Capture
+token = response.json.extract("auth.jwt_token")
+ctx.set_var("auth_token", token)
 
-            <H2 id="request-builder"><ToolOutlined /> Request Builder</H2>
+# Use later (manually injected into headers, or using template strings)
+ctx.http.get("/secure-data", headers={"Authorization": f"Bearer {ctx.get_var('auth_token')}"})`}</Code>
+
+            <H2 id="request-builder" icon={<ToolOutlined />}>Request Builder</H2>
             <Paragraph>
-              The Request Builder is for developers who want to create and debug HTTP scenarios without
-              writing a Python file. It supports single requests and multi-step flows with captures.
-              Saved requests become normal managed scenarios: they appear in Scenarios, can be run,
-              scheduled, tagged, commented on, and inspected like code scenarios.
+              Not every test requires writing code. The QTP UI features a full <strong>Request Builder</strong>, similar to Postman, allowing you to define multi-step HTTP workflows directly in the browser.
             </Paragraph>
-            <Code>{`{
-  "name": "Login and read profile",
+            <Paragraph>
+              Scenarios created via Request Builder are saved natively in QTP. They participate in scheduling, CI integrations, and metrics just like code scenarios. Under the hood, they are stored as JSON configurations:
+            </Paragraph>
+            <Code language="json">{`{
+  "name": "Auth and Fetch Profile (UI Built)",
   "config": {
     "target": "users_api",
     "steps": [
       {
         "id": "login",
         "method": "POST",
-        "url": "/login",
+        "url": "/api/login",
         "body": {"mode": "json", "raw": "{\\"user\\":\\"alice\\"}"},
         "captures": [{"name": "token", "source": "json_path", "path": "$.token"}],
         "assertions": [{"type": "status_code", "operator": "equals", "expected": 200}]
@@ -377,124 +466,123 @@ response.json.should.have_field("items").with_length_at_least(1)`}</Code>
       {
         "id": "profile",
         "method": "GET",
-        "url": "/me",
+        "url": "/api/me",
         "headers": [{"name": "Authorization", "value": "Bearer {{token}}"}],
-        "assertions": [{"type": "json_path", "path": "$.username", "operator": "equals", "expected": "alice"}]
+        "assertions": [
+          {"type": "json_path", "path": "$.role", "operator": "equals", "expected": "admin"}
+        ]
       }
     ]
   }
 }`}</Code>
 
-            <H2 id="scheduling"><ScheduleOutlined /> Scheduling</H2>
+            <H2 id="scheduling" icon={<ScheduleOutlined />}>Scheduling</H2>
             <Paragraph>
-              Schedules automate scenario runs. A schedule can run one scenario or a group of scenarios
-              at the same recurrence. This is useful for smoke packs, integration packs, and long-running
-              confidence checks that should execute together every few minutes.
+              Schedules act as the heartbeat of your system's quality. You can group multiple scenarios into a "Pack" and run them periodically.
+            </Paragraph>
+            <Paragraph>
+              <strong>Common Scheduling Patterns:</strong>
             </Paragraph>
             <ul>
-              <li><code>interval</code>: run every N seconds.</li>
-              <li><code>cron</code>: run at a cron expression in a timezone.</li>
-              <li><code>once</code>: run at a specific time, then disable.</li>
+              <li><strong>Continuous Monitoring:</strong> Run critical <code>P0</code> scenarios every 5 minutes. (Use <code>interval: 300</code>).</li>
+              <li><strong>Nightly Batch:</strong> Run long end-to-end regression suites at 2 AM every day. (Use <code>cron: "0 2 * * *"</code>).</li>
             </ul>
             <Paragraph>
-              Schedule detail shows the recurrence, target mix, all included scenarios, recent runs, and
-              status distribution. When the scheduler fires, it queues one run for each scenario in the
-              schedule, all linked by the same schedule ID.
+              When a schedule fires, it generates an overarching <code>ScheduleRun</code> which aggregates the results of all individual scenario runs, providing a unified pass/fail metric.
             </Paragraph>
 
-            <H2 id="execution"><FieldTimeOutlined /> Execution and results</H2>
+            <H2 id="execution" icon={<DashboardOutlined />}>Execution & Results</H2>
             <Paragraph>
-              Runs are durable records. They start as queued work, are picked up by a capability-aware
-              worker, then finish with a terminal status. The run detail page is the primary debugging
-              surface: it includes scenario link, assertions, response, execution flow, steps, logs, and
-              comments.
+              When a scenario executes, QTP records every granular detail. Navigate to a Run's detail page to debug:
             </Paragraph>
             <ul>
-              <li><Tag color="green">passed</Tag> All required assertions passed.</li>
-              <li><Tag color="red">failed</Tag> Scenario ran but at least one assertion failed.</li>
-              <li><Tag color="orange">error</Tag> Scenario or platform execution failed unexpectedly.</li>
-              <li><Tag color="gold">timeout</Tag> A request, command, or scenario exceeded its budget.</li>
-              <li><Tag>canceled</Tag> A queued/running scenario was canceled.</li>
+              <li><strong>Timeline:</strong> Shows step execution time to spot performance regressions.</li>
+              <li><strong>Assertion View:</strong> A diff view showing exactly what was expected vs. what was received.</li>
+              <li><strong>Raw Request/Response:</strong> Complete HTTP headers and body payloads for deep debugging.</li>
+              <li><strong>Worker Logs:</strong> Standard output from Python or the CLI worker.</li>
             </ul>
             <Paragraph>
-              Failed runs can be triaged with defect types such as <code>product_bug</code>,
-              <code>automation_bug</code>, <code>system_issue</code>, <code>to_investigate</code>, and
-              <code>no_defect</code>. Failure signatures group repeated failures so teams can see whether
-              an issue is new or recurring.
+              <strong>Status Lifecycle:</strong>
+              <br/>
+              <code>Queued</code> ➔ <code>Running</code> ➔ <Tag color="green">Passed</Tag> | <Tag color="red">Failed</Tag> | <Tag color="orange">Error</Tag> | <Tag color="gold">Timeout</Tag>
+            </Paragraph>
+            <Paragraph>
+              To help with metrics, developers can categorize failures (e.g., tagging a failure as a <code>product_bug</code> vs <code>automation_bug</code>), which feeds directly into the QTP Dashboards.
             </Paragraph>
 
-            <H2 id="ci"><DeploymentUnitOutlined /> CI integration</H2>
+            <H2 id="ci" icon={<DeploymentUnitOutlined />}>CI/CD Integration</H2>
             <Paragraph>
-              Use QTP from CI when you want the pipeline to trigger a scenario or pack but keep evidence
-              in the platform. CI should call the API, wait for completion when appropriate, and link to
-              the run detail URL in pipeline logs.
+              The most powerful use of QTP is gating your deployments. Your CI tool shouldn't execute the tests itself; it should trigger QTP, wait for the result, and fail the pipeline if QTP reports a failure.
             </Paragraph>
-            <Code>{`#!/usr/bin/env bash
+            <Paragraph>
+              Here is a robust example for a bash-based CI step:
+            </Paragraph>
+            <Code language="bash">{`#!/usr/bin/env bash
 set -euo pipefail
 
-RUN=$(curl -sf -X POST "$QTP_URL/api/tests/$SCENARIO_ID/run" \\
+# 1. Trigger the Scenario Run
+echo "Triggering QTP Scenario..."
+RUN_RESP=$(curl -sf -X POST "$QTP_URL/api/tests/$SCENARIO_ID/run" \\
   -H "Authorization: Bearer $QTP_TOKEN" \\
   -H "Content-Type: application/json" \\
-  -d '{"environment":"ci"}')
+  -d '{"tags": ["ci-triggered"]}')
 
-RUN_ID=$(echo "$RUN" | jq -r '.id')
-echo "QTP run: $QTP_WEB_URL/runs/$RUN_ID"`}</Code>
-            <Callout type="warning" title="CI should not duplicate QTP's reporting">
-              Let QTP own run evidence. CI only needs to trigger the run, enforce the release gate, and
-              publish a link back to the platform.
-            </Callout>
+RUN_ID=$(echo "$RUN_RESP" | jq -r '.id')
+echo "Run initiated: $QTP_WEB_URL/runs/$RUN_ID"
 
-            <H2 id="api"><ApiOutlined /> API reference</H2>
+# 2. Poll for Completion
+STATUS="running"
+while [ "$STATUS" = "running" ] || [ "$STATUS" = "queued" ]; do
+  sleep 5
+  POLL_RESP=$(curl -sf -X GET "$QTP_URL/api/runs/$RUN_ID" \\
+    -H "Authorization: Bearer $QTP_TOKEN")
+  STATUS=$(echo "$POLL_RESP" | jq -r '.status')
+done
+
+# 3. Handle Result
+if [ "$STATUS" != "passed" ]; then
+  echo "Test failed with status: $STATUS"
+  exit 1
+fi
+echo "Test passed successfully!"`}</Code>
+
+            <H2 id="api" icon={<ApiOutlined />}>API Reference</H2>
             <Paragraph>
-              Most developer workflows can be automated through the API. The frontend route names use
-              <code>/scenarios</code>, while the backend API path remains <code>/api/tests</code>.
+              Everything you can do in the QTP UI can be done via the REST API. Authenticate requests using a Bearer token in the <code>Authorization</code> header.
             </Paragraph>
             <ApiTable />
 
-            <H2 id="extend"><CodeOutlined /> Extending QTP</H2>
+            <H2 id="extend" icon={<BuildOutlined />}>Extending QTP</H2>
             <Paragraph>
-              Add a new scenario type only when an existing type cannot express the test clearly. A new
-              adapter should convert domain-specific output into QTP's common result model: steps,
-              assertions, status, response, logs, and metrics.
+              If your organization uses specialized protocols (e.g., gRPC, AMQP) or bespoke testing utilities, you can extend QTP by creating new scenario adapter types.
             </Paragraph>
-            <Code>{`# Adapter checklist
-1. Add a scenario type constant in src/testkit/base.py.
-2. Implement execute_<adapter>(config, ctx) -> TestResult.
-3. Dispatch it from src/execution/runner.py.
-4. Add a worker capability for the adapter.
-5. Add scenario examples under backend/scenarios/automation.
-6. Document what evidence the adapter records.`}</Code>
+            <ol className="qtp-docs-steps" style={{ paddingLeft: '20px', margin: '20px 0' }}>
+              <li>Define a new constant in <code>src/testkit/base.py</code> (e.g., <code>TYPE_GRPC</code>).</li>
+              <li>Create a base class <code>GrpcTest(BaseTest)</code> with custom setup/teardown logic.</li>
+              <li>Provide context helpers (e.g., <code>ctx.grpc.invoke()</code>) that wrap the underlying driver and record assertions to QTP's evidence format.</li>
+              <li>Ensure the Worker Docker image includes the necessary client libraries.</li>
+            </ol>
 
-            <H2 id="troubleshooting"><BugOutlined /> Troubleshooting</H2>
+            <H2 id="troubleshooting" icon={<BugOutlined />}>Troubleshooting</H2>
             <H3>Scenario does not appear after discovery</H3>
-            <ul>
-              <li>Confirm the file is under <code>backend/scenarios/automation</code>.</li>
-              <li>Confirm the class subclasses one of QTP's scenario base classes.</li>
-              <li>Confirm <code>metadata.key</code> is globally unique.</li>
-              <li>Run discovery and check the API response for validation errors.</li>
+            <ul style={{ marginBottom: '16px' }}>
+              <li>Check the file path. Code must live under <code>backend/scenarios/automation/</code>.</li>
+              <li>Verify the class inherits from a known QTP base class (e.g., <code>HttpTest</code>).</li>
+              <li>Ensure the <code>metadata.key</code> is globally unique across the codebase.</li>
+              <li>Look at the API response from the <code>/discover</code> endpoint for syntax or import errors.</li>
             </ul>
-            <H3>Run remains queued</H3>
-            <ul>
-              <li>Check that at least one worker advertises the required capability.</li>
-              <li>Open Workers and confirm heartbeats are fresh.</li>
-              <li>For browser tests, confirm the worker image includes Playwright/Selenium support.</li>
+            <H3>Run remains stuck in "Queued" state</H3>
+            <ul style={{ marginBottom: '16px' }}>
+              <li>No workers are available. Go to the <strong>Workers</strong> page to check heartbeat freshness.</li>
+              <li>The scenario requires a capability (e.g., <code>browser</code>) that none of the active workers possess.</li>
+              <li>The worker pool is overwhelmed. Check if runs are backed up.</li>
             </ul>
-            <H3>Request is blocked</H3>
+            <H3>HTTP Target requests are timing out</H3>
             <ul>
-              <li>QTP applies SSRF protections to outbound HTTP calls.</li>
-              <li>Use registered targets and avoid private/internal addresses unless explicitly allowed.</li>
-              <li>If a dev-only internal target is intentional, add it to the allowlist in platform config.</li>
+              <li>Network isolation: Ensure the Worker container has network egress to the Target URL.</li>
+              <li>SSRF protections: QTP workers may block requests to internal IPs (<code>10.x.x.x</code>, <code>127.0.0.1</code>) by default unless explicitly whitelisted in the platform configuration.</li>
             </ul>
           </article>
-        </Col>
-
-        <Col xs={0} lg={5} className="qtp-docs-toc-col">
-          <aside className="qtp-docs-toc" aria-label="On this page">
-            <div className="qtp-docs-toc-title">On this page</div>
-            {sections.map((section) => (
-              <a key={section.id} href={`#${section.id}`}>{section.title}</a>
-            ))}
-          </aside>
         </Col>
       </Row>
     </div>

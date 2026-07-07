@@ -700,6 +700,17 @@ function AuthEditor({ value, onChange }: { value: any; onChange: (v: any) => voi
   );
 }
 
+function renderCaptures(captures: any) {
+  if (!captures) return <Typography.Text type="secondary">No variables captured</Typography.Text>;
+  if (Array.isArray(captures)) {
+    if (captures.length === 0) return <Typography.Text type="secondary">No variables captured</Typography.Text>;
+    return <Space>{captures.map((c: string) => <Tag key={c} color="blue">{c}</Tag>)}</Space>;
+  }
+  const entries = Object.entries(captures);
+  if (entries.length === 0) return <Typography.Text type="secondary">No variables captured</Typography.Text>;
+  return <Space>{entries.map(([k, v]) => <Tag key={k} color="blue">{k}: {String(v)}</Tag>)}</Space>;
+}
+
 function ResponseView({ result }: { result: SendResult }) {
   const [selectedResultStepIdx, setSelectedResultStepIdx] = useState<number>(0);
   const { token } = theme.useToken();
@@ -752,7 +763,7 @@ function ResponseView({ result }: { result: SendResult }) {
                  <Tabs items={[
                     { key: "body", label: "Body", children: <pre style={{ background: panelBg, padding: 12, borderRadius: 6, border: `1px solid ${token.colorBorderSecondary}`, marginTop: 0, overflowX: "auto" }}>{(stepRespData.body_text || "").slice(0, 5000) || "(empty)"}</pre> },
                     { key: "headers", label: "Headers", children: <Empty description="Headers not implemented in preview" image={Empty.PRESENTED_IMAGE_SIMPLE} /> },
-                    { key: "captures", label: "Captures", children: (stepRespData.captures && stepRespData.captures.length > 0) ? (<Space>{stepRespData.captures.map((c: string) => <Tag key={c} color="blue">{c}</Tag>)}</Space>) : <Typography.Text type="secondary">No variables captured</Typography.Text> }
+                    { key: "captures", label: "Captures", children: renderCaptures(stepRespData.captures) }
                   ]} />
                </Col>
                <Col span={10}>
@@ -793,7 +804,7 @@ function ResponseView({ result }: { result: SendResult }) {
             <Tabs items={[
               { key: "body", label: "Body", children: <pre style={{ background: panelBg, padding: 12, borderRadius: 6, border: `1px solid ${token.colorBorderSecondary}`, marginTop: 0, overflowX: "auto" }}>{(r.body_text || "").slice(0, 5000) || "(empty)"}</pre> },
               { key: "headers", label: "Headers", children: <Empty description="Headers not implemented in preview" image={Empty.PRESENTED_IMAGE_SIMPLE} /> },
-              { key: "captures", label: "Captures", children: (r.captures && r.captures.length > 0) ? (<Space>{r.captures.map((c: string) => <Tag key={c} color="blue">{c}</Tag>)}</Space>) : <Typography.Text type="secondary">No variables captured</Typography.Text> }
+              { key: "captures", label: "Captures", children: renderCaptures(r.captures) }
             ]} />
           </Col>
           <Col span={10}>

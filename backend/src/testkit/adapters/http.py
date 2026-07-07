@@ -225,8 +225,8 @@ def _capture_value(capture: dict[str, Any], response: dict[str, Any]) -> Any:
     return None
 
 
-def _apply_captures(step: dict[str, Any], response: dict[str, Any], ctx: TestContext) -> tuple[bool, str | None, list[str]]:
-    captured: list[str] = []
+def _apply_captures(step: dict[str, Any], response: dict[str, Any], ctx: TestContext) -> tuple[bool, str | None, dict[str, Any]]:
+    captured: dict[str, Any] = {}
     for capture in step.get("captures") or []:
         name = str(capture.get("name", "")).strip()
         if not name:
@@ -236,7 +236,7 @@ def _apply_captures(step: dict[str, Any], response: dict[str, Any], ctx: TestCon
             return False, f"capture {name!r} did not find a value", captured
         if value is not None:
             ctx.set_var(name, value)
-            captured.append(name)
+            captured[name] = value
     return True, None, captured
 
 
@@ -312,7 +312,7 @@ def execute_http(config: dict[str, Any], ctx: TestContext) -> TestResult:
                         assertion.target = f"{step['id']}:{assertion.target}"
                     all_assertions.append(assertion)
 
-                captured: list[str] = []
+                captured: dict[str, Any] = {}
                 if single.status == PASSED:
                     with tracer.start_as_current_span("http.captures") as cap_span:
                         cap_span.set_attribute("step.id", step["id"])
