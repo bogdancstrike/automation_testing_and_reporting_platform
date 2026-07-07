@@ -242,7 +242,7 @@ def _apply_captures(step: dict[str, Any], response: dict[str, Any], ctx: TestCon
 
 def execute_http(config: dict[str, Any], ctx: TestContext) -> TestResult:
     steps = normalize_steps(config)
-    with tracer.start_as_current_span("flow_executor") as span:
+    with tracer.start_as_current_span("http.execute") as span:
         span.set_attribute("flow.steps", len(steps))
         span.set_attribute("flow.mode", "multi_step" if isinstance(config.get("steps"), list) else "single_request")
 

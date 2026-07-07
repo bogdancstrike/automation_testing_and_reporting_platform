@@ -52,6 +52,15 @@ def main() -> int:
     log.info("creating tables (create_all)")
     Base.metadata.create_all(get_engine())
 
+    # Create the Kafka runs topic up front with the configured partition count
+    # (10), so run dispatch spreads across the worker group instead of Kafka
+    # auto-creating it with a single partition.
+    try:
+        from src.core.kafka_bus import ensure_runs_topic
+        ensure_runs_topic()
+    except Exception as e:
+        log.warning(f"could not ensure kafka runs topic at init: {e}")
+
     with session_scope() as db:
         project = db.scalars(select(Project).where(Project.key == "default")).first()
         if not project:

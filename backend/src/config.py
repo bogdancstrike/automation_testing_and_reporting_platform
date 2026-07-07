@@ -1,5 +1,6 @@
 """QTP application configuration. All env-driven knobs live here."""
 import os
+import socket
 
 from dotenv import load_dotenv
 
@@ -70,14 +71,43 @@ class Config:
     KEYCLOAK_ADMIN_PASSWORD = os.getenv("KEYCLOAK_ADMIN_PASSWORD", "admin")
 
     # ── Execution / worker ─────────────────────────────────────────────────
-    WORKER_NAME          = os.getenv("WORKER_NAME", "qtp-worker-1")
+    # WORKER_NAME is the Kafka *consumer group* shared by every worker replica.
+    # The QF ETL framework uses it as the group id, so Kafka distributes the
+    # runs-topic partitions across all replicas that share this value. It is NOT
+    # a per-instance identity — that is WORKER_INSTANCE_ID below.
+    WORKER_NAME          = os.getenv("WORKER_NAME", "qtp-workers")
+    # Per-container identity for the `workers` table / heartbeats / dashboards.
+    # Defaults to the container hostname, which is unique per replica.
+    WORKER_INSTANCE_ID   = os.getenv("WORKER_INSTANCE_ID") or socket.gethostname()
     WORKER_CAPABILITIES  = tuple(
         c.strip() for c in os.getenv("WORKER_CAPABILITIES", "http,python").split(",") if c.strip()
     )
+    # How many runs one worker process executes concurrently (ETL thread pool).
+    WORKER_MAX_CONCURRENCY = _int("WORKER_MAX_CONCURRENCY", 4)
     WORKER_POLL_SECONDS  = float(os.getenv("WORKER_POLL_SECONDS", "1.0"))
     WORKER_HEARTBEAT_SECONDS = float(os.getenv("WORKER_HEARTBEAT_SECONDS", "5.0"))
     WORKER_STALE_SECONDS = float(os.getenv("WORKER_STALE_SECONDS", "30.0"))
     SCHEDULER_POLL_SECONDS = float(os.getenv("SCHEDULER_POLL_SECONDS", "2.0"))
+    # Scheduler now runs *inside* the backend (API) process as a background
+    # thread. Set false to disable it on a given replica if ever needed.
+    SCHEDULER_ENABLED    = _bool("SCHEDULER_ENABLED", True)
+
+    # ── Kafka (worker transport) ───────────────────────────────────────────
+    # Runs are dispatched to workers over Kafka: the backend produces one
+    # message per enqueued run onto KAFKA_RUNS_TOPIC (keyed by run id, so each
+    # run hashes to a single partition), and the worker consumer group splits
+    # the partitions across replicas. This is what makes workers horizontally
+    # scalable — add a replica and Kafka rebalances partitions onto it.
+    KAFKA_BOOTSTRAP_SERVERS   = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9094")
+    KAFKA_RUNS_TOPIC          = os.getenv("KAFKA_RUNS_TOPIC", "qtp-workers")
+    KAFKA_RUNS_PARTITIONS     = _int("KAFKA_RUNS_PARTITIONS", 10)
+    # The QF @kafka_handler contract requires a non-empty topics_out; the run
+    # executor returns None so nothing is actually published here — it exists
+    # only to satisfy the framework and to carry optional worker events later.
+    KAFKA_WORKER_EVENTS_TOPIC = os.getenv("KAFKA_WORKER_EVENTS_TOPIC", "qtp-worker-events")
+    KAFKA_DLQ_TOPIC           = os.getenv("KAFKA_DLQ_TOPIC", "qtp-workers-dlq")
+    # Required by framework.etl._validate_config() at worker startup.
+    ERROR_TOPIC               = os.getenv("ERROR_TOPIC", "qtp-errors")
 
     # ── Request-test execution limits / SSRF ───────────────────────────────
     REQUEST_MAX_TIMEOUT_MS = _int("REQUEST_MAX_TIMEOUT_MS", 60000)

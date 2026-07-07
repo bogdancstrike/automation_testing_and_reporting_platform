@@ -4,6 +4,7 @@ networks:
 volumes:
   postgres-data: {}
   keycloak-data: {}
+  kafka-data: {}
 
 x-backend-env: &backend-env
   DATABASE_URL: "postgresql+psycopg2://qtp:qtp@postgres:5432/qtp"
@@ -14,9 +15,20 @@ x-backend-env: &backend-env
   KEYCLOAK_AUDIENCE: "qtp-api"
   ALLOWED_ORIGINS: "http://localhost:5173"
   # The demo app-under-test lives inside the compose network on a private IP;
-  # allow it past the SSRF private-range block.
+  # allow it (and the API self-tests target) past the SSRF private-range block.
   SSRF_ALLOWLIST: "httpbin,api,localhost,127.0.0.1"
   LOG_LEVEL: "INFO"
+  # ── Kafka worker transport ──
+  KAFKA_BOOTSTRAP_SERVERS: "kafka:9092"
+  KAFKA_RUNS_TOPIC: "qtp-workers"
+  KAFKA_RUNS_PARTITIONS: "10"
+  # ── Redis (required by the QF ETL worker framework) ──
+  REDIS_HOST: "redis"
+  REDIS_PORT: "6379"
+  REDIS_DB: "0"
+  # ── Tracing → Jaeger (OTLP gRPC) ──
+  ENABLE_TRACING: "true"
+  OTLP_ENDPOINT: "http://jaeger:4317"
 
 services:
 
@@ -38,6 +50,83 @@ services:
       interval: 5s
       timeout: 3s
       retries: 15
+    restart: unless-stopped
+
+  # ── Kafka (KRaft, single broker) — worker work-distribution transport ────
+  kafka:
+    image: bitnami/kafka:3.7
+    container_name: qtp-kafka
+    networks: [qtpnet]
+    ports:
+      - "9094:9094"
+    environment:
+      KAFKA_ENABLE_KRAFT: "yes"
+      KAFKA_BROKER_ID: "1"
+      KAFKA_CFG_NODE_ID: "1"
+      KAFKA_CFG_PROCESS_ROLES: "broker,controller"
+      KAFKA_CFG_LISTENERS: "PLAINTEXT://:9092,EXTERNAL://:9094,CONTROLLER://:9093"
+      # In-network clients use kafka:9092; host tools use localhost:9094.
+      KAFKA_CFG_ADVERTISED_LISTENERS: "PLAINTEXT://kafka:9092,EXTERNAL://localhost:9094"
+      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: "PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT"
+      KAFKA_CFG_INTER_BROKER_LISTENER_NAME: "PLAINTEXT"
+      KAFKA_CFG_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
+      KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: "1@kafka:9093"
+      KAFKA_CFG_LOG_DIRS: "/bitnami/kafka/data"
+      KAFKA_CFG_OFFSETS_TOPIC_REPLICATION_FACTOR: "1"
+      KAFKA_CFG_DEFAULT_REPLICATION_FACTOR: "1"
+      KAFKA_CFG_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: "1"
+      KAFKA_CFG_TRANSACTION_STATE_LOG_MIN_ISR: "1"
+      KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE: "true"
+    volumes:
+      - kafka-data:/bitnami/kafka/data
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-topics.sh --bootstrap-server localhost:9092 --list || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 15
+      start_period: 30s
+    restart: unless-stopped
+
+  # ── Kafka UI (inspect topics / partitions / consumer groups) ─────────────
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: qtp-kafka-ui
+    networks: [qtpnet]
+    depends_on:
+      kafka: {condition: service_healthy}
+    ports:
+      - "8081:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: "qtp"
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: "kafka:9092"
+      DYNAMIC_CONFIG_ENABLED: "true"
+    restart: unless-stopped
+
+  # ── Redis (required by the QF ETL kafka-worker runtime) ──────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: qtp-redis
+    networks: [qtpnet]
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  # ── Jaeger (OTLP traces from backend + workers) ──────────────────────────
+  jaeger:
+    image: jaegertracing/all-in-one:1.56
+    container_name: qtp-jaeger
+    networks: [qtpnet]
+    ports:
+      - "16686:16686"   # Jaeger UI
+      - "4317:4317"     # OTLP gRPC
+      - "4318:4318"     # OTLP HTTP
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
     restart: unless-stopped
 
   # ── Keycloak (dev mode, realm imported from file) ────────────────────────
@@ -74,67 +163,75 @@ services:
       - "8088:8080"
     restart: unless-stopped
 
-  # ── One-shot: create tables + seed admin/project/target/sample tests ─────
+  # ── One-shot: create schema, seed data, create the runs topic (10 parts) ─
   init:
-    build: ./backend
+    build:
+      context: .
+      dockerfile: Dockerfile
     image: qtp-backend
     container_name: qtp-init
     networks: [qtpnet]
+    working_dir: /app/backend
     depends_on:
       postgres: {condition: service_healthy}
+      kafka: {condition: service_healthy}
     environment:
       <<: *backend-env
+      SERVICE_NAME: "qtp-init"
     command: ["python", "scripts/init_db.py"]
     restart: "no"
 
-  # ── API ──────────────────────────────────────────────────────────────────
+  # ── Backend: API + scheduler (merged), gunicorn + gevent, Kafka producer ─
   api:
-    build: ./backend
+    build:
+      context: .
+      dockerfile: Dockerfile
     image: qtp-backend
     container_name: qtp-api
     networks: [qtpnet]
+    working_dir: /app/backend
     ports:
       - "${API_PORT:-5100}:5100"
     depends_on:
       postgres: {condition: service_healthy}
       keycloak: {condition: service_healthy}
+      kafka: {condition: service_healthy}
       init: {condition: service_completed_successfully}
     environment:
       <<: *backend-env
       ROLE: "api"
-    command: ["python", "main.py"]
+      SERVICE_NAME: "qtp-api"
+      GUNICORN_WORKERS: "2"
+    command: ["gunicorn", "-c", "gunicorn.conf.py", "wsgi:app"]
     restart: unless-stopped
 
-  # ── Execution worker ─────────────────────────────────────────────────────
+  # ── Worker: Kafka consumer of qtp-workers, scaled to 3 (own python app) ──
+  # All replicas share consumer group WORKER_NAME=qtp-workers, so the broker
+  # splits the 10 partitions across them. Scale with `replicas` (or GUNICORN_WORKERS).
   worker:
-    build: ./backend
+    build:
+      context: .
+      dockerfile: Dockerfile
     image: qtp-backend
-    container_name: qtp-worker
     networks: [qtpnet]
+    working_dir: /app/worker
     depends_on:
       postgres: {condition: service_healthy}
+      kafka: {condition: service_healthy}
+      redis: {condition: service_healthy}
       init: {condition: service_completed_successfully}
     environment:
       <<: *backend-env
       ROLE: "worker"
-      WORKER_NAME: "qtp-worker-1"
+      SERVICE_NAME: "qtp-worker"
+      # Shared Kafka consumer group across every replica (partition split).
+      WORKER_NAME: "qtp-workers"
       WORKER_CAPABILITIES: "http,python"
-    command: ["python", "worker.py"]
-    restart: unless-stopped
-
-  # ── Scheduler ────────────────────────────────────────────────────────────
-  scheduler:
-    build: ./backend
-    image: qtp-backend
-    container_name: qtp-scheduler
-    networks: [qtpnet]
-    depends_on:
-      postgres: {condition: service_healthy}
-      init: {condition: service_completed_successfully}
-    environment:
-      <<: *backend-env
-      ROLE: "scheduler"
-    command: ["python", "scheduler.py"]
+      GUNICORN_WORKERS: "1"
+      PYTHONPATH: "/app/backend"
+    command: ["gunicorn", "-c", "gunicorn.conf.py", "wsgi:app"]
+    deploy:
+      replicas: 3
     restart: unless-stopped
 
   # ── Frontend (built SPA served by nginx) ─────────────────────────────────

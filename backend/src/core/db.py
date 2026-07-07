@@ -44,7 +44,14 @@ def _sessionmaker() -> sessionmaker:
 
 @contextmanager
 def session_scope() -> Iterator[Session]:
-    """Transactional session scope: commit on success, rollback on error."""
+    """Transactional session scope: commit on success, rollback on error.
+
+    After a successful commit, any runs stashed on ``session.info["pending_runs"]``
+    (by ``execution.service.enqueue_run``) are published to Kafka. This is a
+    transactional-outbox boundary: the run row is durably committed *before* the
+    worker can ever see the message, so a worker never races an uncommitted run.
+    Publishing is best-effort and never rolls back the committed work.
+    """
     session = _sessionmaker()()
     try:
         yield session
@@ -52,8 +59,21 @@ def session_scope() -> Iterator[Session]:
     except Exception:
         session.rollback()
         raise
+    else:
+        _publish_pending_runs(session)
     finally:
         session.close()
+
+
+def _publish_pending_runs(session: Session) -> None:
+    pending = session.info.pop("pending_runs", None)
+    if not pending:
+        return
+    # Imported here to avoid a core→kafka import at module load (keeps `core`
+    # importable in tooling/tests that never touch Kafka).
+    from src.core.kafka_bus import publish_run
+    for run_id, capability in pending:
+        publish_run(run_id, capability)
 
 
 def new_session() -> Session:

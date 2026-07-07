@@ -45,8 +45,12 @@ def enqueue_run(db: Session, definition: TestDefinition, *, trigger: str = "manu
     )
     db.add(run)
     db.flush()
-    db.add(RunQueue(test_run_id=run.id, capability=capability_for(definition.type)))
+    capability = capability_for(definition.type)
+    db.add(RunQueue(test_run_id=run.id, capability=capability))
     db.flush()
+    # Stash for the transactional-outbox publish in session_scope(): the run is
+    # dispatched to a worker over Kafka only after this transaction commits.
+    db.info.setdefault("pending_runs", []).append((run.id, capability))
     return run
 
 
