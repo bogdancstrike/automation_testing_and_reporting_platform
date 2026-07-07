@@ -136,6 +136,7 @@ You can write tests in standard Python inside `backend/scenarios/automation/`. N
 The `HttpTest` base class is optimized for REST and GraphQL APIs. It provides a fluent assertion syntax and automatically logs full request/response payloads as evidence.
 
 **Single-Step Checks**
+
 ```python
 from src.testkit import TYPE_HTTP, HttpTest, TestMetadata
 
@@ -156,6 +157,9 @@ class SelfHealth(HttpTest):
         response.json.should.have_field("service").equal_to("qtp")
 ```
 
+**Stateful Multi-Step Workflows:** For End-to-End API scenarios, you can group actions into steps and pass state dynamically.
+
+```python
 class SelfMultiStepHealthLivenessReadiness(HttpTest):
     metadata = TestMetadata(key="self.multi_health", name="QTP · Health/Liveness", type=TYPE_HTTP, target="qtp_self")
 
@@ -171,7 +175,6 @@ class SelfMultiStepHealthLivenessReadiness(HttpTest):
             response.json.should.have_field("status").equal_to("alive")
 ```
 
-**Stateful Multi-Step Workflows:** For End-to-End API scenarios, you can group actions into steps and pass state dynamically.
 
 ```python
 from src.testkit import TYPE_HTTP, HttpTest, TestMetadata
