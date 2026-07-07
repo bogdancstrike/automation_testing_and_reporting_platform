@@ -1,0 +1,179 @@
+import pytest
+from sqlalchemy import create_engine, select
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.ext.compiler import compiles
+from sqlalchemy.dialects.postgresql import JSONB
+
+from src.core.db import Base
+import src.models_all  # noqa: F401
+from src.catalog.models import Project, Target, TestDefinition
+from src.execution.models import RunQueue, TestRun
+from src.catalog import service as catalog_service
+from src.execution import service as execution_service
+from src.execution import queue as execution_queue
+from src.execution.runner import execute_run
+from src.testkit.context import TestContext
+from src.testkit.result import CANCELED, PASSED, ERROR
+
+# Define SQLite compile rule for JSONB
+@compiles(JSONB, "sqlite")
+def compile_jsonb_sqlite(type_, compiler, **kw):
+    return "JSON"
+
+@pytest.fixture
+def db_session():
+    engine = create_engine("sqlite:///:memory:")
+    Base.metadata.create_all(engine)
+    Session = sessionmaker(bind=engine, expire_on_commit=False)
+    db = Session()
+    try:
+        # Seed default project
+        p = Project(key="default", name="Default Project")
+        db.add(p)
+        db.flush()
+        yield db
+    finally:
+        db.close()
+
+def test_enqueue_and_claim(db_session):
+    db = db_session
+    # 1. Create target
+    catalog_service.create_target(db, {
+        "key": "demo",
+        "name": "Demo Target",
+        "base_url": "http://example.com"
+    })
+    
+    # 2. Create test definition
+    test_def = catalog_service.create_request_test(db, {
+        "key": "ui.test",
+        "name": "UI Test",
+        "config": {
+            "target": "demo",
+            "method": "GET",
+            "url": "/get",
+            "assertions": [{"type": "status_code", "operator": "equals", "expected": 200}]
+        }
+    })
+    
+    # 3. Enqueue run
+    run = execution_service.enqueue_run(db, db.get(TestDefinition, test_def["id"]))
+    assert run.status == "queued"
+    
+    # 4. Claim run (worker with matching capabilities)
+    # If capabilities don't match (e.g. CLI only), shouldn't claim
+    claimed = execution_queue.claim_next(db, "worker-1", ("cli",))
+    assert claimed is None
+    
+    # Matching capability (http)
+    claimed = execution_queue.claim_next(db, "worker-1", ("http",))
+    assert claimed is not None
+    assert claimed.id == run.id
+    assert claimed.status == "claimed"
+    assert claimed.worker_name == "worker-1"
+
+def test_cancel_queued_run(db_session):
+    db = db_session
+    catalog_service.create_target(db, {
+        "key": "demo",
+        "name": "Demo Target",
+        "base_url": "http://example.com"
+    })
+    test_def = catalog_service.create_request_test(db, {
+        "key": "ui.test",
+        "name": "UI Test",
+        "config": {
+            "target": "demo",
+            "method": "GET",
+            "url": "/get",
+        }
+    })
+    run = execution_service.enqueue_run(db, db.get(TestDefinition, test_def["id"]))
+    
+    # Cancel while queued
+    res = execution_service.cancel_run(db, run.id)
+    assert res["status"] == "canceled"
+    assert run.status == "canceled"
+    assert run.error_category == "canceled"
+    
+    # Queue item should be marked done
+    q_items = db.scalars(select(RunQueue).where(RunQueue.test_run_id == run.id)).all()
+    assert all(q.status == "done" for q in q_items)
+
+def test_cancel_running_run_cooperative(db_session):
+    db = db_session
+    catalog_service.create_target(db, {
+        "key": "demo",
+        "name": "Demo Target",
+        "base_url": "http://example.com"
+    })
+    test_def = catalog_service.create_request_test(db, {
+        "key": "ui.test2",
+        "name": "UI Test 2",
+        "config": {
+            "target": "demo",
+            "steps": [
+                {"id": "step1", "name": "Step 1", "method": "GET", "url": "/get"},
+                {"id": "step2", "name": "Step 2", "method": "GET", "url": "/get"},
+            ]
+        }
+    })
+    run = execution_service.enqueue_run(db, db.get(TestDefinition, test_def["id"]))
+    
+    # Claim run
+    claimed = execution_queue.claim_next(db, "worker-1", ("http",))
+    assert claimed is not None
+    assert claimed.status == "claimed"
+    
+    # Request cancellation while running/claimed
+    res = execution_service.cancel_run(db, run.id)
+    assert res["status"] == "claimed"
+    assert res["cancel_requested"] is True
+    assert run.cancel_requested is True
+
+    # When execute_run is called, should check cancel_requested and mark CANCELED
+    execute_run(db, run, "worker-1")
+    assert run.status == CANCELED
+    assert run.error_category == "canceled"
+
+
+def test_encrypted_secrets(db_session):
+    from src.core.secrets import create_secret, get_secrets_for_project, decrypt
+    db = db_session
+    p = db.scalars(select(Project).where(Project.key == "default")).first()
+    project_id = p.id
+    
+    # Create secret
+    secret = create_secret(db, project_id, "my_token", "super_secret_value_123")
+    assert secret.name == "my_token"
+    # Ensure it's stored encrypted
+    assert secret.encrypted_value != "super_secret_value_123"
+    
+    # Decrypt and check
+    decrypted = decrypt(secret.encrypted_value)
+    assert decrypted == "super_secret_value_123"
+    
+    # Fetch all secrets for project
+    all_secrets = get_secrets_for_project(db, project_id)
+    assert all_secrets == {"my_token": "super_secret_value_123"}
+
+
+def test_audit_logging(db_session):
+    from src.audit.service import log_audit
+    from src.audit.models import AuditEvent
+    db = db_session
+    p = db.scalars(select(Project).where(Project.key == "default")).first()
+    project_id = p.id
+    
+    # Create audit event
+    evt = log_audit(db, project_id, "test.create", "alice", "test", "test-123", {"name": "test-name"})
+    
+    # Query database
+    db_evt = db.scalars(select(AuditEvent).where(AuditEvent.id == evt.id)).first()
+    assert db_evt is not None
+    assert db_evt.project_id == project_id
+    assert db_evt.action == "test.create"
+    assert db_evt.actor == "alice"
+    assert db_evt.entity_type == "test"
+    assert db_evt.entity_id == "test-123"
+    assert db_evt.context == {"name": "test-name"}

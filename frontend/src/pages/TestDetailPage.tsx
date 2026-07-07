@@ -1,7 +1,8 @@
-import { Card, Descriptions, Button, Typography, Table, Space, Tabs, App, Tag, Row, Col, Alert } from "antd";
-import { PlayCircleOutlined, ArrowLeftOutlined, ApiOutlined } from "@ant-design/icons";
+import { useState } from "react";
+import { Card, Descriptions, Button, Typography, Table, Space, Tabs, App, Tag, Row, Col, Alert, Modal, Select, Form, Input, List } from "antd";
+import { PlayCircleOutlined, ArrowLeftOutlined, ApiOutlined, EditOutlined } from "@ant-design/icons";
 import { useParams, useNavigate } from "react-router-dom";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { qtp } from "../api/qtp";
 import { StatusTag, TypeTag } from "../components/tags";
 
@@ -13,13 +14,41 @@ export default function TestDetailPage() {
   const { id = "" } = useParams();
   const nav = useNavigate();
   const { message } = App.useApp();
+  const qc = useQueryClient();
+  const [commentForm] = Form.useForm();
+
+  const [isEditingTags, setIsEditingTags] = useState(false);
+  const [editingTags, setEditingTags] = useState<string[]>([]);
+
   const { data: t } = useQuery({ queryKey: ["test", id], queryFn: () => qtp.test(id) });
   const { data: runs = [] } = useQuery({ queryKey: ["runs", "byTest", id], queryFn: () => qtp.runs(`?test_definition_id=${id}`) });
+  const { data: allTags = [] } = useQuery({ queryKey: ["allTags"], queryFn: () => qtp.tags("") });
+  const { data: comments = [] } = useQuery({ queryKey: ["testComments", id], queryFn: () => qtp.testComments(id) });
 
   const run = useMutation({
     mutationFn: () => qtp.runTest(id),
     onSuccess: (r) => { message.success("Run queued"); nav(`/runs/${r.id}`); },
     onError: (e: any) => message.error(e.message || "failed"),
+  });
+
+  const updateTags = useMutation({
+    mutationFn: (newTags: string[]) => qtp.updateTestTags(id, newTags),
+    onSuccess: () => {
+      message.success("Tags updated");
+      qc.invalidateQueries({ queryKey: ["test", id] });
+      setIsEditingTags(false);
+    },
+    onError: (e: any) => message.error(e.message || "failed to update tags"),
+  });
+
+  const addComment = useMutation({
+    mutationFn: (v: { body: string; tags: string[] }) => qtp.createTestComment(id, v.body, v.tags),
+    onSuccess: () => {
+      message.success("Comment added");
+      qc.invalidateQueries({ queryKey: ["testComments", id] });
+      commentForm.resetFields();
+    },
+    onError: (e: any) => message.error(e.message || "failed to add comment"),
   });
 
   if (!t) return null;
@@ -43,7 +72,12 @@ export default function TestDetailPage() {
               <Descriptions.Item label="Owner">{t.owner || "—"}</Descriptions.Item>
               <Descriptions.Item label="Status"><Tag>{t.status}</Tag></Descriptions.Item>
               <Descriptions.Item label="Last result"><StatusTag status={t.last_run_status} /></Descriptions.Item>
-              <Descriptions.Item label="Tags">{(t.tags || []).map((x) => <Tag key={x}>{x}</Tag>) || "—"}</Descriptions.Item>
+              <Descriptions.Item label="Tags">
+                <Space wrap>
+                  {(t.tags || []).map((x) => <Tag key={x}>{x}</Tag>)}
+                  <Button size="small" type="dashed" icon={<EditOutlined />} onClick={() => { setEditingTags(t.tags || []); setIsEditingTags(true); }}>Edit</Button>
+                </Space>
+              </Descriptions.Item>
               {t.code_ref && <Descriptions.Item label="Code ref"><Typography.Text code>{t.code_ref}</Typography.Text></Descriptions.Item>}
             </Descriptions>
           </Card>
@@ -195,7 +229,59 @@ export default function TestDetailPage() {
               }} />
           ),
         },
+        {
+          key: "comments", label: `Comments (${comments.length})`,
+          children: (
+            <div style={{ padding: "8px 0" }}>
+              <List
+                dataSource={comments}
+                locale={{ emptyText: "No comments yet" }}
+                renderItem={(item: any) => (
+                  <List.Item style={{ padding: "12px 0", borderBottom: "1px solid #f0f0f0" }}>
+                    <List.Item.Meta
+                      title={
+                        <Space>
+                          <Typography.Text strong>{item.author}</Typography.Text>
+                          <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                            {item.created_at?.replace("T", " ").slice(0, 19)}
+                          </Typography.Text>
+                          {(item.tags || []).map((tc: string) => (
+                            <Tag key={tc} color="purple">{tc}</Tag>
+                          ))}
+                        </Space>
+                      }
+                      description={<div style={{ whiteSpace: "pre-wrap", color: "#333", marginTop: 4 }}>{item.body}</div>}
+                    />
+                  </List.Item>
+                )}
+              />
+              <Card size="small" title="Add a comment" style={{ marginTop: 16 }}>
+                <Form form={commentForm} layout="vertical" onFinish={(v) => addComment.mutate(v)}>
+                  <Form.Item name="body" rules={[{ required: true, message: "Comment body is required" }]} style={{ marginBottom: 12 }}>
+                    <Input.TextArea rows={3} placeholder="Write a comment..." />
+                  </Form.Item>
+                  <Form.Item name="tags" label="Comment Tags" style={{ marginBottom: 12 }}>
+                    <Select mode="tags" style={{ width: "100%" }} placeholder="Add tags to this comment" options={allTags.map((tag: string) => ({ value: tag, label: tag }))} />
+                  </Form.Item>
+                  <Button type="primary" htmlType="submit" loading={addComment.isPending}>Add comment</Button>
+                </Form>
+              </Card>
+            </div>
+          ),
+        },
       ]} />
+
+      <Modal title="Edit Test Tags" open={isEditingTags} onCancel={() => setIsEditingTags(false)}
+        onOk={() => updateTags.mutate(editingTags)} confirmLoading={updateTags.isPending}>
+        <Select
+          mode="tags"
+          style={{ width: "100%" }}
+          placeholder="Select or type tags"
+          value={editingTags}
+          onChange={setEditingTags}
+          options={allTags.map((tag: string) => ({ value: tag, label: tag }))}
+        />
+      </Modal>
     </div>
   );
 }

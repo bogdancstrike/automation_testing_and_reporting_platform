@@ -94,6 +94,7 @@ class Config:
     # ── Tracing ────────────────────────────────────────────────────────────
     ENABLE_TRACING = _bool("ENABLE_TRACING", False)
     OTLP_ENDPOINT  = os.getenv("OTLP_ENDPOINT", "http://localhost:4317")
+    SECRET_ENCRYPTION_KEY = os.getenv("SECRET_ENCRYPTION_KEY", "qtp-fallback-key-32bytes-long-123")
 
     # ── Test discovery ─────────────────────────────────────────────────────
     AUTOMATION_MODULES = tuple(

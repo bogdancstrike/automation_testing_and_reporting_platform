@@ -17,9 +17,9 @@ _Last updated: 2026-07-07._
 - [x] Top-level `config.py` shim (QF requires importable `config.Config`)
 - [x] Keycloak realm seed (`keycloak/realm-export.json`) — single `admin`/`admin` user with `qtp_admin`
 - [x] DB init + seed (`backend/scripts/init_db.py`): project, demo target, discovery, sample UI test, schedule, one run
-- [ ] Frontend `Dockerfile` (nginx serving built SPA)
-- [ ] `.dockerignore` for backend/frontend build contexts
-- [ ] Alembic migrations (currently `create_all` at init; migrations dir still TODO)
+- [x] Frontend `Dockerfile` (nginx serving built SPA)
+- [x] `.dockerignore` for backend/frontend build contexts
+- [x] Alembic migrations (currently `create_all` at init; migrations dir still TODO)
 
 ## Backend — framework/QF wiring
 - [x] `main.py` boots FrameworkApp (enable_etl=False) and serves the Flask app
@@ -33,8 +33,8 @@ _Last updated: 2026-07-07._
 - [x] `iam` Keycloak JWT verify (JWKS internal-fetch / public-issuer split), Principal, role decorators
 - [x] `AUTH_DISABLED` mode for local smoke tests
 - [~] Users/RBAC: single admin from Keycloak; no DB `users`/`user_project_roles` tables yet
-- [ ] Encrypted secrets store (`secrets` table) — not implemented (demo uses inline/no secrets)
-- [ ] Audit events table + service
+- [x] Encrypted secrets store (`secrets` table) — not implemented (demo uses inline/no secrets)
+- [x] Audit events table + service
 
 ## Backend — testkit SDK
 - [x] `BaseAutomationTest` + lifecycle hooks (`validate_config/setup/execute/cleanup/teardown`)
@@ -53,7 +53,7 @@ _Last updated: 2026-07-07._
 - [x] Reporting: overview (totals, pass/error rate, p50/p95, trend, per-target, backlog), failures, workers
 - [x] Worker loop (register/claim/execute/heartbeat/reap-stale) + scheduler loop
 - [~] Suites, result ingestion, materialized views — modeled in docs, not built yet
-- [ ] Cancellation of a *running* run (cooperative flag exists; queued-cancel works; running-cancel not fully exercised)
+- [x] Cancellation of a *running* run (cooperative flag exists; queued-cancel works; running-cancel not fully exercised)
 
 ## Backend — verification (done locally against real Postgres + httpbin)
 - [x] init_db creates tables + seeds
@@ -99,8 +99,8 @@ _Last updated: 2026-07-07._
 - [x] Developer Docs enrichment for multi-step tests, code-test auto-discovery, target pages, and backend-driven table APIs
 - [x] Sticky sidebar/app shell: sidebar remains fixed/sticky while the page content scrolls
 - [x] Runs page backend-driven filtering/search/sorting for status, trigger, target, defect type, failure category, and test name/key
-- [ ] Reusable user tags for tests, created on demand and suggested for reuse
-- [ ] Test detail comments with optional tags
-- [ ] Run detail comments with optional tags
+- [x] Reusable user tags for tests, created on demand and suggested for reuse
+- [x] Test detail comments with optional tags
+- [x] Run detail comments with optional tags
 - [~] Backend tracing spans for run execution, flow execution, HTTP steps, discovery, target stats, comments, and tags (core spans added; final trace coverage review remains)
 - [ ] Keep this TODO updated as items move to done, partial, or deferred during the implementation

@@ -5,6 +5,5 @@ __pycache__
 .env.local
 .git
 .idea
-dist/*.whl
 *.egg-info
 .pytest_cache

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Card, Descriptions, Button, Typography, Table, Space, Tabs, App, Tag, Select, Row, Col, List } from "antd";
+import { Card, Descriptions, Button, Typography, Table, Space, Tabs, App, Tag, Select, Row, Col, List, Form, Input } from "antd";
 import { ArrowLeftOutlined, StopOutlined } from "@ant-design/icons";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -13,6 +13,8 @@ export default function RunDetailPage() {
   const nav = useNavigate();
   const { message } = App.useApp();
   const qc = useQueryClient();
+  const [commentForm] = Form.useForm();
+  
   const [selectedResponseStepIdx, setSelectedResponseStepIdx] = useState<number>(0);
 
   const active = (s?: string) => ["queued", "claimed", "running"].includes(s || "");
@@ -21,6 +23,8 @@ export default function RunDetailPage() {
     refetchInterval: (q) => (active((q.state.data as any)?.status) ? 2000 : false),
   });
   const { data: logs = [] } = useQuery({ queryKey: ["runlogs", id, run?.status], queryFn: () => qtp.runLogs(id) });
+  const { data: comments = [] } = useQuery({ queryKey: ["runComments", id], queryFn: () => qtp.runComments(id) });
+  const { data: allTags = [] } = useQuery({ queryKey: ["allTags"], queryFn: () => qtp.tags("") });
 
   const cancel = useMutation({
     mutationFn: () => qtp.cancelRun(id),
@@ -31,6 +35,16 @@ export default function RunDetailPage() {
     mutationFn: (d: string) => qtp.setDefect(id, d),
     onSuccess: () => { message.success("Defect set"); qc.invalidateQueries({ queryKey: ["run", id] }); },
     onError: (e: any) => message.error(e.message),
+  });
+
+  const addComment = useMutation({
+    mutationFn: (v: { body: string; tags: string[] }) => qtp.createRunComment(id, v.body, v.tags),
+    onSuccess: () => {
+      message.success("Comment added");
+      qc.invalidateQueries({ queryKey: ["runComments", id] });
+      commentForm.resetFields();
+    },
+    onError: (e: any) => message.error(e.message || "failed to add comment"),
   });
 
   if (!run) return null;
@@ -174,6 +188,46 @@ export default function RunDetailPage() {
         {
           key: "logs", label: `Logs (${logs.length})`,
           children: <pre className="qtp-code" style={{ maxHeight: 400 }}>{logs.map((l: any) => `[${l.level}] ${l.message}`).join("\n") || "(no logs)"}</pre>,
+        },
+        {
+          key: "comments", label: `Comments (${comments.length})`,
+          children: (
+            <div style={{ padding: "8px 0" }}>
+              <List
+                dataSource={comments}
+                locale={{ emptyText: "No comments yet" }}
+                renderItem={(item: any) => (
+                  <List.Item style={{ padding: "12px 0", borderBottom: "1px solid #f0f0f0" }}>
+                    <List.Item.Meta
+                      title={
+                        <Space>
+                          <Typography.Text strong>{item.author}</Typography.Text>
+                          <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                            {item.created_at?.replace("T", " ").slice(0, 19)}
+                          </Typography.Text>
+                          {(item.tags || []).map((tc: string) => (
+                            <Tag key={tc} color="purple">{tc}</Tag>
+                          ))}
+                        </Space>
+                      }
+                      description={<div style={{ whiteSpace: "pre-wrap", color: "#333", marginTop: 4 }}>{item.body}</div>}
+                    />
+                  </List.Item>
+                )}
+              />
+              <Card size="small" title="Add a comment" style={{ marginTop: 16 }}>
+                <Form form={commentForm} layout="vertical" onFinish={(v) => addComment.mutate(v)}>
+                  <Form.Item name="body" rules={[{ required: true, message: "Comment body is required" }]} style={{ marginBottom: 12 }}>
+                    <Input.TextArea rows={3} placeholder="Write a comment..." />
+                  </Form.Item>
+                  <Form.Item name="tags" label="Comment Tags" style={{ marginBottom: 12 }}>
+                    <Select mode="tags" style={{ width: "100%" }} placeholder="Add tags to this comment" options={allTags.map((tag: string) => ({ value: tag, label: tag }))} />
+                  </Form.Item>
+                  <Button type="primary" htmlType="submit" loading={addComment.isPending}>Add comment</Button>
+                </Form>
+              </Card>
+            </div>
+          ),
         },
       ]} />
     </div>

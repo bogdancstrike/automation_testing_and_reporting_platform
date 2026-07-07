@@ -18,6 +18,7 @@ from src.testkit.base import TYPE_HTTP
 from src.testkit.context import ResolvedTarget, TestContext
 from src.testkit.result import (CANCELED, ERROR, FAILED, TERMINAL_STATUSES,
                                 TIMEOUT, TestResult)
+from src.core.secrets import get_secrets_for_project
 
 tracer = get_tracer()
 
@@ -25,6 +26,7 @@ tracer = get_tracer()
 def _build_context(db: Session, run: TestRun, definition: TestDefinition,
                    target: Target | None) -> TestContext:
     ctx = TestContext(correlation_id=run.correlation_id)
+    ctx.secrets = get_secrets_for_project(db, run.project_id)
     if target:
         ctx.targets[target.key] = ResolvedTarget(
             key=target.key, base_url=target.base_url,

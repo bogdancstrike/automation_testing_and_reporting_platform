@@ -73,3 +73,13 @@ class TestRevision(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     definition: Mapped[TestDefinition] = relationship(back_populates="revisions")
+
+
+class Secret(Base):
+    __tablename__ = "secrets"
+    id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True, default=_uuid)
+    project_id: Mapped[str] = mapped_column(UUID(as_uuid=False), ForeignKey("projects.id"), index=True)
+    name: Mapped[str] = mapped_column(String(100), index=True)
+    encrypted_value: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
