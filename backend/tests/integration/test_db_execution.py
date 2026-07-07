@@ -1,8 +1,6 @@
 import pytest
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy.ext.compiler import compiles
-from sqlalchemy.dialects.postgresql import JSONB
 
 from src.core.db import Base
 import src.models_all  # noqa: F401
@@ -12,18 +10,20 @@ from src.catalog import service as catalog_service
 from src.execution import service as execution_service
 from src.execution import queue as execution_queue
 from src.execution.runner import execute_run
-from src.testkit.context import TestContext
-from src.testkit.result import CANCELED, PASSED, ERROR
+from src.testkit.result import CANCELED
 
-# Define SQLite compile rule for JSONB
-@compiles(JSONB, "sqlite")
-def compile_jsonb_sqlite(type_, compiler, **kw):
-    return "JSON"
+# PostgreSQL Test Database URL
+TEST_DATABASE_URL = "postgresql+psycopg2://qtp:qtp@localhost:5432/qtp"
 
 @pytest.fixture
 def db_session():
-    engine = create_engine("sqlite:///:memory:")
+    # Use real Postgres engine for tests
+    engine = create_engine(TEST_DATABASE_URL)
+    
+    # Drop existing tables to ensure clean state
+    Base.metadata.drop_all(engine)
     Base.metadata.create_all(engine)
+    
     Session = sessionmaker(bind=engine, expire_on_commit=False)
     db = Session()
     try:
@@ -136,7 +136,6 @@ def test_cancel_running_run_cooperative(db_session):
     assert run.status == CANCELED
     assert run.error_category == "canceled"
 
-
 def test_encrypted_secrets(db_session):
     from src.core.secrets import create_secret, get_secrets_for_project, decrypt
     db = db_session
@@ -156,7 +155,6 @@ def test_encrypted_secrets(db_session):
     # Fetch all secrets for project
     all_secrets = get_secrets_for_project(db, project_id)
     assert all_secrets == {"my_token": "super_secret_value_123"}
-
 
 def test_audit_logging(db_session):
     from src.audit.service import log_audit
