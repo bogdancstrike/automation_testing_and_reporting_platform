@@ -51,6 +51,7 @@ def main() -> int:
     wait_for_db()
     log.info("creating tables (create_all)")
     Base.metadata.create_all(get_engine())
+    ensure_schema_compatibility()
 
     # Create the Kafka runs topic up front with the configured partition count
     # (10), so run dispatch spreads across the worker group instead of Kafka
@@ -124,6 +125,21 @@ def main() -> int:
 
     log.info("init complete")
     return 0
+
+
+def ensure_schema_compatibility() -> None:
+    """Apply additive schema fixes for dev databases created before migrations."""
+    statements = [
+        "ALTER TABLE test_runs ADD COLUMN IF NOT EXISTS triggered_by VARCHAR(120)",
+        "ALTER TABLE test_runs ADD COLUMN IF NOT EXISTS stats_reset_at TIMESTAMP WITH TIME ZONE",
+        "ALTER TABLE test_runs ADD COLUMN IF NOT EXISTS stats_reset_by VARCHAR(120)",
+        "ALTER TABLE test_runs ADD COLUMN IF NOT EXISTS stats_reset_reason TEXT",
+        "CREATE INDEX IF NOT EXISTS ix_test_runs_triggered_by ON test_runs (triggered_by)",
+        "CREATE INDEX IF NOT EXISTS ix_test_runs_stats_reset_at ON test_runs (stats_reset_at)",
+    ]
+    with get_engine().begin() as conn:
+        for statement in statements:
+            conn.execute(text(statement))
 
 
 if __name__ == "__main__":

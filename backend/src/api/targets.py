@@ -47,6 +47,13 @@ def target_stats(app, operation, request, target_id=None, principal=None, **kwar
         return service.target_stats(db, target_id, hours=hours), 200
 
 
+@require_role(ROLE_OPERATOR)
+def reset_target_stats(app, operation, request, target_id=None, principal=None, **kwargs):
+    actor = getattr(principal, "username", None) or getattr(principal, "subject", None) or "unknown"
+    with session_scope() as db:
+        return exec_service.reset_target_stats(db, target_id, actor=actor), 200
+
+
 @require_role(ROLE_PROJECT_ADMIN)
 def create_target(app, operation, request, principal=None, **kwargs):
     with session_scope() as db:
@@ -67,6 +74,7 @@ def run_all_target_tests(app, operation, request, target_id=None, principal=None
     from src.execution import serializers
 
     sync_mode = query_args(request).get("sync", "").lower() == "true"
+    actor = getattr(principal, "username", None) or getattr(principal, "subject", None)
 
     with session_scope() as db:
         target = db.get(Target, target_id)
@@ -77,7 +85,7 @@ def run_all_target_tests(app, operation, request, target_id=None, principal=None
         test_map = {}
         for t in tests:
             test_map[t.id] = t
-            queued.append(exec_service.run_now(db, t.id, environment="default"))
+            queued.append(exec_service.run_now(db, t.id, environment="default", triggered_by=actor))
         
         if not sync_mode:
             return {"items": queued}, 202

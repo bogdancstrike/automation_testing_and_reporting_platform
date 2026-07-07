@@ -101,7 +101,7 @@ def reap_stale(db: Session) -> int:
     if not dead:
         return 0
     n = 0
-    stuck = db.scalars(select(TestRun).where(TestRun.status.in_(["claimed", "running"]))).all()
+    stuck = db.scalars(select(TestRun).where(TestRun.stats_reset_at.is_(None), TestRun.status.in_(["claimed", "running"]))).all()
     for run in stuck:
         if run.worker_name in dead:
             run.status = "error"

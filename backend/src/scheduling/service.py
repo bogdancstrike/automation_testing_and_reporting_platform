@@ -46,7 +46,7 @@ def list_schedules(db: Session, filters: dict[str, Any] | None = None) -> dict:
     if sched_ids:
         run_counts = db.execute(
             select(TestRun.schedule_id, func.count())
-            .where(TestRun.schedule_id.in_(sched_ids))
+            .where(TestRun.schedule_id.in_(sched_ids), TestRun.stats_reset_at.is_(None))
             .group_by(TestRun.schedule_id)
         ).all()
         counts = {sid: c for sid, c in run_counts}
@@ -71,12 +71,12 @@ def get_schedule_detail(db: Session, schedule_id: str) -> dict:
     from src.execution.models import TestRun
     stats = db.execute(
         select(TestRun.status, func.count())
-        .where(TestRun.schedule_id == s.id)
+        .where(TestRun.schedule_id == s.id, TestRun.stats_reset_at.is_(None))
         .group_by(TestRun.status)
     ).all()
     
     last_run = db.scalars(
-        select(TestRun).where(TestRun.schedule_id == s.id).order_by(TestRun.queued_at.desc()).limit(1)
+        select(TestRun).where(TestRun.schedule_id == s.id, TestRun.stats_reset_at.is_(None)).order_by(TestRun.queued_at.desc()).limit(1)
     ).first()
 
     out = serializers.schedule(s, test_name=d.name if d else None)

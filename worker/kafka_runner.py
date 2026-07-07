@@ -55,6 +55,11 @@ def execute_run_message(message: dict, consumer_name: str, metadatas: dict):
                 span.set_attribute("run.skipped", "not_found")
                 log.warning(f"run {run_id} not found; skipping")
                 return None
+            if run.stats_reset_at is not None:
+                span.set_attribute("run.skipped", "stats_reset")
+                queue.complete(db, run.id)
+                log.info(f"run {run_id} was stats-reset; skipping")
+                return None
             if run.status in TERMINAL_STATUSES:
                 span.set_attribute("run.skipped", f"terminal:{run.status}")
                 log.info(f"run {run_id} already {run.status}; skipping (redelivery)")
@@ -96,4 +101,3 @@ def execute_run_message(message: dict, consumer_name: str, metadatas: dict):
                 log.error(f"could not mark run {run_id} errored: {e2}")
 
     return None
-

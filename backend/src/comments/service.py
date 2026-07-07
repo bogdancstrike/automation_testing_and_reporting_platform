@@ -38,7 +38,7 @@ def _entity_project(db: Session, entity_type: str, entity_id: str) -> str:
         return test.project_id
     if entity_type == "run":
         run = db.get(TestRun, entity_id)
-        if not run:
+        if not run or run.stats_reset_at is not None:
             raise NotFoundError("run not found")
         return run.project_id
     raise ValidationError("entity_type must be test or run")

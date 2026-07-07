@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from src.catalog.models import Target, TestDefinition
 from src.catalog.service import resolve_target
 from src.core.correlation import get_correlation_id
+from src.core.clock import utcnow
 from src.core.errors import NotFoundError, ValidationError
 from src.core.pagination import apply_sort, envelope, parse_page
 from framework.tracing import get_tracer
@@ -30,7 +31,8 @@ def capability_for(test_type: str) -> str:
 
 
 def enqueue_run(db: Session, definition: TestDefinition, *, trigger: str = "manual",
-                environment: str = "default", schedule_id: str | None = None) -> TestRun:
+                environment: str = "default", schedule_id: str | None = None,
+                triggered_by: str | None = None) -> TestRun:
     target = resolve_target(db, definition.project_id, definition.target_key)
     run = TestRun(
         project_id=definition.project_id,
@@ -41,6 +43,7 @@ def enqueue_run(db: Session, definition: TestDefinition, *, trigger: str = "manu
         status="queued",
         trigger=trigger,
         environment=environment,
+        triggered_by=triggered_by,
         correlation_id=get_correlation_id() if trigger in ("manual", "api") else None,
     )
     db.add(run)
@@ -54,13 +57,13 @@ def enqueue_run(db: Session, definition: TestDefinition, *, trigger: str = "manu
     return run
 
 
-def run_now(db: Session, test_id: str, *, environment: str = "default") -> dict:
+def run_now(db: Session, test_id: str, *, environment: str = "default", triggered_by: str | None = None) -> dict:
     d = db.get(TestDefinition, test_id)
     if not d:
         raise NotFoundError("test not found")
     if d.status == "missing_from_source":
         raise ValidationError("cannot run a test missing from source")
-    run = enqueue_run(db, d, trigger="manual", environment=environment)
+    run = enqueue_run(db, d, trigger="manual", environment=environment, triggered_by=triggered_by)
     return serializers.run_summary(run, test_name=d.name, target_key=d.target_key)
 
 
@@ -83,7 +86,7 @@ def list_runs(db: Session, filters: dict[str, Any]) -> dict:
 
 def _list_runs(db: Session, filters: dict[str, Any]) -> dict:
     params = parse_page(filters, default_sort="queued_at", default_order="desc", max_page_size=100)
-    stmt = select(TestRun)
+    stmt = select(TestRun).where(TestRun.stats_reset_at.is_(None))
     if filters.get("status"):
         stmt = stmt.where(TestRun.status == filters["status"])
     if filters.get("test_definition_id"):
@@ -94,6 +97,8 @@ def _list_runs(db: Session, filters: dict[str, Any]) -> dict:
         stmt = stmt.where(TestRun.schedule_id == filters["schedule_id"])
     if filters.get("trigger"):
         stmt = stmt.where(TestRun.trigger == filters["trigger"])
+    if filters.get("triggered_by"):
+        stmt = stmt.where(TestRun.triggered_by == filters["triggered_by"])
     if filters.get("defect_type"):
         stmt = stmt.where(TestRun.defect_type == filters["defect_type"])
     if filters.get("error_category"):
@@ -137,7 +142,7 @@ def _list_runs(db: Session, filters: dict[str, Any]) -> dict:
 
 def get_run_detail(db: Session, run_id: str) -> dict:
     r = db.get(TestRun, run_id)
-    if not r:
+    if not r or r.stats_reset_at is not None:
         raise NotFoundError("run not found")
     d = db.get(TestDefinition, r.test_definition_id)
     t = db.get(Target, r.target_id) if r.target_id else None
@@ -146,7 +151,7 @@ def get_run_detail(db: Session, run_id: str) -> dict:
 
 def cancel_run(db: Session, run_id: str) -> dict:
     r = db.get(TestRun, run_id)
-    if not r:
+    if not r or r.stats_reset_at is not None:
         raise NotFoundError("run not found")
     if r.status in ("queued",):
         r.status = "canceled"
@@ -162,9 +167,56 @@ def cancel_run(db: Session, run_id: str) -> dict:
 
 def set_defect(db: Session, run_id: str, defect_type: str) -> dict:
     r = db.get(TestRun, run_id)
-    if not r:
+    if not r or r.stats_reset_at is not None:
         raise NotFoundError("run not found")
     if r.status not in ("failed", "error", "timeout"):
         raise ValidationError("only failed/error/timeout runs can be triaged")
     apply_defect(db, r, defect_type)
     return {"id": r.id, "defect_type": r.defect_type}
+
+
+def reset_target_stats(db: Session, target_id: str, *, actor: str, reason: str = "target stats reset") -> dict:
+    """Soft-reset all execution data for a target without deleting rows."""
+    target = db.get(Target, target_id)
+    if not target:
+        raise NotFoundError("target not found")
+
+    reset_at = utcnow()
+    runs = db.scalars(
+        select(TestRun)
+        .where(TestRun.target_id == target.id, TestRun.stats_reset_at.is_(None))
+        .order_by(TestRun.queued_at)
+    ).all()
+    run_ids = [r.id for r in runs]
+
+    for run in runs:
+        run.stats_reset_at = reset_at
+        run.stats_reset_by = actor or "unknown"
+        run.stats_reset_reason = reason
+        if run.status in ("queued", "claimed", "preparing", "running"):
+            run.cancel_requested = True
+
+    if run_ids:
+        queue_items = db.scalars(
+            select(RunQueue).where(RunQueue.test_run_id.in_(run_ids), RunQueue.status != "done")
+        ).all()
+        for item in queue_items:
+            item.status = "done"
+
+    tests = db.scalars(
+        select(TestDefinition)
+        .where(TestDefinition.project_id == target.project_id, TestDefinition.target_key == target.key)
+    ).all()
+    for definition in tests:
+        definition.last_run_status = None
+        definition.last_run_at = None
+
+    db.flush()
+    return {
+        "target_id": target.id,
+        "target_key": target.key,
+        "reset_runs": len(runs),
+        "reset_tests": len(tests),
+        "reset_at": reset_at.isoformat(),
+        "reset_by": actor or "unknown",
+    }

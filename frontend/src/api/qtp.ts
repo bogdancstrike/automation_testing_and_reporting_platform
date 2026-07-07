@@ -2,6 +2,7 @@ import { api } from "./client";
 import type {
   CommentItem, Failures, Me, Overview, Page, QueryParams, RunDetail, RunSummary,
   Schedule, SendResult, Target, TargetDetail, TargetStats, TestDef, TestDetail, WorkerInfo,
+  TargetStatsReset,
 } from "./types";
 
 const list = <T>() => (r: { items: T[] }) => r.items;
@@ -30,6 +31,7 @@ export const qtp = {
   targetStats: (id: string, hours = 168) => api.get<TargetStats>(`/api/targets/${id}/stats${qs({ hours })}`),
   targetTests: (id: string, params: QueryParams = {}) => api.get<Page<TestDef>>(`/api/targets/${id}/tests${qs(params)}`),
   targetRuns: (id: string, params: QueryParams = {}) => api.get<Page<RunSummary>>(`/api/targets/${id}/runs${qs(params)}`),
+  resetTargetStats: (id: string) => api.post<TargetStatsReset>(`/api/targets/${id}/reset-stats`),
   createTarget: (b: Partial<Target>) => api.post<Target>("/api/targets", b),
   runAllTargetTests: (id: string, environment = "default", sync = false) => api.post<any>(`/api/targets/${id}/run-all${sync ? "?sync=true" : ""}`, { environment }),
 

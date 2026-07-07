@@ -16,12 +16,14 @@ def run_summary(r: TestRun, *, test_name: str | None = None, target_key: str | N
         "test_name": test_name, "target_id": r.target_id, "target_key": target_key,
         "tags": tags or [],
         "status": r.status, "trigger": r.trigger, "environment": r.environment,
-        "worker_name": r.worker_name, "schedule_id": r.schedule_id,
+        "worker_name": r.worker_name, "triggered_by": r.triggered_by,
+        "schedule_id": r.schedule_id,
         "error_category": r.error_category, "error_message": r.error_message,
         "defect_type": r.defect_type, "failure_signature": r.failure_signature,
         "duration_ms": r.duration_ms,
         "queued_at": _iso(r.queued_at), "started_at": _iso(r.started_at),
         "finished_at": _iso(r.finished_at),
+        "stats_reset_at": _iso(r.stats_reset_at), "stats_reset_by": r.stats_reset_by,
         "metrics": r.metrics or {},
     }
 

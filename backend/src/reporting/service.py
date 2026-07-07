@@ -25,7 +25,7 @@ def overview(db: Session, *, hours: int = 24, start: datetime | None = None, end
     status_counts = dict(
         db.execute(
             select(TestRun.status, func.count())
-            .where(TestRun.queued_at >= since, TestRun.queued_at <= end)
+            .where(TestRun.stats_reset_at.is_(None), TestRun.queued_at >= since, TestRun.queued_at <= end)
             .group_by(TestRun.status)
         ).all()
     )
@@ -41,7 +41,7 @@ def overview(db: Session, *, hours: int = 24, start: datetime | None = None, end
             func.percentile_cont(0.5).within_group(cast(TestRun.duration_ms, Float)),
             func.percentile_cont(0.95).within_group(cast(TestRun.duration_ms, Float)),
             func.avg(cast(TestRun.duration_ms, Float)),
-        ).where(TestRun.queued_at >= since, TestRun.queued_at <= end, TestRun.duration_ms.isnot(None))
+        ).where(TestRun.stats_reset_at.is_(None), TestRun.queued_at >= since, TestRun.queued_at <= end, TestRun.duration_ms.isnot(None))
     ).first()
     p50, p95, avg = (durations or (None, None, None))
 
@@ -49,7 +49,7 @@ def overview(db: Session, *, hours: int = 24, start: datetime | None = None, end
     bucket = func.date_trunc("hour", TestRun.queued_at)
     trend_rows = db.execute(
         select(bucket.label("h"), TestRun.status, func.count())
-        .where(TestRun.queued_at >= since, TestRun.queued_at <= end)
+        .where(TestRun.stats_reset_at.is_(None), TestRun.queued_at >= since, TestRun.queued_at <= end)
         .group_by("h", TestRun.status).order_by("h")
     ).all()
     trend: dict[str, dict] = {}
@@ -58,7 +58,7 @@ def overview(db: Session, *, hours: int = 24, start: datetime | None = None, end
         trend.setdefault(key, {"bucket": key})
         trend[key][status] = count
 
-    queue_backlog = db.scalar(select(func.count()).select_from(TestRun).where(TestRun.status == "queued"))
+    queue_backlog = db.scalar(select(func.count()).select_from(TestRun).where(TestRun.stats_reset_at.is_(None), TestRun.status == "queued"))
     active_workers = db.scalar(
         select(func.count()).select_from(Worker)
         .where(Worker.last_heartbeat >= utcnow() - timedelta(seconds=30))
@@ -67,7 +67,7 @@ def overview(db: Session, *, hours: int = 24, start: datetime | None = None, end
     # Per-target health.
     tgt_rows = db.execute(
         select(TestRun.target_id, TestRun.status, func.count())
-        .where(TestRun.queued_at >= since, TestRun.queued_at <= end, TestRun.target_id.isnot(None))
+        .where(TestRun.stats_reset_at.is_(None), TestRun.queued_at >= since, TestRun.queued_at <= end, TestRun.target_id.isnot(None))
         .group_by(TestRun.target_id, TestRun.status)
     ).all()
     per_target: dict[str, dict] = {}
@@ -116,13 +116,13 @@ def failures(db: Session, *, hours: int = 168, start: datetime | None = None, en
 
     defect_rows = db.execute(
         select(TestRun.defect_type, func.count())
-        .where(TestRun.queued_at >= since, TestRun.queued_at <= end, TestRun.status.in_(["failed", "error", "timeout"]))
+        .where(TestRun.stats_reset_at.is_(None), TestRun.queued_at >= since, TestRun.queued_at <= end, TestRun.status.in_(["failed", "error", "timeout"]))
         .group_by(TestRun.defect_type)
     ).all()
     defect_distribution = {(dt or "untriaged"): c for dt, c in defect_rows}
 
     recent = db.scalars(
-        select(TestRun).where(TestRun.status.in_(["failed", "error", "timeout"]))
+        select(TestRun).where(TestRun.stats_reset_at.is_(None), TestRun.status.in_(["failed", "error", "timeout"]))
         .order_by(TestRun.queued_at.desc()).limit(15)
     ).all()
     defs = {d.id: d.name for d in db.scalars(select(TestDefinition)).all()}

@@ -412,8 +412,9 @@ def _get_target_detail(db: Session, target_id: str) -> dict:
         TestDefinition.target_key == target.key,
     )
     test_ids = list(db.scalars(tests_stmt).all())
+    active_run = TestRun.stats_reset_at.is_(None)
     status_counts = dict(db.execute(
-        select(TestRun.status, func.count()).where(TestRun.target_id == target.id).group_by(TestRun.status)
+        select(TestRun.status, func.count()).where(TestRun.target_id == target.id, active_run).group_by(TestRun.status)
     ).all())
     finished = sum(status_counts.get(s, 0) for s in ("passed", "failed", "error", "timeout"))
     passed = status_counts.get("passed", 0)
@@ -421,7 +422,7 @@ def _get_target_detail(db: Session, target_id: str) -> dict:
         func.percentile_cont(0.5).within_group(cast(TestRun.duration_ms, Float)),
         func.percentile_cont(0.95).within_group(cast(TestRun.duration_ms, Float)),
         func.avg(cast(TestRun.duration_ms, Float)),
-    ).where(TestRun.target_id == target.id, TestRun.duration_ms.isnot(None))).first()
+    ).where(TestRun.target_id == target.id, active_run, TestRun.duration_ms.isnot(None))).first()
     p50, p95, avg = (durations or (None, None, None))
     scheduled = 0
     if test_ids:
@@ -466,7 +467,7 @@ def _target_stats(db: Session, target_id: str, *, hours: int = 168) -> dict:
     bucket = func.date_trunc("hour", TestRun.queued_at)
     trend_rows = db.execute(
         select(bucket.label("bucket"), TestRun.status, func.count())
-        .where(TestRun.target_id == target.id, TestRun.queued_at >= since)
+        .where(TestRun.target_id == target.id, TestRun.stats_reset_at.is_(None), TestRun.queued_at >= since)
         .group_by("bucket", TestRun.status).order_by("bucket")
     ).all()
     trend: dict[str, dict] = {}
@@ -477,20 +478,20 @@ def _target_stats(db: Session, target_id: str, *, hours: int = 168) -> dict:
 
     duration_rows = db.execute(
         select(bucket.label("bucket"), func.avg(cast(TestRun.duration_ms, Float)))
-        .where(TestRun.target_id == target.id, TestRun.queued_at >= since, TestRun.duration_ms.isnot(None))
+        .where(TestRun.target_id == target.id, TestRun.stats_reset_at.is_(None), TestRun.queued_at >= since, TestRun.duration_ms.isnot(None))
         .group_by("bucket").order_by("bucket")
     ).all()
     durations = [{"bucket": b.isoformat(), "avg_ms": round(avg, 1) if avg else None} for b, avg in duration_rows]
 
     defect_distribution = dict(db.execute(
         select(TestRun.defect_type, func.count())
-        .where(TestRun.target_id == target.id, TestRun.queued_at >= since, TestRun.status.in_(["failed", "error", "timeout"]))
+        .where(TestRun.target_id == target.id, TestRun.stats_reset_at.is_(None), TestRun.queued_at >= since, TestRun.status.in_(["failed", "error", "timeout"]))
         .group_by(TestRun.defect_type)
     ).all())
     defect_distribution = {(k or "untriaged"): v for k, v in defect_distribution.items()}
 
     recent = db.scalars(
-        select(TestRun).where(TestRun.target_id == target.id, TestRun.status.in_(["failed", "error", "timeout"]))
+        select(TestRun).where(TestRun.target_id == target.id, TestRun.stats_reset_at.is_(None), TestRun.status.in_(["failed", "error", "timeout"]))
         .order_by(TestRun.queued_at.desc()).limit(10)
     ).all()
     def_ids = {r.test_definition_id for r in recent}

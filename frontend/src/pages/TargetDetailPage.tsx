@@ -1,8 +1,8 @@
-import { Button, Card, Col, Descriptions, Empty, Progress, Row, Space, Statistic, Table, Tag, Typography } from "antd";
-import { ArrowLeftOutlined } from "@ant-design/icons";
+import { App, Button, Card, Col, Descriptions, Empty, Progress, Row, Space, Statistic, Table, Tag, Typography } from "antd";
+import { ArrowLeftOutlined, ClearOutlined } from "@ant-design/icons";
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import ReactECharts from "echarts-for-react";
 import { qtp } from "../api/qtp";
 import { StatusTag, DefectTag, Duration } from "../components/tags";
@@ -11,14 +11,30 @@ import type { QueryParams } from "../api/types";
 function sortOrder(order?: string) { return order === "ascend" ? "asc" : order === "descend" ? "desc" : undefined; }
 
 export default function TargetDetailPage() {
+  const { message, modal } = App.useApp();
   const { id = "" } = useParams();
   const nav = useNavigate();
+  const qc = useQueryClient();
   const [testParams, setTestParams] = useState<QueryParams>({ page: 1, page_size: 10, sort: "name", order: "asc" });
   const [runParams, setRunParams] = useState<QueryParams>({ page: 1, page_size: 10, sort: "queued_at", order: "desc" });
   const { data: detail } = useQuery({ queryKey: ["targetDetail", id], queryFn: () => qtp.targetDetail(id), enabled: !!id });
   const { data: stats } = useQuery({ queryKey: ["targetStats", id], queryFn: () => qtp.targetStats(id), enabled: !!id, refetchInterval: 10000 });
   const { data: testsPage } = useQuery({ queryKey: ["targetTests", id, testParams], queryFn: () => qtp.targetTests(id, testParams), enabled: !!id });
   const { data: runsPage } = useQuery({ queryKey: ["targetRuns", id, runParams], queryFn: () => qtp.targetRuns(id, runParams), enabled: !!id, refetchInterval: 5000 });
+  const resetStats = useMutation({
+    mutationFn: () => qtp.resetTargetStats(id),
+    onSuccess: (result) => {
+      message.success(`Reset ${result.reset_runs} runs for ${result.target_key}`);
+      qc.invalidateQueries({ queryKey: ["targetDetail", id] });
+      qc.invalidateQueries({ queryKey: ["targetStats", id] });
+      qc.invalidateQueries({ queryKey: ["targetRuns", id] });
+      qc.invalidateQueries({ queryKey: ["targetTests", id] });
+      qc.invalidateQueries({ queryKey: ["runsPage"] });
+      qc.invalidateQueries({ queryKey: ["overview"] });
+      qc.invalidateQueries({ queryKey: ["failures"] });
+    },
+    onError: (e: any) => message.error(e.message || "reset failed"),
+  });
 
   if (!detail) return null;
   const target = detail.target;
@@ -26,6 +42,25 @@ export default function TargetDetailPage() {
   const passPct = detail.pass_rate != null ? Math.round(detail.pass_rate * 100) : 0;
   const statuses = ["passed", "failed", "error", "timeout", "queued", "running"];
   const trend = stats?.trend || [];
+  const confirmReset = () => {
+    modal.confirm({
+      title: "Reset target statistics?",
+      content: `This will hide all existing runs, charts, and latest-result data for ${target.name}. The rows stay in the database as soft-reset history.`,
+      okText: "Continue",
+      cancelText: "Cancel",
+      okButtonProps: { danger: true },
+      onOk: () => {
+        modal.confirm({
+          title: "Final confirmation",
+          content: "Are you sure you want to delete this target's statistics from active platform views?",
+          okText: "Reset stats",
+          cancelText: "Cancel",
+          okButtonProps: { danger: true, loading: resetStats.isPending },
+          onOk: () => resetStats.mutateAsync(),
+        });
+      },
+    });
+  };
 
   const trendOption = {
     tooltip: { trigger: "axis" }, legend: { data: statuses }, grid: { left: 36, right: 16, top: 32, bottom: 28 },
@@ -47,10 +82,13 @@ export default function TargetDetailPage() {
   return (
     <div>
       <Space style={{ marginBottom: 12 }}><Button icon={<ArrowLeftOutlined />} onClick={() => nav("/targets")}>Targets</Button></Space>
-      <Space align="baseline" wrap>
-        <Typography.Title level={3} style={{ margin: 0 }}>{target.name}</Typography.Title>
-        <Typography.Text code>{target.key}</Typography.Text>
-        {(target.tags || []).map((tag) => <Tag key={tag}>{tag}</Tag>)}
+      <Space align="start" wrap style={{ width: "100%", justifyContent: "space-between" }}>
+        <Space align="baseline" wrap>
+          <Typography.Title level={3} style={{ margin: 0 }}>{target.name}</Typography.Title>
+          <Typography.Text code>{target.key}</Typography.Text>
+          {(target.tags || []).map((tag) => <Tag key={tag}>{tag}</Tag>)}
+        </Space>
+        <Button danger icon={<ClearOutlined />} loading={resetStats.isPending} onClick={confirmReset}>Reset stats</Button>
       </Space>
       <Card size="small" style={{ marginTop: 12, marginBottom: 16 }}>
         <Descriptions column={2} size="small">

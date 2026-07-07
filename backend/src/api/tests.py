@@ -30,5 +30,6 @@ def discover_tests(app, operation, request, principal=None, **kwargs):
 @require_role(ROLE_OPERATOR)
 def run_test(app, operation, request, test_id=None, principal=None, **kwargs):
     body = json_body(request)
+    actor = getattr(principal, "username", None) or getattr(principal, "subject", None)
     with session_scope() as db:
-        return execution.run_now(db, test_id, environment=body.get("environment", "default")), 202
+        return execution.run_now(db, test_id, environment=body.get("environment", "default"), triggered_by=actor), 202

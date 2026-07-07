@@ -30,7 +30,8 @@ def get_run_logs(app, operation, request, run_id=None, principal=None, **kwargs)
     after_id = int(args.get("after_id", 0))
     limit = min(int(args.get("limit", 500)), 1000)
     with session_scope() as db:
-        if not db.get(TestRun, run_id):
+        run = db.get(TestRun, run_id)
+        if not run or run.stats_reset_at is not None:
             raise NotFoundError("run not found")
         rows = db.scalars(
             select(RunLog).where(RunLog.test_run_id == run_id, RunLog.id > after_id)

@@ -440,6 +440,19 @@
     },
     {
       "namespace": "qtp",
+      "operation_name": "targets_reset_stats",
+      "model_name": "Empty",
+      "request_method": [
+        "POST"
+      ],
+      "api_url": "/api/targets/<target_id>/reset-stats",
+      "exec_method": {
+        "module_name": "src.api.targets",
+        "method_name": "reset_target_stats"
+      }
+    },
+    {
+      "namespace": "qtp",
       "operation_name": "tags_list",
       "model_name": "Empty",
       "request_method": [

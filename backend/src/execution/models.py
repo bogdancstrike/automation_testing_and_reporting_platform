@@ -30,6 +30,7 @@ class TestRun(Base):
     trigger: Mapped[str] = mapped_column(String(20), default="manual")  # manual|schedule|api|discovery
     environment: Mapped[str] = mapped_column(String(64), default="default")
     worker_name: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    triggered_by: Mapped[str | None] = mapped_column(String(120), nullable=True, index=True)
 
     cancel_requested: Mapped[bool] = mapped_column(Boolean, default=False)
 
@@ -46,6 +47,9 @@ class TestRun(Base):
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     duration_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    stats_reset_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, index=True)
+    stats_reset_by: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    stats_reset_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     steps: Mapped[list["TestRunStep"]] = relationship(
         cascade="all, delete-orphan", order_by="TestRunStep.ord")

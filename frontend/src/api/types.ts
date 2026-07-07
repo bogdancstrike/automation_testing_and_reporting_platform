@@ -39,6 +39,8 @@ export interface TestDef {
   status: string;
   last_run_status?: string;
   last_run_at?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface Revision {
@@ -82,6 +84,7 @@ export interface RunSummary {
   trigger: string;
   environment: string;
   worker_name?: string;
+  triggered_by?: string;
   error_category?: string;
   error_message?: string;
   defect_type?: string;
@@ -90,6 +93,8 @@ export interface RunSummary {
   queued_at?: string;
   started_at?: string;
   finished_at?: string;
+  stats_reset_at?: string;
+  stats_reset_by?: string;
   metrics?: Record<string, any>;
 }
 
@@ -214,4 +219,13 @@ export interface TargetStats {
     finished_at?: string;
   }[];
   latest_per_test: { id: string; key: string; name: string; last_run_status?: string; last_run_at?: string }[];
+}
+
+export interface TargetStatsReset {
+  target_id: string;
+  target_key: string;
+  reset_runs: number;
+  reset_tests: number;
+  reset_at: string;
+  reset_by: string;
 }
