@@ -11,10 +11,15 @@ grouping, defect-type triage). It tests **any target application by URL** — ne
 by assumption, though it does include self-tests as one target among many.
 
 Tests are authored two ways, both resolving a target by URL rather than hardcoding one:
-1. **Code-based tests** — Python subclasses of `BaseAutomationTest` under
-   `backend/tests/automations/`, auto-discovered recursively.
+1. **Code-based scenarios** — one Python file per test under
+   `backend/scenarios/automation/<target>/`, written in the imperative fluent style
+   (subclass `HttpTest`/`CliTest`/`PythonTest`/`PlaywrightTest`, implement `test(self, ctx)`).
+   Auto-discovered recursively — a new target directory needs no registration.
 2. **UI request tests** — built in a Postman-like Request Builder, asserting on response
    body/headers/timing, not just status code.
+
+Note the split: `backend/scenarios/` holds automation scenarios QTP *runs against targets*;
+`backend/tests/` is reserved for QTP's own pytest suites (`unit`, `integration`).
 
 Full design: `docs/architecture.md` (read this before any non-trivial backend change —
 it documents 23 sections including domain model, execution lifecycle, assertion model,
@@ -58,9 +63,9 @@ cd backend
 ./.venv/bin/pytest tests/unit/test_unit.py::test_compute_next_cron   # single test
 ```
 There's no `pytest.ini`/`pyproject.toml` — pytest runs with defaults from `backend/`.
-Note: `tests/automations/` are QTP's *product* tests (discovered and run by the platform
-itself, not by pytest) — don't confuse them with `tests/unit` and `tests/integration`,
-which are pytest suites covering QTP's own backend code.
+Note: `backend/scenarios/automation/` are QTP's *product* scenarios (discovered and run by
+the platform against targets, not by pytest) — don't confuse them with `tests/unit` and
+`tests/integration`, which are pytest suites covering QTP's own backend code.
 
 ### Frontend
 ```bash
@@ -117,15 +122,24 @@ Dependency direction is one-way: `core` → `iam`/`testkit` → domain modules
   `decorators.py` (`@require_authenticated`, `@require_role(...)` — every handler in
   `api/` is wrapped by one of these; `AUTH_DISABLED=true` and the literal
   `system-bearer-token` bearer both short-circuit to `synthetic_admin()`).
-- `testkit/` — the test framework SDK: `base.py` (`BaseAutomationTest`, lifecycle
-  `validate_config → setup → execute → cleanup → teardown`, where `cleanup`/`teardown`
-  always run even if `execute` raised), `context.py` (`TestContext`: target resolution,
-  `{{var}}` templating, secret redaction, cancellation token), `assertions.py` (full
-  operator taxonomy + minimal JSONPath), `registry.py` (discovery, recursively scans
-  `backend/tests/automations/` for `BaseAutomationTest` subclasses — `Config
-  .AUTOMATION_MODULES` explicit-list discovery is only a fallback for when the path scan
-  finds nothing), `adapters/` (HTTP adapter is real; Playwright/Selenium/CLI adapters are
-  stubbed to return a clear ERROR — not runnable in the demo image yet).
+- `testkit/` — the scenario authoring SDK. Import surface is `src.testkit` (`__init__.py`
+  re-exports `HttpTest`/`CliTest`/`PythonTest`/`PlaywrightTest`, `TestMetadata`, types).
+  - `scenario.py` — `Scenario` base: subclasses implement `test(self, ctx)` (not `execute`);
+    the base runs it, catches assertion failures (→ failed) / exceptions (→ error), and
+    assembles a `TestResult` from the steps/assertions recorded on the context. Lifecycle is
+    still `validate_config → setup → test → cleanup → teardown` (`cleanup`/`teardown` always run).
+  - `context.py` — `TestContext`: target resolution + `{{var}}` templating + secret redaction,
+    plus the imperative API: `ctx.step(name)` (grouped step), and lazy `ctx.http` / `ctx.cli` /
+    `ctx.browser` clients (in `clients.py`).
+  - `fluent.py` — `response.should.*` / `response.json.should.have_field(...).equal_to(...)`;
+    each records an `AssertionResult` and raises `AssertionFailure` on failure (fail-fast).
+  - `http_exec.py` — the SSRF-guarded `perform_request` primitive shared by `ctx.http` and the
+    declarative `adapters/http.py`. `assertions.py` — operator taxonomy + minimal JSONPath.
+  - `registry.py` — discovery: recursively scans `backend/scenarios/automation/` (one dir per
+    target) for `BaseAutomationTest` subclasses; `Config.AUTOMATION_MODULES` is only a fallback.
+  - `adapters/` — declarative execution for UI-created tests (HTTP is real). Code-based
+    scenarios of every type run via `Scenario.execute` using the `ctx.*` clients: HTTP/CLI/
+    Python work in the image; Playwright needs a browser-equipped worker image.
 - `catalog/`, `execution/`, `scheduling/`, `reporting/`, `audit/`, `comments/` — one
   `models.py` + `service.py` (+ `serializers.py`) per domain. Services take a SQLAlchemy
   `Session` as their first argument and return plain dicts (already serialized) — handlers
@@ -184,12 +198,27 @@ to point at a different API host without a rebuild). Flow/step visualizations
 
 ### Adding a test (for when asked to add one, not as a standing instruction)
 
-- **Code test**: subclass `BaseAutomationTest` under `backend/tests/automations/...`,
-  declare `TestMetadata` (globally unique `key`), implement `execute` (+ optional
-  `setup`/`cleanup`/`teardown`). No manual registration needed — discovery scans the path
-  recursively; trigger it via `POST /api/tests/discover` or the Catalog page's "Discover
-  code tests". Existing examples: `backend/tests/automations/api/` (~22 tests against the
-  platform's own health endpoints and the httpbin demo target).
+- **Code scenario**: create one file `backend/scenarios/automation/<target>/<name>.py` with
+  one class subclassing `HttpTest` (or `CliTest`/`PythonTest`/`PlaywrightTest`), a
+  `TestMetadata` (globally unique `key`, `target` = the target's key), and a `test(self, ctx)`
+  method. Drive the target imperatively and assert fluently; multi-step flows use
+  `with ctx.step(...)` and capture data across steps as plain Python variables (or
+  `ctx.set_var`/`ctx.get_var` when `cleanup` needs it). Optional `setup`/`cleanup`/`teardown`.
+  No registration — discovery finds it; trigger via `POST /api/tests/discover` or the Catalog
+  page's "Discover code tests". Examples: `backend/scenarios/automation/{qtp_self,httpbin}/`.
+
+  ```python
+  from src.testkit import HttpTest, TestMetadata, TYPE_HTTP
+
+  class SelfHealth(HttpTest):
+      metadata = TestMetadata(key="self.health", name="QTP · health returns ok",
+                              type=TYPE_HTTP, tags=["self"], owner="admin", target="qtp_self")
+
+      def test(self, ctx):
+          response = ctx.http.get("/health")
+          response.should.have_status(200)
+          response.json.should.have_field("status").equal_to("ok")
+  ```
 - **UI request test**: Request Builder page → configure method/URL/headers/body/
   assertions → Send to try unsaved → Save as Test. Config is stored as JSONB on
   `test_revisions`; hot-queried fields are projected into `request_test_specs`.
@@ -199,5 +228,6 @@ to point at a different API host without a rebuild). Flow/step visualizations
 The Request Builder lets users call arbitrary URLs by design, so `core/net_guard.py`'s
 SSRF controls (resolved-IP validation, per-redirect-hop re-check, private/loopback/
 link-local/metadata-IP blocking, project allowlist) are load-bearing, not optional
-hardening. Any change that touches outbound HTTP execution (`testkit/adapters/http.py`,
-request builder send/save paths) must keep every call routed through `net_guard`.
+hardening. Any change that touches outbound HTTP execution (`testkit/http_exec.py`, which
+both `ctx.http` scenarios and `testkit/adapters/http.py` route through) must keep every call
+going through `net_guard.resolve_and_check` — on every request and every redirect hop.

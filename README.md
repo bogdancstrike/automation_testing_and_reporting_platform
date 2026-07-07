@@ -12,9 +12,11 @@ application**. It combines two ideas that usually live in two separate tools:
 
 Tests are authored two ways, both pointing at an app **by URL**:
 
-1. **Code-based tests** written in Python with the QTP framework (a common base
-   class, lifecycle hooks, target resolution, assertions), discovered from the
-   repo.
+1. **Code-based scenarios** written in Python — one file per test under
+   `backend/scenarios/automation/<target>/`, in an imperative fluent style
+   (`ctx.http.get(...).should.have_status(200)`, `with ctx.step(...)`), covering
+   HTTP, CLI/container, browser (Playwright), and free-form Python. Auto-discovered
+   from the repo by target directory.
 2. **UI request tests** built in a Postman-like builder that assert on the
    **response body, headers, and timing — not just the status code**, runnable
    on demand or on a schedule.
@@ -29,10 +31,12 @@ Docs** tab explains how to add and run tests with copy-pasteable snippets.
 docker compose up -d --build
 ```
 
-That builds and starts the whole stack: PostgreSQL 17, Keycloak 26.1 (realm
-auto-imported), a demo target (httpbin), the API, an execution worker, the
-scheduler, and the frontend. The `init` service creates the schema and seeds a
-project, targets, ~22 example tests, a schedule, and one run.
+That builds and starts the whole stack: PostgreSQL 17, Kafka + Kafka UI, Redis,
+Jaeger, Keycloak 26.1 (realm auto-imported), a demo target (httpbin), the backend
+(API + scheduler), 3 execution workers, and the frontend. The `init` service
+creates the schema, the `qtp-workers` topic, and seeds a project, targets, the
+example scenarios (single- and multi-step, across the `qtp_self` and `httpbin`
+targets), a schedule, and one run.
 
 Then open the UI and sign in:
 
@@ -158,11 +162,34 @@ cd frontend && npm install && npm run dev   # http://localhost:5173
 
 ## Adding a test
 
-- **In Python**: subclass `BaseAutomationTest` under `backend/tests/automations/`,
-  declare `TestMetadata`, implement `execute` (and optionally
-  `setup`/`cleanup`/`teardown`), add the module to `AUTOMATION_MODULES`, then run
-  discovery (Catalog → “Discover code tests”). See `tests/automations/api/` for
-  ~22 worked examples.
+- **In Python (a scenario)**: add one file `backend/scenarios/automation/<target>/<name>.py`
+  (one class per file, organized by target). Subclass `HttpTest` (or `CliTest` / `PythonTest`
+  / `PlaywrightTest`), declare `TestMetadata`, and write an imperative `test(self, ctx)` with
+  fluent assertions. No registration step — dropping a file in a target directory (or adding a
+  new target directory) is auto-discovered (Catalog → "Discover code tests"). See
+  `backend/scenarios/automation/qtp_self/` and `.../httpbin/` for worked single- and
+  multi-step examples.
+
+  ```python
+  from src.testkit import HttpTest, TestMetadata, TYPE_HTTP
+
+  class SelfHealth(HttpTest):
+      metadata = TestMetadata(key="self.health", name="QTP · health returns ok",
+                              type=TYPE_HTTP, tags=["self", "health"], owner="admin",
+                              target="qtp_self")
+
+      def test(self, ctx):
+          response = ctx.http.get("/health")
+          response.should.have_status(200)
+          response.should.respond_within_ms(3000)
+          response.json.should.have_field("status").equal_to("ok")
+  ```
+
+  Multi-step flows group actions with `with ctx.step("...")` and pass data between steps
+  (capture an id from one response, use it in the next). `ctx.cli.run(...)` runs a
+  command/container CLI (Testkube-style); `ctx.browser.visit(...)` drives Playwright (needs a
+  browser-equipped worker image).
+
 - **From the UI**: open Request Builder, configure the request and assertions,
   Send to try it, Save to keep it.
 
