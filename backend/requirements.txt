@@ -5,6 +5,11 @@
 flask>=3.0.0
 flask-restx>=1.3.0
 
+# QF framework transitive deps (logger + etl import chain)
+colorama>=0.4.6
+redis>=5.0.0
+kafka-python>=2.0.2
+
 # Database
 sqlalchemy>=2.0.0
 psycopg2-binary>=2.9.0
