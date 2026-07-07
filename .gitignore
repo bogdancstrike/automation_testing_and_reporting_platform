@@ -222,3 +222,5 @@ node_modules/
 # local env (keep .env.example)
 backend/.env
 .env
+# local agent/brainstorming artifacts
+.superpowers/

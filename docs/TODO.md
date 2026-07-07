@@ -87,3 +87,14 @@ _Last updated: 2026-07-07._
 - [x] `architecture.md`, `implementation_plan.md` updated (Testkube+ReportPortal framing, targets, cleanup hook, docs tab)
 - [x] `docs/TODO.md` (this file)
 - [ ] Root `README.md` with quickstart (`docker compose up`, URLs, admin/admin)
+
+## Next increment — multi-step tests, target observability, backend-driven tables
+- [ ] Multi-step UI request tests (`config.steps[]`) with sequential execution, per-step assertions, captures, and single-request backward compatibility
+- [ ] Automatic code-test discovery by recursively scanning `backend/tests/automations/` for `BaseAutomationTest` subclasses; no manual module registration
+- [ ] Backend pagination/search/filter/sort contract for table endpoints (tests, runs, targets, target detail tables, schedules/workers where applicable)
+- [ ] Target detail API + `/targets/{id}` page with target metadata, tests, runs, pass/fail ratio, charts, and failure information
+- [ ] React Flow step visualization on `/tests/{id}` with run-context coloring from `?runId=...`
+- [ ] Overview enrichment, including clickable Recent Failures rows that route to the failed test detail page
+- [ ] Request Builder Flow mode for add/duplicate/reorder/delete steps, captures, send-flow results, save/update/schedule
+- [ ] Developer Docs enrichment for multi-step tests, code-test auto-discovery, target pages, and backend-driven table APIs
+- [ ] Keep this TODO updated as items move to done, partial, or deferred during the implementation
