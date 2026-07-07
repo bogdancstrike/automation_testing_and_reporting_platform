@@ -193,7 +193,6 @@ class BrowserClient:
         options.add_argument("--headless")
         options.add_argument("--no-sandbox")
         options.add_argument("--disable-dev-shm-usage")
-        options.add_argument("--unsafely-treat-insecure-origin-as-secure=http://qtp-frontend")
         self._driver = webdriver.Chrome(options=options)
         return self._driver
 
@@ -210,8 +209,7 @@ class BrowserClient:
         
         self._pw = sync_playwright().start()
         self._browser = self._pw.chromium.launch(
-            headless=True,
-            args=["--unsafely-treat-insecure-origin-as-secure=http://qtp-frontend"]
+            headless=True
         )
 
     def visit(self, path: str = "/") -> "PageResult":

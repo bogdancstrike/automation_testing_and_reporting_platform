@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
-import { Col, Row, Tag, Typography } from "antd";
+import { Col, Row, Tag, Typography, theme } from "antd";
 import {
   ApiOutlined,
   BugOutlined,
@@ -95,9 +95,10 @@ function Code({ children, language = "plaintext" }: { children: string; language
 }
 
 function H2({ id, icon, children }: { id: string; icon?: React.ReactNode; children: React.ReactNode }) {
+  const { token } = theme.useToken();
   return (
-    <h2 id={id} className="qtp-docs-heading" style={{ marginTop: '3em', paddingBottom: '0.5em', borderBottom: '1px solid #eaeaea' }}>
-      <a href={`#${id}`} aria-label={`Link to ${id}`} style={{ marginRight: '8px', color: '#ccc', textDecoration: 'none' }}>#</a>
+    <h2 id={id} className="qtp-docs-heading" style={{ marginTop: '3em', paddingBottom: '0.5em', borderBottom: `1px solid ${token.colorBorderSecondary}` }}>
+      <a href={`#${id}`} aria-label={`Link to ${id}`} style={{ marginRight: '8px', color: token.colorTextQuaternary, textDecoration: 'none' }}>#</a>
       {icon && <span style={{ marginRight: '12px' }}>{icon}</span>}
       {children}
     </h2>
@@ -109,11 +110,12 @@ function H3({ children }: { children: React.ReactNode }) {
 }
 
 function ApiTable() {
+  const { token } = theme.useToken();
   return (
     <div className="qtp-docs-table" style={{ overflowX: 'auto', marginTop: '1em' }}>
       <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
         <thead>
-          <tr style={{ borderBottom: '2px solid #f0f0f0' }}>
+          <tr style={{ borderBottom: `2px solid ${token.colorBorderSecondary}` }}>
             <th style={{ padding: '12px 8px' }}>Method</th>
             <th style={{ padding: '12px 8px' }}>Endpoint</th>
             <th style={{ padding: '12px 8px' }}>Use</th>
@@ -121,7 +123,7 @@ function ApiTable() {
         </thead>
         <tbody>
           {apiEndpoints.map(([method, endpoint, use]) => (
-            <tr key={`${method}-${endpoint}`} style={{ borderBottom: '1px solid #f0f0f0' }}>
+            <tr key={`${method}-${endpoint}`} style={{ borderBottom: `1px solid ${token.colorBorderSecondary}` }}>
               <td style={{ padding: '12px 8px' }}><Tag color={method === 'GET' ? 'blue' : method === 'POST' ? 'green' : 'default'}>{method}</Tag></td>
               <td style={{ padding: '12px 8px' }}><code>{endpoint}</code></td>
               <td style={{ padding: '12px 8px' }}>{use}</td>
@@ -135,6 +137,7 @@ function ApiTable() {
 
 export default function DocsPage() {
   const { hash } = useLocation();
+  const { token } = theme.useToken();
 
   useEffect(() => {
     if (hash) window.setTimeout(() => scrollToHash(hash), 80);
@@ -145,13 +148,13 @@ export default function DocsPage() {
       <Row gutter={48} align="top" wrap={false}>
         <Col xs={0} lg={5} className="qtp-docs-nav-col" style={{ position: 'sticky', top: '24px', height: 'calc(100vh - 48px)', overflowY: 'auto' }}>
           <aside className="qtp-docs-side-nav" aria-label="Documentation navigation">
-            <div className="qtp-docs-brand" style={{ fontSize: '1.2rem', fontWeight: 600, marginBottom: '24px' }}>QTP Developer Guide</div>
+            <div className="qtp-docs-brand" style={{ fontSize: '1.2rem', fontWeight: 600, marginBottom: '24px', color: token.colorText }}>QTP Developer Guide</div>
             {navGroups.map((group) => (
               <nav key={group.title} style={{ marginBottom: '24px' }}>
-                <div className="qtp-docs-nav-title" style={{ fontSize: '0.85rem', textTransform: 'uppercase', color: '#888', fontWeight: 600, marginBottom: '8px' }}>{group.title}</div>
+                <div className="qtp-docs-nav-title" style={{ fontSize: '0.85rem', textTransform: 'uppercase', color: token.colorTextSecondary, fontWeight: 600, marginBottom: '8px' }}>{group.title}</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   {group.items.map((id) => (
-                    <a key={id} href={`#${id}`} style={{ color: '#444', textDecoration: 'none', fontSize: '0.95rem' }}>{slugTitle(id)}</a>
+                    <a key={id} href={`#${id}`} style={{ color: token.colorText, textDecoration: 'none', fontSize: '0.95rem' }}>{slugTitle(id)}</a>
                   ))}
                 </div>
               </nav>
@@ -160,13 +163,13 @@ export default function DocsPage() {
         </Col>
 
         <Col xs={24} lg={19}>
-          <article className="qtp-docs-article" style={{ fontSize: '1.05rem', lineHeight: 1.7, color: '#333' }}>
+          <article className="qtp-docs-article" style={{ fontSize: '1.05rem', lineHeight: 1.7, color: token.colorText }}>
             <div className="qtp-docs-hero" style={{ marginBottom: '3rem' }}>
               <Tag color="blue" style={{ marginBottom: '16px' }}>Developer documentation</Tag>
-              <h1 style={{ fontSize: '2.5rem', fontWeight: 800, marginBottom: '16px', lineHeight: 1.2 }}>
+              <h1 style={{ fontSize: '2.5rem', fontWeight: 800, marginBottom: '16px', lineHeight: 1.2, color: token.colorTextHeading }}>
                 Build reliable automation scenarios with QTP
               </h1>
-              <p style={{ fontSize: '1.25rem', color: '#555' }}>
+              <p style={{ fontSize: '1.25rem', color: token.colorTextSecondary }}>
                 QTP (Quality Test Platform) is a testing control plane built for developers. It enables you to define, 
                 orchestrate, and debug test scenarios—from simple HTTP checks to complex UI workflows—across environments, 
                 all within a single unified platform.

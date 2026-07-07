@@ -379,7 +379,7 @@ export default function RequestBuilderPage() {
     <Layout style={{ height: "calc(100vh - 64px)", background: "transparent" }}>
       <Splitter style={{ flex: 1, width: "100%", height: "100%" }}>
         <Splitter.Panel defaultSize={280} min={220} max={500}>
-          <Sider width="100%" theme="light" style={{ height: "100%", borderRight: `1px solid ${token.colorBorderSecondary}`, background: sidebarBg }}>
+          <div style={{ width: "100%", height: "100%", borderRight: `1px solid ${token.colorBorderSecondary}`, background: sidebarBg, display: "flex", flexDirection: "column" }}>
         <div style={{ padding: "16px 12px", borderBottom: `1px solid ${token.colorBorderSecondary}`, background: panelBg }}>
           <Space style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
             <Typography.Text strong>Collections</Typography.Text>
@@ -424,7 +424,7 @@ export default function RequestBuilderPage() {
             }}
           />
         </div>
-          </Sider>
+          </div>
         </Splitter.Panel>
 
         <Splitter.Panel>

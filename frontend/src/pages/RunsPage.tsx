@@ -20,6 +20,11 @@ export default function RunsPage() {
   });
   const { data: targets = [] } = useQuery({ queryKey: ["targetsOptions"], queryFn: qtp.targets });
   const { data: allTags = [] } = useQuery({ queryKey: ["allTags"], queryFn: () => qtp.tags("") });
+  const { data: overview } = useQuery({
+    queryKey: ["overview", 24],
+    queryFn: () => qtp.overview({ hours: 24 }),
+    refetchInterval: live ? 5000 : false,
+  });
   const runs = page?.items || [];
 
   const rerunQueued = useMutation({
@@ -43,6 +48,25 @@ export default function RunsPage() {
           <span>Live <Switch size="small" checked={live} onChange={setLive} /></span>
         </Space>
       </Space>
+      {overview && (
+        <Space size="large" style={{ marginBottom: 16, padding: "8px 16px", background: "var(--qtp-surface-bg)", borderRadius: 4, border: "1px solid var(--qtp-surface-border)", width: "100%" }}>
+          <Typography.Link onClick={() => setParams(p => ({ ...p, status: undefined, page: 1 }))}>
+            <Typography.Text>Total runs (24h): <strong>{overview.totals.total_runs}</strong></Typography.Text>
+          </Typography.Link>
+          <Typography.Link onClick={() => setParams(p => ({ ...p, status: "queued", page: 1 }))}>
+            <Typography.Text>Queued: <strong>{overview.totals.queued}</strong></Typography.Text>
+          </Typography.Link>
+          <Typography.Link onClick={() => setParams(p => ({ ...p, status: "passed", page: 1 }))}>
+            <Typography.Text>Passed: <strong style={{ color: "#52c41a" }}>{overview.totals.passed}</strong></Typography.Text>
+          </Typography.Link>
+          <Typography.Link onClick={() => setParams(p => ({ ...p, status: "failed", page: 1 }))}>
+            <Typography.Text>Failed: <strong style={{ color: "#f5222d" }}>{overview.totals.failed}</strong></Typography.Text>
+          </Typography.Link>
+          <Typography.Link onClick={() => setParams(p => ({ ...p, status: "error", page: 1 }))}>
+            <Typography.Text>Errors: <strong style={{ color: "#f5222d" }}>{overview.totals.error}</strong></Typography.Text>
+          </Typography.Link>
+        </Space>
+      )}
       <Table
         rowKey="id"
         loading={isLoading}
