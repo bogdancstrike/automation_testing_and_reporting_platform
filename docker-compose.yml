@@ -1,0 +1,150 @@
+networks:
+  qtpnet:
+
+volumes:
+  postgres-data: {}
+  keycloak-data: {}
+
+x-backend-env: &backend-env
+  DATABASE_URL: "postgresql+psycopg2://qtp:qtp@postgres:5432/qtp"
+  KEYCLOAK_PUBLIC_URL: "http://localhost:8080"
+  KEYCLOAK_INTERNAL_URL: "http://keycloak:8080"
+  KEYCLOAK_REALM: "qtp"
+  KEYCLOAK_SPA_CLIENT_ID: "qtp-spa"
+  KEYCLOAK_AUDIENCE: "qtp-api"
+  ALLOWED_ORIGINS: "http://localhost:5173"
+  # The demo app-under-test lives inside the compose network on a private IP;
+  # allow it past the SSRF private-range block.
+  SSRF_ALLOWLIST: "httpbin,localhost,127.0.0.1"
+  LOG_LEVEL: "INFO"
+
+services:
+
+  # ── PostgreSQL (QTP data) ────────────────────────────────────────────────
+  postgres:
+    image: postgres:15-alpine
+    container_name: qtp-postgres
+    networks: [qtpnet]
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    environment:
+      POSTGRES_USER: "qtp"
+      POSTGRES_PASSWORD: "qtp"
+      POSTGRES_DB: "qtp"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U qtp -d qtp"]
+      interval: 5s
+      timeout: 3s
+      retries: 15
+    restart: unless-stopped
+
+  # ── Keycloak (dev mode, realm imported from file) ────────────────────────
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    container_name: qtp-keycloak
+    networks: [qtpnet]
+    ports:
+      - "${KEYCLOAK_PORT:-8080}:8080"
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: "${KEYCLOAK_ADMIN_USER:-admin}"
+      KC_BOOTSTRAP_ADMIN_PASSWORD: "${KEYCLOAK_ADMIN_PASSWORD:-admin}"
+      KC_HOSTNAME_STRICT: "false"
+      KC_HTTP_ENABLED: "true"
+      KC_HEALTH_ENABLED: "true"
+    command: ["start-dev", "--import-realm"]
+    volumes:
+      - ./keycloak/realm-export.json:/opt/keycloak/data/import/realm-export.json:ro
+      - keycloak-data:/opt/keycloak/data
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/8080 && echo -e 'GET /realms/qtp HTTP/1.0\\r\\nHost: localhost\\r\\n\\r\\n' >&3 && cat <&3 | grep -q '200 OK'"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 25s
+    restart: unless-stopped
+
+  # ── Demo app-under-test (so the request builder has a real target) ───────
+  httpbin:
+    image: mccutchen/go-httpbin:v2.15.0
+    container_name: qtp-httpbin
+    networks: [qtpnet]
+    ports:
+      - "8088:8080"
+    restart: unless-stopped
+
+  # ── One-shot: create tables + seed admin/project/target/sample tests ─────
+  init:
+    build: .
+    image: qtp-backend
+    container_name: qtp-init
+    networks: [qtpnet]
+    depends_on:
+      postgres: {condition: service_healthy}
+    environment:
+      <<: *backend-env
+    command: ["python", "scripts/init_db.py"]
+    restart: "no"
+
+  # ── API ──────────────────────────────────────────────────────────────────
+  api:
+    build: .
+    image: qtp-backend
+    container_name: qtp-api
+    networks: [qtpnet]
+    ports:
+      - "${API_PORT:-5100}:5100"
+    depends_on:
+      postgres: {condition: service_healthy}
+      keycloak: {condition: service_healthy}
+      init: {condition: service_completed_successfully}
+    environment:
+      <<: *backend-env
+      ROLE: "api"
+    command: ["python", "main.py"]
+    restart: unless-stopped
+
+  # ── Execution worker ─────────────────────────────────────────────────────
+  worker:
+    build: .
+    image: qtp-backend
+    container_name: qtp-worker
+    networks: [qtpnet]
+    depends_on:
+      postgres: {condition: service_healthy}
+      init: {condition: service_completed_successfully}
+    environment:
+      <<: *backend-env
+      ROLE: "worker"
+      WORKER_NAME: "qtp-worker-1"
+      WORKER_CAPABILITIES: "http,python"
+    command: ["python", "worker.py"]
+    restart: unless-stopped
+
+  # ── Scheduler ────────────────────────────────────────────────────────────
+  scheduler:
+    build: .
+    image: qtp-backend
+    container_name: qtp-scheduler
+    networks: [qtpnet]
+    depends_on:
+      postgres: {condition: service_healthy}
+      init: {condition: service_completed_successfully}
+    environment:
+      <<: *backend-env
+      ROLE: "scheduler"
+    command: ["python", "scheduler.py"]
+    restart: unless-stopped
+
+  # ── Frontend (built SPA served by nginx) ─────────────────────────────────
+  frontend:
+    build: ./frontend
+    image: qtp-frontend
+    container_name: qtp-frontend
+    networks: [qtpnet]
+    ports:
+      - "5173:80"
+    depends_on:
+      - api
+    restart: unless-stopped
