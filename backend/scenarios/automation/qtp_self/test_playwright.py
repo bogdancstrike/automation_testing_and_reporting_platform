@@ -10,26 +10,52 @@ class QtpSelfPlaywrightTest1(PlaywrightTest):
     )
 
     def test(self, ctx):
+        from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
+
+        token = 'system-bearer-token'
+
         page = ctx.browser.visit('about:blank').page
 
+        # Adds the Authorization header to normal browser requests.
         page.set_extra_http_headers({
-            'Authorization': 'Bearer system-bearer-token'
+            'Authorization': f'Bearer {token}'
         })
 
-        page.goto('http://qtp-frontend/overview', wait_until='networkidle')
+        # Adds the Authorization header to all routed requests too,
+        # including React fetch/XHR calls.
+        def add_auth_header(route, request):
+            headers = dict(request.headers)
+            headers['authorization'] = f'Bearer {token}'
+            route.continue_(headers=headers)
+
+        page.route('**/*', add_auth_header)
+
+        page.goto('http://qtp-frontend/overview', wait_until='domcontentloaded')
 
         page.wait_for_selector('body', timeout=5000)
         page.wait_for_timeout(2000)  # Wait a bit for React to render
 
-        total_runs_card = page.locator(
-            '.ant-card-body:has(.ant-statistic-title:text("Total runs"))'
+        total_runs_statistic = page.locator(
+            "xpath=//div[contains(@class, 'ant-statistic') "
+            "and .//div[contains(@class, 'ant-statistic-title') "
+            "and normalize-space()='Total runs']]"
         )
 
-        total_runs_card.wait_for(timeout=5000)
+        try:
+            total_runs_statistic.wait_for(state='visible', timeout=10000)
 
-        total_runs_value = total_runs_card.locator(
-            '.ant-statistic-content-value-int'
-        ).inner_text().strip()
+            total_runs_value = total_runs_statistic.locator(
+                "xpath=.//span[contains(@class, 'ant-statistic-content-value-int')]"
+            ).inner_text(timeout=5000).strip()
+
+        except PlaywrightTimeoutError:
+            current_url = page.url
+            body_text = page.locator('body').inner_text(timeout=5000)[:1000].replace('\n', ' ')
+
+            ctx.log('error', f'Could not find Total runs statistic. Current URL: {current_url}')
+            ctx.log('error', f'Page body preview: {body_text}')
+
+            raise
 
         ctx.log('info', f'Total runs: {total_runs_value}')
         print(f'Total runs: {total_runs_value}')

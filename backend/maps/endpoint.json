@@ -284,6 +284,32 @@
     },
     {
       "namespace": "qtp",
+      "operation_name": "runs_rerun",
+      "model_name": "Empty",
+      "request_method": [
+        "POST"
+      ],
+      "api_url": "/api/runs/<run_id>/re-run",
+      "exec_method": {
+        "module_name": "src.api.runs",
+        "method_name": "rerun_queued_run"
+      }
+    },
+    {
+      "namespace": "qtp",
+      "operation_name": "runs_rerun_all_queued",
+      "model_name": "Empty",
+      "request_method": [
+        "POST"
+      ],
+      "api_url": "/api/runs/re-run-queued",
+      "exec_method": {
+        "module_name": "src.api.runs",
+        "method_name": "rerun_all_queued"
+      }
+    },
+    {
+      "namespace": "qtp",
       "operation_name": "schedules_list",
       "model_name": "Empty",
       "request_method": [

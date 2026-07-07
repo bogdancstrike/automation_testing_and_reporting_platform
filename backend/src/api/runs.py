@@ -55,3 +55,15 @@ def set_defect(app, operation, request, run_id=None, principal=None, **kwargs):
     defect = json_body(request).get("defect_type", "")
     with session_scope() as db:
         return service.set_defect(db, run_id, defect), 200
+
+
+@require_authenticated
+def rerun_queued_run(app, operation, request, run_id=None, principal=None, **kwargs):
+    with session_scope() as db:
+        return service.requeue_run(db, run_id), 200
+
+
+@require_authenticated
+def rerun_all_queued(app, operation, request, principal=None, **kwargs):
+    with session_scope() as db:
+        return service.requeue_all_queued(db), 200

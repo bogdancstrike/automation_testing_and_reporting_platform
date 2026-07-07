@@ -1,6 +1,6 @@
-import { Table, Typography, Space, Switch, Tag } from "antd";
+import { Table, Typography, Space, Switch, Tag, Button, App } from "antd";
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { qtp } from "../api/qtp";
 import { StatusTag, DefectTag, Duration } from "../components/tags";
@@ -9,6 +9,8 @@ import type { QueryParams } from "../api/types";
 
 export default function RunsPage() {
   const nav = useNavigate();
+  const { message } = App.useApp();
+  const qc = useQueryClient();
   const [live, setLive] = useState(true);
   const [params, setParams] = useState<QueryParams>({ page: 1, page_size: 20, sort: "queued_at", order: "desc" });
   const { data: page, isLoading } = useQuery({
@@ -20,6 +22,15 @@ export default function RunsPage() {
   const { data: allTags = [] } = useQuery({ queryKey: ["allTags"], queryFn: () => qtp.tags("") });
   const runs = page?.items || [];
 
+  const rerunQueued = useMutation({
+    mutationFn: () => qtp.rerunQueuedRuns(),
+    onSuccess: (data: any) => {
+      message.success(`Re-queued ${data.requeued_count} runs`);
+      qc.invalidateQueries({ queryKey: ["runsPage"] });
+    },
+    onError: (e: any) => message.error(e.message),
+  });
+
   return (
     <div>
       <Space style={{ marginBottom: 16, justifyContent: "space-between", width: "100%" }}>
@@ -27,7 +38,10 @@ export default function RunsPage() {
           <Typography.Title level={3} style={{ margin: 0 }}>Runs</Typography.Title>
           <Typography.Text type="secondary">Search, filters, sorting, and pagination are executed by the backend.</Typography.Text>
         </div>
-        <Space><span>Live <Switch size="small" checked={live} onChange={setLive} /></span></Space>
+        <Space>
+          <Button onClick={() => rerunQueued.mutate()} loading={rerunQueued.isPending}>Re-run all queued</Button>
+          <span>Live <Switch size="small" checked={live} onChange={setLive} /></span>
+        </Space>
       </Space>
       <Table
         rowKey="id"

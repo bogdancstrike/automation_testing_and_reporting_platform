@@ -180,6 +180,7 @@ class BrowserClient:
         self._ctx = ctx
         self._pw = None
         self._browser = None
+        self._driver = None
 
     def get_driver(self):
         if self._driver is not None:
@@ -200,26 +201,18 @@ class BrowserClient:
         if self._browser is not None:
             return
         try:
-            import nest_asyncio
-            nest_asyncio.apply()
             from playwright.sync_api import sync_playwright
-            import asyncio
-            original_is_running = asyncio.BaseEventLoop.is_running
-            asyncio.BaseEventLoop.is_running = lambda self: False
-        except Exception as e:  # pragma: no cover - depends on image
+        except ImportError as e:  # pragma: no cover - depends on image
             raise RuntimeError(
                 "playwright is not installed in this worker image; use a "
                 "Playwright-enabled image to run browser scenarios"
             ) from e
         
-        try:
-            self._pw = sync_playwright().start()
-            self._browser = self._pw.chromium.launch(
-                headless=True,
-                args=["--unsafely-treat-insecure-origin-as-secure=http://qtp-frontend"]
-            )
-        finally:
-            asyncio.BaseEventLoop.is_running = original_is_running
+        self._pw = sync_playwright().start()
+        self._browser = self._pw.chromium.launch(
+            headless=True,
+            args=["--unsafely-treat-insecure-origin-as-secure=http://qtp-frontend"]
+        )
 
     def visit(self, path: str = "/") -> "PageResult":
         self._ensure()
@@ -240,9 +233,11 @@ class BrowserClient:
                 self._browser.close()
             if self._pw:
                 self._pw.stop()
+            if getattr(self, "_driver", None):
+                self._driver.quit()
         except Exception:  # pragma: no cover
             pass
-        self._browser = self._pw = None
+        self._browser = self._pw = self._driver = None
 
 
 class PageResult:

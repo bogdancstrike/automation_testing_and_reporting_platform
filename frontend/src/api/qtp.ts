@@ -59,6 +59,8 @@ export const qtp = {
   createRunComment: (id: string, body: string, tags: string[] = []) => api.post<CommentItem>(`/api/runs/${id}/comments`, { body, tags }),
   cancelRun: (id: string) => api.post<any>(`/api/runs/${id}/cancel`),
   setDefect: (id: string, defect_type: string) => api.put<any>(`/api/runs/${id}/defect`, { defect_type }),
+  rerunRun: (id: string) => api.post<any>(`/api/runs/${id}/re-run`),
+  rerunQueuedRuns: () => api.post<any>("/api/runs/re-run-queued"),
 
   schedulesPage: (params: QueryParams = {}) => api.get<Page<Schedule>>(`/api/schedules${qs(params)}`),
   schedules: () => api.get<Page<Schedule>>(`/api/schedules${qs({ page_size: 100 })}`).then(list<Schedule>()),

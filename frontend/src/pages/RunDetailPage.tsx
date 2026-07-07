@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Card, Descriptions, Button, Typography, Table, Space, Tabs, App, Tag, Select, Row, Col, List, Form, Input } from "antd";
-import { ArrowLeftOutlined, ExperimentOutlined, StopOutlined } from "@ant-design/icons";
+import { ArrowLeftOutlined, ExperimentOutlined, StopOutlined, PlayCircleOutlined } from "@ant-design/icons";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { qtp } from "../api/qtp";
@@ -37,6 +37,11 @@ export default function RunDetailPage() {
     onSuccess: () => { message.success("Defect set"); qc.invalidateQueries({ queryKey: ["run", id] }); },
     onError: (e: any) => message.error(e.message),
   });
+  const rerun = useMutation({
+    mutationFn: () => qtp.rerunRun(id),
+    onSuccess: () => { message.success("Run re-queued"); qc.invalidateQueries({ queryKey: ["run", id] }); },
+    onError: (e: any) => message.error(e.message),
+  });
 
   const addComment = useMutation({
     mutationFn: (v: { body: string; tags: string[] }) => qtp.createRunComment(id, v.body, v.tags),
@@ -58,6 +63,7 @@ export default function RunDetailPage() {
         <Button icon={<ArrowLeftOutlined />} onClick={() => nav("/runs")}>Runs</Button>
         <Button icon={<ExperimentOutlined />} onClick={() => nav(`/scenarios/${run.test_definition_id}`)}>Open scenario</Button>
         {active(run.status) && <Button danger icon={<StopOutlined />} loading={cancel.isPending} onClick={() => cancel.mutate()}>Cancel</Button>}
+        {run.status === "queued" && <Button type="primary" icon={<PlayCircleOutlined />} loading={rerun.isPending} onClick={() => rerun.mutate()}>Re-run</Button>}
       </Space>
       <Typography.Title level={3}>
         {run.test_name || "Run"} <StatusTag status={run.status} />

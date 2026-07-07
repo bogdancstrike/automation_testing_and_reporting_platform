@@ -67,6 +67,30 @@ def run_now(db: Session, test_id: str, *, environment: str = "default", triggere
     return serializers.run_summary(run, test_name=d.name, target_key=d.target_key)
 
 
+def requeue_run(db: Session, run_id: str) -> dict:
+    r = db.get(TestRun, run_id)
+    if not r or r.stats_reset_at is not None:
+        raise NotFoundError("run not found")
+    if r.status != "queued":
+        raise ValidationError("only queued runs can be re-queued")
+    
+    q = db.scalar(select(RunQueue).where(RunQueue.test_run_id == r.id))
+    capability = q.capability if q else "http"
+    db.info.setdefault("pending_runs", []).append((r.id, capability))
+    return serializers.run_summary(r)
+
+
+def requeue_all_queued(db: Session) -> dict:
+    runs = db.scalars(select(TestRun).where(TestRun.status == "queued")).all()
+    count = 0
+    for r in runs:
+        q = db.scalar(select(RunQueue).where(RunQueue.test_run_id == r.id))
+        capability = q.capability if q else "http"
+        db.info.setdefault("pending_runs", []).append((r.id, capability))
+        count += 1
+    return {"requeued_count": count}
+
+
 def _names(db: Session, runs: list[TestRun]) -> tuple[dict, dict]:
     def_ids = {r.test_definition_id for r in runs}
     tgt_ids = {r.target_id for r in runs if r.target_id}
