@@ -26,6 +26,7 @@
     { "namespace": "qtp", "operation_name": "request_send",   "model_name": "Empty", "request_method": ["POST"],  "api_url": "/api/request-tests/send",       "exec_method": { "module_name": "src.api.request_tests", "method_name": "send_request" } },
     { "namespace": "qtp", "operation_name": "request_create", "model_name": "Empty", "request_method": ["POST"],  "api_url": "/api/request-tests",            "exec_method": { "module_name": "src.api.request_tests", "method_name": "create_request_test" } },
     { "namespace": "qtp", "operation_name": "request_update", "model_name": "Empty", "request_method": ["PATCH"], "api_url": "/api/request-tests/<test_id>",  "exec_method": { "module_name": "src.api.request_tests", "method_name": "update_request_test" } },
+    { "namespace": "qtp", "operation_name": "request_delete", "model_name": "Empty", "request_method": ["DELETE"], "api_url": "/api/request-tests/<test_id>",  "exec_method": { "module_name": "src.api.request_tests", "method_name": "delete_request_test" } },
 
     { "namespace": "qtp", "operation_name": "runs_list",   "model_name": "Empty", "request_method": ["GET"],  "api_url": "/api/runs",                 "exec_method": { "module_name": "src.api.runs", "method_name": "list_runs" } },
     { "namespace": "qtp", "operation_name": "runs_get",    "model_name": "Empty", "request_method": ["GET"],  "api_url": "/api/runs/<run_id>",        "exec_method": { "module_name": "src.api.runs", "method_name": "get_run" } },

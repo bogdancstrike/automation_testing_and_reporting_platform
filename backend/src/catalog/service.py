@@ -186,3 +186,29 @@ def update_request_test(db: Session, test_id: str, payload: dict[str, Any]) -> d
         _make_revision(db, d, config=config)
         d.target_key = config.get("target", d.target_key)
     return serializers.test_detail(d)
+
+
+def delete_request_test(db: Session, test_id: str) -> dict:
+    """Delete a UI request test and everything that depends on it."""
+    from sqlalchemy import delete as sa_delete
+    from src.execution.models import (RunLog, RunQueue, TestRun,
+                                      TestRunAssertion, TestRunStep)
+    from src.scheduling.models import Schedule
+
+    d = db.get(TestDefinition, test_id)
+    if not d:
+        raise NotFoundError("test not found")
+    if d.source != "ui":
+        raise ValidationError("only UI request tests can be deleted")
+
+    run_ids = list(db.scalars(select(TestRun.id).where(TestRun.test_definition_id == test_id)).all())
+    if run_ids:
+        db.execute(sa_delete(RunLog).where(RunLog.test_run_id.in_(run_ids)))
+        db.execute(sa_delete(TestRunStep).where(TestRunStep.test_run_id.in_(run_ids)))
+        db.execute(sa_delete(TestRunAssertion).where(TestRunAssertion.test_run_id.in_(run_ids)))
+        db.execute(sa_delete(RunQueue).where(RunQueue.test_run_id.in_(run_ids)))
+        db.execute(sa_delete(TestRun).where(TestRun.id.in_(run_ids)))
+    db.execute(sa_delete(Schedule).where(Schedule.test_definition_id == test_id))
+    db.execute(sa_delete(TestRevision).where(TestRevision.test_definition_id == test_id))
+    db.execute(sa_delete(TestDefinition).where(TestDefinition.id == test_id))
+    return {"deleted": test_id}

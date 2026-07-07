@@ -23,6 +23,7 @@ export const qtp = {
     api.post<TestDetail>("/api/request-tests", b),
   updateRequestTest: (id: string, b: { name?: string; config?: Record<string, any> }) =>
     api.patch<TestDetail>(`/api/request-tests/${id}`, b),
+  deleteRequestTest: (id: string) => api.del<any>(`/api/request-tests/${id}`),
 
   runs: (q = "") => api.get<{ items: RunSummary[] }>(`/api/runs${q}`).then(list<RunSummary>("items")),
   run: (id: string) => api.get<RunDetail>(`/api/runs/${id}`),

@@ -52,3 +52,9 @@ def create_request_test(app, operation, request, principal=None, **kwargs):
 def update_request_test(app, operation, request, test_id=None, principal=None, **kwargs):
     with session_scope() as db:
         return service.update_request_test(db, test_id, json_body(request)), 200
+
+
+@require_role(ROLE_TEST_AUTHOR)
+def delete_request_test(app, operation, request, test_id=None, principal=None, **kwargs):
+    with session_scope() as db:
+        return service.delete_request_test(db, test_id), 200
