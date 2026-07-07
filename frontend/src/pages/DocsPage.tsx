@@ -1,3 +1,5 @@
+import { useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { Anchor, Card, Col, Row, Typography, Table, Tag, Alert } from "antd";
 
 const { Title, Paragraph, Text } = Typography;
@@ -160,6 +162,20 @@ const ENDPOINTS = [
 ];
 
 export default function DocsPage() {
+  const { hash } = useLocation();
+
+  useEffect(() => {
+    if (hash) {
+      setTimeout(() => {
+        const id = hash.replace('#', '');
+        const element = document.getElementById(id);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 100);
+    }
+  }, [hash]);
+
   return (
     <Row gutter={24}>
       <Col xs={0} lg={5}>

@@ -2,11 +2,10 @@ import { useState } from "react";
 import { Card, Descriptions, Button, Typography, Table, Space, Tabs, App, Tag, Row, Col, Alert, Modal, Select, Form, Input, List } from "antd";
 import { PlayCircleOutlined, ArrowLeftOutlined, ApiOutlined, EditOutlined } from "@ant-design/icons";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { ReactFlow, Background, Controls, MarkerType } from "@xyflow/react";
-import "@xyflow/react/dist/style.css";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { qtp } from "../api/qtp";
 import { StatusTag, TypeTag } from "../components/tags";
+import ExecutionFlow from "../components/ExecutionFlow";
 
 const METHOD_COLOR: Record<string, string> = {
   GET: "green", POST: "blue", PUT: "orange", PATCH: "gold", DELETE: "red", HEAD: "default",
@@ -65,44 +64,20 @@ export default function TestDetailPage() {
   const base = t.target?.base_url || "";
   const effectiveUrl = (t.url_template || "").replace("{{base_url}}", base);
 
-  const getFlowData = () => {
-    if (!t?.steps?.length) return { nodes: [], edges: [] };
-    const nodes: any[] = [];
-    const edges: any[] = [];
-    const stepResults = runData?.step_results || [];
-
-    t.steps.forEach((step: any, index: number) => {
-      let bg = "#fff", borderColor = "#d9d9d9";
-      if (runId && runData) {
-        const sr = stepResults.find((r: any) => r.step_id === step.id);
-        if (sr) {
-          if (sr.status === "passed") { bg = "#f6ffed"; borderColor = "#b7eb8f"; }
-          else if (sr.status === "failed") { bg = "#fff2f0"; borderColor = "#ffccc7"; }
-          else if (sr.status === "error") { bg = "#fff1f0"; borderColor = "#ffa39e"; }
-          else if (sr.status === "timeout") { bg = "#fffbe6"; borderColor = "#ffe58f"; }
-        } else if (runData.status !== "running") { bg = "#f5f5f5"; }
-      }
-
-      nodes.push({
-        id: step.id,
-        position: { x: 250, y: index * 100 },
-        data: { label: <div style={{ padding: 4 }}><div style={{ fontWeight: 600, fontSize: 12 }}>{step.name}</div><div style={{ fontSize: 10, color: "#666" }}>{step.method} {step.url}</div></div> },
-        style: { background: bg, border: `1px solid ${borderColor}`, borderRadius: 8, width: 250 }
-      });
-
-      if (index > 0) {
-        edges.push({
-          id: `e-${t.steps[index - 1].id}-${step.id}`,
-          source: t.steps[index - 1].id,
-          target: step.id,
-          animated: runData?.status === "running",
-          markerEnd: { type: MarkerType.ArrowClosed },
-        });
-      }
+  const getFlowSteps = () => {
+    if (!t?.steps?.length) return [];
+    // If we have an active runId, try to overlay status onto the definition steps.
+    const runSteps = runData?.steps || [];
+    return t.steps.map((step: any) => {
+      const rs = runSteps.find((r: any) => r.name === step.name || r.step_id === step.id);
+      return {
+        ...step,
+        status: rs ? rs.status : (runData && runData.status !== "running" ? undefined : "queued"),
+        duration_ms: rs?.duration_ms
+      };
     });
-    return { nodes, edges };
   };
-  const { nodes, edges } = getFlowData();
+  const flowSteps = getFlowSteps();
 
   return (
     <div>
@@ -148,14 +123,11 @@ export default function TestDetailPage() {
       </Row>
 
       <Tabs style={{ marginTop: 16 }} defaultActiveKey={runId ? "flow" : "code"} items={[
-        ...(t.steps && t.steps.length > 0 ? [{
-          key: "flow", label: "Flow Visualization",
+        ...(flowSteps.length > 0 ? [{
+          key: "flow", label: "Execution Plan (Flow)",
           children: (
-            <div style={{ height: 500, border: "1px solid #f0f0f0", borderRadius: 8 }}>
-              <ReactFlow nodes={nodes} edges={edges} fitView>
-                <Background />
-                <Controls />
-              </ReactFlow>
+            <div style={{ marginTop: 12 }}>
+              <ExecutionFlow steps={flowSteps} status={runData?.status || "queued"} />
             </div>
           )
         }] : []),

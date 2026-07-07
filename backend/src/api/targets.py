@@ -4,7 +4,7 @@ from __future__ import annotations
 from sqlalchemy import select
 from src.api._helpers import json_body, query_args
 from src.catalog import service
-from src.catalog.models import TestDefinition
+from src.catalog.models import Target, TestDefinition
 from src.core.db import session_scope
 from src.execution import service as exec_service
 from src.iam.decorators import require_authenticated, require_role
@@ -57,7 +57,10 @@ def update_target(app, operation, request, target_id=None, principal=None, **kwa
 @require_role(ROLE_OPERATOR)
 def run_all_target_tests(app, operation, request, target_id=None, principal=None, **kwargs):
     with session_scope() as db:
-        tests = db.scalars(select(TestDefinition).where(TestDefinition.target_id == target_id)).all()
+        target = db.get(Target, target_id)
+        if not target:
+            return {"error": "target not found"}, 404
+        tests = db.scalars(select(TestDefinition).where(TestDefinition.target_key == target.key)).all()
         queued = []
         for t in tests:
             queued.append(exec_service.run_now(db, t.id, environment="default"))

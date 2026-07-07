@@ -5,6 +5,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { qtp } from "../api/qtp";
 import { StatusTag, DefectTag, Duration } from "../components/tags";
+import ExecutionFlow from "../components/ExecutionFlow";
 
 const DEFECTS = ["product_bug", "automation_bug", "system_issue", "to_investigate", "no_defect"];
 
@@ -180,7 +181,15 @@ export default function RunDetailPage() {
           })(),
         },
         {
-          key: "steps", label: `Steps (${run.steps.length})`,
+          key: "flow", label: "Execution Plan (Flow)",
+          children: (
+            <div style={{ marginTop: 12 }}>
+              <ExecutionFlow steps={run.steps} status={run.status} />
+            </div>
+          ),
+        },
+        {
+          key: "steps", label: `Steps Table (${run.steps.length})`,
           children: <Table rowKey="name" size="small" pagination={false} dataSource={run.steps}
             columns={[{ title: "Step", dataIndex: "name" }, { title: "Status", dataIndex: "status", render: (s) => <StatusTag status={s} /> },
             { title: "Duration", dataIndex: "duration_ms", render: (m) => <Duration ms={m} /> }, { title: "Error", dataIndex: "error" }]} />,
