@@ -181,27 +181,45 @@ class BrowserClient:
         self._pw = None
         self._browser = None
 
+    def get_driver(self):
+        if self._driver is not None:
+            return self._driver
+        try:
+            from selenium import webdriver
+        except ImportError as e:
+            raise RuntimeError("selenium is not installed in this worker image") from e
+        options = webdriver.ChromeOptions()
+        options.add_argument("--headless")
+        options.add_argument("--no-sandbox")
+        options.add_argument("--disable-dev-shm-usage")
+        options.add_argument("--unsafely-treat-insecure-origin-as-secure=http://qtp-frontend")
+        self._driver = webdriver.Chrome(options=options)
+        return self._driver
+
     def _ensure(self):
         if self._browser is not None:
             return
         try:
+            import nest_asyncio
+            nest_asyncio.apply()
             from playwright.sync_api import sync_playwright
-            import playwright.sync_api._context_manager as ctx_mgr
-            original_get_running_loop = ctx_mgr.asyncio.get_running_loop
-            
-            def fake_get_running_loop():
-                raise RuntimeError("No running event loop")
-            ctx_mgr.asyncio.get_running_loop = fake_get_running_loop
+            import asyncio
+            original_is_running = asyncio.BaseEventLoop.is_running
+            asyncio.BaseEventLoop.is_running = lambda self: False
         except Exception as e:  # pragma: no cover - depends on image
             raise RuntimeError(
                 "playwright is not installed in this worker image; use a "
                 "Playwright-enabled image to run browser scenarios"
             ) from e
+        
         try:
             self._pw = sync_playwright().start()
-            self._browser = self._pw.chromium.launch(headless=True)
+            self._browser = self._pw.chromium.launch(
+                headless=True,
+                args=["--unsafely-treat-insecure-origin-as-secure=http://qtp-frontend"]
+            )
         finally:
-            ctx_mgr.asyncio.get_running_loop = original_get_running_loop
+            asyncio.BaseEventLoop.is_running = original_is_running
 
     def visit(self, path: str = "/") -> "PageResult":
         self._ensure()

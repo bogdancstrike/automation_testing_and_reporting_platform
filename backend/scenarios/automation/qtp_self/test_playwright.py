@@ -10,13 +10,38 @@ class QtpSelfPlaywrightTest1(PlaywrightTest):
     )
 
     def test(self, ctx):
-        page = ctx.browser.visit('http://qtp-frontend/overview').page
+        page = ctx.browser.visit('about:blank').page
+
+        page.set_extra_http_headers({
+            'Authorization': 'Bearer system-bearer-token'
+        })
+
+        page.goto('http://qtp-frontend/overview', wait_until='networkidle')
+
         page.wait_for_selector('body', timeout=5000)
-        page.wait_for_timeout(2000) # Wait a bit for React to render
-        info = page.locator('body').inner_text()[:200].replace('\\n', ' ')
-        ctx.log('info', f'Scraped from Playwright: {info}')
-        print(f'Playwright scraped info: {info}')
-        ctx.assert_that('test', 'equals', True, True, True, message='always pass')
+        page.wait_for_timeout(2000)  # Wait a bit for React to render
+
+        total_runs_card = page.locator(
+            '.ant-card-body:has(.ant-statistic-title:text("Total runs"))'
+        )
+
+        total_runs_card.wait_for(timeout=5000)
+
+        total_runs_value = total_runs_card.locator(
+            '.ant-statistic-content-value-int'
+        ).inner_text().strip()
+
+        ctx.log('info', f'Total runs: {total_runs_value}')
+        print(f'Total runs: {total_runs_value}')
+
+        ctx.assert_that(
+            'total_runs_visible',
+            'equals',
+            bool(total_runs_value),
+            True,
+            True,
+            message='Total runs value should be visible'
+        )
 
 class QtpSelfPlaywrightTest2(PlaywrightTest):
     metadata = TestMetadata(
