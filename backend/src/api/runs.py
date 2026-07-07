@@ -15,7 +15,7 @@ from src.iam.principal import ROLE_OPERATOR
 @require_authenticated
 def list_runs(app, operation, request, principal=None, **kwargs):
     with session_scope() as db:
-        return {"items": service.list_runs(db, query_args(request))}, 200
+        return service.list_runs(db, query_args(request)), 200
 
 
 @require_authenticated

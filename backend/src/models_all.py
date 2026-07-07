@@ -5,5 +5,6 @@ Imported by the DB init script and by Alembic's env before create_all/autogenera
 from src.catalog import models as _catalog          # noqa: F401
 from src.execution import models as _execution        # noqa: F401
 from src.scheduling import models as _scheduling       # noqa: F401
+from src.comments import models as _comments         # noqa: F401
 
-__all__ = ["_catalog", "_execution", "_scheduling"]
+__all__ = ["_catalog", "_execution", "_scheduling", "_comments"]

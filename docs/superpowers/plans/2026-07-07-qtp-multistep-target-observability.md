@@ -4,7 +4,7 @@
 
 **Goal:** Add easy-to-author multi-step tests, automatic code-test discovery, backend-driven tables, target observability pages, React Flow step maps, and richer docs/UI.
 
-**Architecture:** Extend the current modulith without introducing a separate workflow engine. The backend normalizes legacy single-request configs into step configs, executes steps through the existing HTTP adapter primitives, exposes paginated list envelopes, and adds target-focused aggregate endpoints. The frontend keeps the AntD operations-console style and adds reusable backend table/query helpers plus a React Flow test map.
+**Architecture:** Extend the current modulith without introducing a separate workflow engine. QF usage guardrail: keep using QF dynamic endpoints/bootstrap/logging where useful, but keep domain behavior in plain service modules and do not add heavier QF/ETL/Kafka pieces for this increment. Horizontal scalability guardrails: API instances stay stateless, worker coordination stays in PostgreSQL queue/run rows, and new features persist shared state instead of storing it in process memory. The backend normalizes legacy single-request configs into step configs, executes steps through the existing HTTP adapter primitives, exposes paginated list envelopes, and adds target-focused aggregate endpoints. The frontend keeps the AntD operations-console style and adds reusable backend table/query helpers plus a React Flow test map.
 
 **Tech Stack:** Python 3.12, Flask/QF, SQLAlchemy 2, PostgreSQL, requests, React 18, TypeScript, Ant Design 5, TanStack Query, ECharts, reactflow 11.11.4.
 
@@ -616,6 +616,26 @@ Document `page`, `page_size`, `q`, `sort`, `order`, and filters.
 - [ ] **Step 6: TODO update**
 
 Mark Developer Docs enrichment `[x]`.
+
+---
+
+### Task 11A: Horizontal Scalability Review
+
+**Files:**
+- Review backend service/API changes
+- Modify docs only if a scaling caveat is found
+
+- [ ] **Step 1: Check API state**
+
+Confirm new API handlers do not use module-level mutable state for pagination, comments, tags, target stats, or request-builder sends.
+
+- [ ] **Step 2: Check worker state**
+
+Confirm multi-step captures live only in the per-run `TestContext` during execution and are persisted into the run response/metrics when needed. No worker process-global state participates in correctness.
+
+- [ ] **Step 3: Check scheduler/queue behavior**
+
+Confirm existing `FOR UPDATE SKIP LOCKED` queue and due-schedule patterns remain intact and are not bypassed by new execution paths.
 
 ---
 

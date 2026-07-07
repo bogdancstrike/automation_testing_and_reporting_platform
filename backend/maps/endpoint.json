@@ -1,47 +1,507 @@
 {
   "namespaces": [
-    { "name": "qtp", "description": "QSINT Testing Platform API" }
+    {
+      "name": "qtp",
+      "description": "QSINT Testing Platform API"
+    }
   ],
   "models": {
     "Empty": {}
   },
   "endpoints": [
-    { "namespace": "qtp", "operation_name": "health",    "model_name": "Empty", "request_method": ["GET"], "api_url": "/health",    "exec_method": { "module_name": "src.api.health", "method_name": "health_check" } },
-    { "namespace": "qtp", "operation_name": "liveness",  "model_name": "Empty", "request_method": ["GET"], "api_url": "/liveness",  "exec_method": { "module_name": "src.api.health", "method_name": "liveness" } },
-    { "namespace": "qtp", "operation_name": "readiness", "model_name": "Empty", "request_method": ["GET"], "api_url": "/readiness", "exec_method": { "module_name": "src.api.health", "method_name": "readiness" } },
-
-    { "namespace": "qtp", "operation_name": "me", "model_name": "Empty", "request_method": ["GET"], "api_url": "/api/me", "exec_method": { "module_name": "src.api.me", "method_name": "me" } },
-
-    { "namespace": "qtp", "operation_name": "projects_list", "model_name": "Empty", "request_method": ["GET"], "api_url": "/api/projects", "exec_method": { "module_name": "src.api.projects", "method_name": "list_projects" } },
-
-    { "namespace": "qtp", "operation_name": "targets_list",   "model_name": "Empty", "request_method": ["GET"],  "api_url": "/api/targets",              "exec_method": { "module_name": "src.api.targets", "method_name": "list_targets" } },
-    { "namespace": "qtp", "operation_name": "targets_create", "model_name": "Empty", "request_method": ["POST"], "api_url": "/api/targets",              "exec_method": { "module_name": "src.api.targets", "method_name": "create_target" } },
-    { "namespace": "qtp", "operation_name": "targets_update", "model_name": "Empty", "request_method": ["PATCH"],"api_url": "/api/targets/<target_id>",  "exec_method": { "module_name": "src.api.targets", "method_name": "update_target" } },
-
-    { "namespace": "qtp", "operation_name": "tests_list",     "model_name": "Empty", "request_method": ["GET"],  "api_url": "/api/tests",                 "exec_method": { "module_name": "src.api.tests", "method_name": "list_tests" } },
-    { "namespace": "qtp", "operation_name": "tests_discover", "model_name": "Empty", "request_method": ["POST"], "api_url": "/api/tests/discover",         "exec_method": { "module_name": "src.api.tests", "method_name": "discover_tests" } },
-    { "namespace": "qtp", "operation_name": "tests_get",      "model_name": "Empty", "request_method": ["GET"],  "api_url": "/api/tests/<test_id>",       "exec_method": { "module_name": "src.api.tests", "method_name": "get_test" } },
-    { "namespace": "qtp", "operation_name": "tests_run",      "model_name": "Empty", "request_method": ["POST"], "api_url": "/api/tests/<test_id>/run",   "exec_method": { "module_name": "src.api.tests", "method_name": "run_test" } },
-
-    { "namespace": "qtp", "operation_name": "request_send",   "model_name": "Empty", "request_method": ["POST"],  "api_url": "/api/request-tests/send",       "exec_method": { "module_name": "src.api.request_tests", "method_name": "send_request" } },
-    { "namespace": "qtp", "operation_name": "request_create", "model_name": "Empty", "request_method": ["POST"],  "api_url": "/api/request-tests",            "exec_method": { "module_name": "src.api.request_tests", "method_name": "create_request_test" } },
-    { "namespace": "qtp", "operation_name": "request_update", "model_name": "Empty", "request_method": ["PATCH"], "api_url": "/api/request-tests/<test_id>",  "exec_method": { "module_name": "src.api.request_tests", "method_name": "update_request_test" } },
-    { "namespace": "qtp", "operation_name": "request_delete", "model_name": "Empty", "request_method": ["DELETE"], "api_url": "/api/request-tests/<test_id>",  "exec_method": { "module_name": "src.api.request_tests", "method_name": "delete_request_test" } },
-
-    { "namespace": "qtp", "operation_name": "runs_list",   "model_name": "Empty", "request_method": ["GET"],  "api_url": "/api/runs",                 "exec_method": { "module_name": "src.api.runs", "method_name": "list_runs" } },
-    { "namespace": "qtp", "operation_name": "runs_get",    "model_name": "Empty", "request_method": ["GET"],  "api_url": "/api/runs/<run_id>",        "exec_method": { "module_name": "src.api.runs", "method_name": "get_run" } },
-    { "namespace": "qtp", "operation_name": "runs_logs",   "model_name": "Empty", "request_method": ["GET"],  "api_url": "/api/runs/<run_id>/logs",   "exec_method": { "module_name": "src.api.runs", "method_name": "get_run_logs" } },
-    { "namespace": "qtp", "operation_name": "runs_cancel", "model_name": "Empty", "request_method": ["POST"], "api_url": "/api/runs/<run_id>/cancel", "exec_method": { "module_name": "src.api.runs", "method_name": "cancel_run" } },
-    { "namespace": "qtp", "operation_name": "runs_defect", "model_name": "Empty", "request_method": ["PUT"],  "api_url": "/api/runs/<run_id>/defect", "exec_method": { "module_name": "src.api.runs", "method_name": "set_defect" } },
-
-    { "namespace": "qtp", "operation_name": "schedules_list",   "model_name": "Empty", "request_method": ["GET"],    "api_url": "/api/schedules",                "exec_method": { "module_name": "src.api.schedules", "method_name": "list_schedules" } },
-    { "namespace": "qtp", "operation_name": "schedules_create", "model_name": "Empty", "request_method": ["POST"],   "api_url": "/api/schedules",                "exec_method": { "module_name": "src.api.schedules", "method_name": "create_schedule" } },
-    { "namespace": "qtp", "operation_name": "schedules_update", "model_name": "Empty", "request_method": ["PATCH"],  "api_url": "/api/schedules/<schedule_id>",  "exec_method": { "module_name": "src.api.schedules", "method_name": "update_schedule" } },
-    { "namespace": "qtp", "operation_name": "schedules_delete", "model_name": "Empty", "request_method": ["DELETE"], "api_url": "/api/schedules/<schedule_id>",  "exec_method": { "module_name": "src.api.schedules", "method_name": "delete_schedule" } },
-
-    { "namespace": "qtp", "operation_name": "dash_overview", "model_name": "Empty", "request_method": ["GET"], "api_url": "/api/dashboards/overview", "exec_method": { "module_name": "src.api.dashboards", "method_name": "overview" } },
-    { "namespace": "qtp", "operation_name": "dash_failures", "model_name": "Empty", "request_method": ["GET"], "api_url": "/api/dashboards/failures", "exec_method": { "module_name": "src.api.dashboards", "method_name": "failures" } },
-
-    { "namespace": "qtp", "operation_name": "workers_list", "model_name": "Empty", "request_method": ["GET"], "api_url": "/api/workers", "exec_method": { "module_name": "src.api.workers", "method_name": "list_workers" } }
+    {
+      "namespace": "qtp",
+      "operation_name": "health",
+      "model_name": "Empty",
+      "request_method": [
+        "GET"
+      ],
+      "api_url": "/health",
+      "exec_method": {
+        "module_name": "src.api.health",
+        "method_name": "health_check"
+      }
+    },
+    {
+      "namespace": "qtp",
+      "operation_name": "liveness",
+      "model_name": "Empty",
+      "request_method": [
+        "GET"
+      ],
+      "api_url": "/liveness",
+      "exec_method": {
+        "module_name": "src.api.health",
+        "method_name": "liveness"
+      }
+    },
+    {
+      "namespace": "qtp",
+      "operation_name": "readiness",
+      "model_name": "Empty",
+      "request_method": [
+        "GET"
+      ],
+      "api_url": "/readiness",
+      "exec_method": {
+        "module_name": "src.api.health",
+        "method_name": "readiness"
+      }
+    },
+    {
+      "namespace": "qtp",
+      "operation_name": "me",
+      "model_name": "Empty",
+      "request_method": [
+        "GET"
+      ],
+      "api_url": "/api/me",
+      "exec_method": {
+        "module_name": "src.api.me",
+        "method_name": "me"
+      }
+    },
+    {
+      "namespace": "qtp",
+      "operation_name": "projects_list",
+      "model_name": "Empty",
+      "request_method": [
+        "GET"
+      ],
+      "api_url": "/api/projects",
+      "exec_method": {
+        "module_name": "src.api.projects",
+        "method_name": "list_projects"
+      }
+    },
+    {
+      "namespace": "qtp",
+      "operation_name": "targets_list",
+      "model_name": "Empty",
+      "request_method": [
+        "GET"
+      ],
+      "api_url": "/api/targets",
+      "exec_method": {
+        "module_name": "src.api.targets",
+        "method_name": "list_targets"
+      }
+    },
+    {
+      "namespace": "qtp",
+      "operation_name": "targets_create",
+      "model_name": "Empty",
+      "request_method": [
+        "POST"
+      ],
+      "api_url": "/api/targets",
+      "exec_method": {
+        "module_name": "src.api.targets",
+        "method_name": "create_target"
+      }
+    },
+    {
+      "namespace": "qtp",
+      "operation_name": "targets_update",
+      "model_name": "Empty",
+      "request_method": [
+        "PATCH"
+      ],
+      "api_url": "/api/targets/<target_id>",
+      "exec_method": {
+        "module_name": "src.api.targets",
+        "method_name": "update_target"
+      }
+    },
+    {
+      "namespace": "qtp",
+      "operation_name": "tests_list",
+      "model_name": "Empty",
+      "request_method": [
+        "GET"
+      ],
+      "api_url": "/api/tests",
+      "exec_method": {
+        "module_name": "src.api.tests",
+        "method_name": "list_tests"
+      }
+    },
+    {
+      "namespace": "qtp",
+      "operation_name": "tests_discover",
+      "model_name": "Empty",
+      "request_method": [
+        "POST"
+      ],
+      "api_url": "/api/tests/discover",
+      "exec_method": {
+        "module_name": "src.api.tests",
+        "method_name": "discover_tests"
+      }
+    },
+    {
+      "namespace": "qtp",
+      "operation_name": "tests_get",
+      "model_name": "Empty",
+      "request_method": [
+        "GET"
+      ],
+      "api_url": "/api/tests/<test_id>",
+      "exec_method": {
+        "module_name": "src.api.tests",
+        "method_name": "get_test"
+      }
+    },
+    {
+      "namespace": "qtp",
+      "operation_name": "tests_run",
+      "model_name": "Empty",
+      "request_method": [
+        "POST"
+      ],
+      "api_url": "/api/tests/<test_id>/run",
+      "exec_method": {
+        "module_name": "src.api.tests",
+        "method_name": "run_test"
+      }
+    },
+    {
+      "namespace": "qtp",
+      "operation_name": "request_send",
+      "model_name": "Empty",
+      "request_method": [
+        "POST"
+      ],
+      "api_url": "/api/request-tests/send",
+      "exec_method": {
+        "module_name": "src.api.request_tests",
+        "method_name": "send_request"
+      }
+    },
+    {
+      "namespace": "qtp",
+      "operation_name": "request_create",
+      "model_name": "Empty",
+      "request_method": [
+        "POST"
+      ],
+      "api_url": "/api/request-tests",
+      "exec_method": {
+        "module_name": "src.api.request_tests",
+        "method_name": "create_request_test"
+      }
+    },
+    {
+      "namespace": "qtp",
+      "operation_name": "request_update",
+      "model_name": "Empty",
+      "request_method": [
+        "PATCH"
+      ],
+      "api_url": "/api/request-tests/<test_id>",
+      "exec_method": {
+        "module_name": "src.api.request_tests",
+        "method_name": "update_request_test"
+      }
+    },
+    {
+      "namespace": "qtp",
+      "operation_name": "request_delete",
+      "model_name": "Empty",
+      "request_method": [
+        "DELETE"
+      ],
+      "api_url": "/api/request-tests/<test_id>",
+      "exec_method": {
+        "module_name": "src.api.request_tests",
+        "method_name": "delete_request_test"
+      }
+    },
+    {
+      "namespace": "qtp",
+      "operation_name": "runs_list",
+      "model_name": "Empty",
+      "request_method": [
+        "GET"
+      ],
+      "api_url": "/api/runs",
+      "exec_method": {
+        "module_name": "src.api.runs",
+        "method_name": "list_runs"
+      }
+    },
+    {
+      "namespace": "qtp",
+      "operation_name": "runs_get",
+      "model_name": "Empty",
+      "request_method": [
+        "GET"
+      ],
+      "api_url": "/api/runs/<run_id>",
+      "exec_method": {
+        "module_name": "src.api.runs",
+        "method_name": "get_run"
+      }
+    },
+    {
+      "namespace": "qtp",
+      "operation_name": "runs_logs",
+      "model_name": "Empty",
+      "request_method": [
+        "GET"
+      ],
+      "api_url": "/api/runs/<run_id>/logs",
+      "exec_method": {
+        "module_name": "src.api.runs",
+        "method_name": "get_run_logs"
+      }
+    },
+    {
+      "namespace": "qtp",
+      "operation_name": "runs_cancel",
+      "model_name": "Empty",
+      "request_method": [
+        "POST"
+      ],
+      "api_url": "/api/runs/<run_id>/cancel",
+      "exec_method": {
+        "module_name": "src.api.runs",
+        "method_name": "cancel_run"
+      }
+    },
+    {
+      "namespace": "qtp",
+      "operation_name": "runs_defect",
+      "model_name": "Empty",
+      "request_method": [
+        "PUT"
+      ],
+      "api_url": "/api/runs/<run_id>/defect",
+      "exec_method": {
+        "module_name": "src.api.runs",
+        "method_name": "set_defect"
+      }
+    },
+    {
+      "namespace": "qtp",
+      "operation_name": "schedules_list",
+      "model_name": "Empty",
+      "request_method": [
+        "GET"
+      ],
+      "api_url": "/api/schedules",
+      "exec_method": {
+        "module_name": "src.api.schedules",
+        "method_name": "list_schedules"
+      }
+    },
+    {
+      "namespace": "qtp",
+      "operation_name": "schedules_create",
+      "model_name": "Empty",
+      "request_method": [
+        "POST"
+      ],
+      "api_url": "/api/schedules",
+      "exec_method": {
+        "module_name": "src.api.schedules",
+        "method_name": "create_schedule"
+      }
+    },
+    {
+      "namespace": "qtp",
+      "operation_name": "schedules_update",
+      "model_name": "Empty",
+      "request_method": [
+        "PATCH"
+      ],
+      "api_url": "/api/schedules/<schedule_id>",
+      "exec_method": {
+        "module_name": "src.api.schedules",
+        "method_name": "update_schedule"
+      }
+    },
+    {
+      "namespace": "qtp",
+      "operation_name": "schedules_delete",
+      "model_name": "Empty",
+      "request_method": [
+        "DELETE"
+      ],
+      "api_url": "/api/schedules/<schedule_id>",
+      "exec_method": {
+        "module_name": "src.api.schedules",
+        "method_name": "delete_schedule"
+      }
+    },
+    {
+      "namespace": "qtp",
+      "operation_name": "dash_overview",
+      "model_name": "Empty",
+      "request_method": [
+        "GET"
+      ],
+      "api_url": "/api/dashboards/overview",
+      "exec_method": {
+        "module_name": "src.api.dashboards",
+        "method_name": "overview"
+      }
+    },
+    {
+      "namespace": "qtp",
+      "operation_name": "dash_failures",
+      "model_name": "Empty",
+      "request_method": [
+        "GET"
+      ],
+      "api_url": "/api/dashboards/failures",
+      "exec_method": {
+        "module_name": "src.api.dashboards",
+        "method_name": "failures"
+      }
+    },
+    {
+      "namespace": "qtp",
+      "operation_name": "workers_list",
+      "model_name": "Empty",
+      "request_method": [
+        "GET"
+      ],
+      "api_url": "/api/workers",
+      "exec_method": {
+        "module_name": "src.api.workers",
+        "method_name": "list_workers"
+      }
+    },
+    {
+      "namespace": "qtp",
+      "operation_name": "targets_get",
+      "model_name": "Empty",
+      "request_method": [
+        "GET"
+      ],
+      "api_url": "/api/targets/<target_id>",
+      "exec_method": {
+        "module_name": "src.api.targets",
+        "method_name": "get_target"
+      }
+    },
+    {
+      "namespace": "qtp",
+      "operation_name": "targets_tests",
+      "model_name": "Empty",
+      "request_method": [
+        "GET"
+      ],
+      "api_url": "/api/targets/<target_id>/tests",
+      "exec_method": {
+        "module_name": "src.api.targets",
+        "method_name": "target_tests"
+      }
+    },
+    {
+      "namespace": "qtp",
+      "operation_name": "targets_runs",
+      "model_name": "Empty",
+      "request_method": [
+        "GET"
+      ],
+      "api_url": "/api/targets/<target_id>/runs",
+      "exec_method": {
+        "module_name": "src.api.targets",
+        "method_name": "target_runs"
+      }
+    },
+    {
+      "namespace": "qtp",
+      "operation_name": "targets_stats",
+      "model_name": "Empty",
+      "request_method": [
+        "GET"
+      ],
+      "api_url": "/api/targets/<target_id>/stats",
+      "exec_method": {
+        "module_name": "src.api.targets",
+        "method_name": "target_stats"
+      }
+    },
+    {
+      "namespace": "qtp",
+      "operation_name": "tags_list",
+      "model_name": "Empty",
+      "request_method": [
+        "GET"
+      ],
+      "api_url": "/api/tags",
+      "exec_method": {
+        "module_name": "src.api.tags",
+        "method_name": "list_tags"
+      }
+    },
+    {
+      "namespace": "qtp",
+      "operation_name": "tests_tags",
+      "model_name": "Empty",
+      "request_method": [
+        "PUT"
+      ],
+      "api_url": "/api/tests/<test_id>/tags",
+      "exec_method": {
+        "module_name": "src.api.tags",
+        "method_name": "update_test_tags"
+      }
+    },
+    {
+      "namespace": "qtp",
+      "operation_name": "test_comments_list",
+      "model_name": "Empty",
+      "request_method": [
+        "GET"
+      ],
+      "api_url": "/api/tests/<test_id>/comments",
+      "exec_method": {
+        "module_name": "src.api.comments",
+        "method_name": "list_test_comments"
+      }
+    },
+    {
+      "namespace": "qtp",
+      "operation_name": "test_comments_create",
+      "model_name": "Empty",
+      "request_method": [
+        "POST"
+      ],
+      "api_url": "/api/tests/<test_id>/comments",
+      "exec_method": {
+        "module_name": "src.api.comments",
+        "method_name": "create_test_comment"
+      }
+    },
+    {
+      "namespace": "qtp",
+      "operation_name": "run_comments_list",
+      "model_name": "Empty",
+      "request_method": [
+        "GET"
+      ],
+      "api_url": "/api/runs/<run_id>/comments",
+      "exec_method": {
+        "module_name": "src.api.comments",
+        "method_name": "list_run_comments"
+      }
+    },
+    {
+      "namespace": "qtp",
+      "operation_name": "run_comments_create",
+      "model_name": "Empty",
+      "request_method": [
+        "POST"
+      ],
+      "api_url": "/api/runs/<run_id>/comments",
+      "exec_method": {
+        "module_name": "src.api.comments",
+        "method_name": "create_run_comment"
+      }
+    }
   ]
 }

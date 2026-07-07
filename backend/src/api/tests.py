@@ -12,7 +12,7 @@ from src.iam.principal import ROLE_OPERATOR, ROLE_TEST_AUTHOR
 @require_authenticated
 def list_tests(app, operation, request, principal=None, **kwargs):
     with session_scope() as db:
-        return {"items": service.list_tests(db, query_args(request))}, 200
+        return service.list_tests(db, query_args(request)), 200
 
 
 @require_authenticated

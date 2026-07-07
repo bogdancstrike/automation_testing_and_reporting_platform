@@ -1,37 +1,65 @@
 """Discovery registry for code-based automation tests.
 
-Imports configured modules and registers ``BaseAutomationTest`` subclasses by
-their globally-unique ``metadata.key``.
+A test author creates one Python file under ``backend/tests/automations/`` and
+puts a ``BaseAutomationTest`` subclass in it. Discovery recursively imports those
+files and registers concrete test classes by ``metadata.key``. The old explicit
+module-list API remains for compatibility.
 """
 from __future__ import annotations
 
 import importlib
 import inspect
+from pathlib import Path
 from typing import Iterable
 
 from src.core.errors import ValidationError
 from src.testkit.base import SUPPORTED_TYPES, BaseAutomationTest
 
 
+def _register_from_module(module_name: str, found: dict[str, type[BaseAutomationTest]]) -> None:
+    module = importlib.import_module(module_name)
+    importlib.reload(module)
+    for _, obj in inspect.getmembers(module, inspect.isclass):
+        if not issubclass(obj, BaseAutomationTest) or obj is BaseAutomationTest:
+            continue
+        # Imported helper/base classes should not become separate tests.
+        if obj.__module__ != module.__name__:
+            continue
+        meta = getattr(obj, "metadata", None)
+        if meta is None:
+            continue
+        if meta.type not in SUPPORTED_TYPES:
+            raise ValidationError(f"test {meta.key!r} has unsupported type {meta.type!r}")
+        if meta.key in found:
+            raise ValidationError(f"duplicate test key {meta.key!r}")
+        obj().validate_config(dict(meta.default_config))
+        found[meta.key] = obj
+
+
 def discover_classes(modules: Iterable[str]) -> dict[str, type[BaseAutomationTest]]:
-    """Return {metadata.key: class} for every valid test found in *modules*."""
+    """Return {metadata.key: class} for every valid test found in modules."""
     found: dict[str, type[BaseAutomationTest]] = {}
     for module_name in modules:
-        module = importlib.import_module(module_name)
-        importlib.reload(module)
-        for _, obj in inspect.getmembers(module, inspect.isclass):
-            if not issubclass(obj, BaseAutomationTest) or obj is BaseAutomationTest:
-                continue
-            if obj.__module__ != module.__name__:
-                continue
-            meta = getattr(obj, "metadata", None)
-            if meta is None:
-                continue
-            if meta.type not in SUPPORTED_TYPES:
-                raise ValidationError(f"test {meta.key!r} has unsupported type {meta.type!r}")
-            if meta.key in found:
-                raise ValidationError(f"duplicate test key {meta.key!r}")
-            # Fail fast on invalid default config.
-            obj().validate_config(dict(meta.default_config))
-            found[meta.key] = obj
+        _register_from_module(module_name, found)
+    return found
+
+
+def discover_from_path(root: Path, *, package_root: str = "tests.automations") -> dict[str, type[BaseAutomationTest]]:
+    """Recursively discover tests from a filesystem tree.
+
+    ``root`` is usually ``backend/tests/automations``. Every Python file under it
+    is imported as ``tests.automations.<relative.module>``. Files whose name
+    starts with ``_`` are treated as helpers and skipped unless imported by a
+    concrete test module.
+    """
+    root = root.resolve()
+    if not root.exists():
+        return {}
+    found: dict[str, type[BaseAutomationTest]] = {}
+    for file in sorted(root.rglob("*.py")):
+        if file.name == "__init__.py" or file.name.startswith("_"):
+            continue
+        rel = file.relative_to(root).with_suffix("")
+        module_name = ".".join((package_root, *rel.parts))
+        _register_from_module(module_name, found)
     return found

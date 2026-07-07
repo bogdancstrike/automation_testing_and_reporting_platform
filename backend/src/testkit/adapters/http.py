@@ -1,15 +1,16 @@
 """HTTP request adapter.
 
-Executes a request-test config against a target, enforcing SSRF egress checks on
-the initial URL and every redirect hop, then evaluates assertions against the
-response body/headers/timing. Used by both the request builder (unsaved send)
-and the runner (saved request tests).
+Executes legacy single-request configs and multi-step HTTP flows. Every outbound
+request still goes through the SSRF guard. Multi-step captures live only in the
+per-run TestContext while the worker executes one claimed run, then are persisted
+in the combined run response for later inspection.
 """
 from __future__ import annotations
 
+import json
 import time
 from typing import Any
-from urllib.parse import urljoin, urlparse
+from urllib.parse import urljoin
 
 import requests
 
@@ -18,7 +19,7 @@ from src.core.errors import ValidationError
 from src.core.net_guard import resolve_and_check
 from src.testkit import assertions as asserts
 from src.testkit.context import TestContext
-from src.testkit.result import ERROR, FAILED, PASSED, TIMEOUT, StepResult, TestResult
+from src.testkit.result import ERROR, FAILED, PASSED, TIMEOUT, AssertionResult, StepResult, TestResult
 
 
 def _enabled_pairs(items: list[dict[str, Any]] | None, ctx: TestContext) -> list[tuple[str, str]]:
@@ -76,18 +77,39 @@ def _resolve_url(config: dict[str, Any], ctx: TestContext) -> str:
     return urljoin(base.rstrip("/") + "/", url.lstrip("/"))
 
 
-def execute_http(config: dict[str, Any], ctx: TestContext) -> TestResult:
+def normalize_steps(config: dict[str, Any]) -> list[dict[str, Any]]:
+    if isinstance(config.get("steps"), list) and config["steps"]:
+        raw_steps = [dict(s) for s in config["steps"]]
+    else:
+        raw_steps = [{"id": "request", "name": "Request", **dict(config)}]
+    seen: set[str] = set()
+    steps: list[dict[str, Any]] = []
+    for i, raw in enumerate(raw_steps):
+        step = dict(raw)
+        sid = str(step.get("id") or f"step-{i + 1}").strip() or f"step-{i + 1}"
+        if sid in seen:
+            raise ValidationError(f"duplicate step id {sid!r}")
+        seen.add(sid)
+        step["id"] = sid
+        step["name"] = step.get("name") or f"Step {i + 1}"
+        step["method"] = str(step.get("method", "GET")).upper()
+        steps.append(step)
+    return steps
+
+
+def _execute_http_step(config: dict[str, Any], ctx: TestContext, *, session: requests.Session | None = None) -> TestResult:
     started = time.monotonic()
     method = str(config.get("method", "GET")).upper()
-    timeout_ms = min(int(config.get("timeoutMs", 30000)), Config.REQUEST_MAX_TIMEOUT_MS)
+    timeout_ms = min(int(config.get("timeoutMs", 30000) or 30000), Config.REQUEST_MAX_TIMEOUT_MS)
     tls_verify = bool(config.get("tlsVerify", True))
     follow = bool(config.get("followRedirects", True))
     max_bytes = Config.REQUEST_MAX_BODY_BYTES
+    step_id = config.get("id")
+    step_name = config.get("name") or f"{method} request"
 
     url = _resolve_url(config, ctx)
     if not url:
-        return TestResult(status=ERROR, error_category="script_error",
-                          error_message="request has no resolvable URL")
+        return TestResult(status=ERROR, error_category="script_error", error_message="request has no resolvable URL")
 
     headers = dict(ctx.target(config.get("target", "default")).default_headers)
     for name, value in _enabled_pairs(config.get("headers"), ctx):
@@ -99,16 +121,16 @@ def execute_http(config: dict[str, Any], ctx: TestContext) -> TestResult:
         headers["Content-Type"] = default_ct
 
     params = _enabled_pairs(config.get("query"), ctx)
-
-    ctx.log("info", f"{method} {url}")
-    session = requests.Session()
+    owns_session = session is None
+    session = session or requests.Session()
     hops = 0
     try:
+        ctx.log("info", f"{step_name}: {method} {url}")
         current_url = url
         current_method = method
         current_body: Any = body
         while True:
-            resolve_and_check(current_url)  # SSRF check on every hop
+            resolve_and_check(current_url)
             resp = session.request(
                 current_method,
                 current_url,
@@ -125,7 +147,6 @@ def execute_http(config: dict[str, Any], ctx: TestContext) -> TestResult:
                 if hops > Config.REQUEST_MAX_REDIRECTS:
                     raise requests.TooManyRedirects("max redirects exceeded")
                 current_url = urljoin(current_url, resp.headers.get("Location", ""))
-                # Redirects downgrade to GET on 303 / for non-GET on 301/302.
                 if resp.status_code in (301, 302, 303) and current_method != "HEAD":
                     current_method, current_body = "GET", None
                 resp.close()
@@ -137,7 +158,6 @@ def execute_http(config: dict[str, Any], ctx: TestContext) -> TestResult:
         raw = raw[:max_bytes]
         body_text = raw.decode(resp.encoding or "utf-8", errors="replace")
         elapsed_ms = int((time.monotonic() - started) * 1000)
-
         response = {
             "status_code": resp.status_code,
             "headers": dict(resp.headers),
@@ -150,12 +170,10 @@ def execute_http(config: dict[str, Any], ctx: TestContext) -> TestResult:
         all_pass = all(a.passed for a in results)
         status = PASSED if all_pass else FAILED
         error_category = None if all_pass else _classify_failure(results)
-        ctx.log("info", f"-> {resp.status_code} in {elapsed_ms}ms ({len(results)} assertions, "
-                        f"{sum(1 for a in results if a.passed)} passed)")
-
+        ctx.log("info", f"{step_name}: -> {resp.status_code} in {elapsed_ms}ms ({len(results)} assertions, {sum(1 for a in results if a.passed)} passed)")
         return TestResult(
             status=status,
-            steps=[StepResult(name=f"{method} request", status=status, duration_ms=elapsed_ms)],
+            steps=[StepResult(name=str(step_name), status=status, duration_ms=elapsed_ms, step_id=step_id)],
             assertions=results,
             error_category=error_category,
             error_message=None if all_pass else "one or more assertions failed",
@@ -163,20 +181,140 @@ def execute_http(config: dict[str, Any], ctx: TestContext) -> TestResult:
             metrics={"elapsed_ms": elapsed_ms, "status_code": resp.status_code},
         )
     except ValidationError as e:
-        # SSRF guard (or invalid URL) rejected the request — a clean error result,
-        # not an exception that escapes to the handler.
-        ctx.log("error", f"blocked: {e.message}")
-        return TestResult(status=ERROR, error_category="network_error",
-                          error_message=e.message)
+        ctx.log("error", f"{step_name}: blocked: {e.message}")
+        return TestResult(status=ERROR, error_category="network_error", error_message=e.message,
+                          steps=[StepResult(name=str(step_name), status=ERROR, step_id=step_id, error=e.message)])
     except requests.Timeout:
-        return TestResult(status=TIMEOUT, error_category="timeout",
-                          error_message=f"request exceeded {timeout_ms}ms")
+        return TestResult(status=TIMEOUT, error_category="timeout", error_message=f"request exceeded {timeout_ms}ms",
+                          steps=[StepResult(name=str(step_name), status=TIMEOUT, step_id=step_id, error=f"request exceeded {timeout_ms}ms")])
     except requests.TooManyRedirects as e:
-        return TestResult(status=ERROR, error_category="network_error", error_message=str(e))
+        return TestResult(status=ERROR, error_category="network_error", error_message=str(e),
+                          steps=[StepResult(name=str(step_name), status=ERROR, step_id=step_id, error=str(e))])
     except requests.RequestException as e:
-        return TestResult(status=ERROR, error_category="network_error", error_message=str(e))
+        return TestResult(status=ERROR, error_category="network_error", error_message=str(e),
+                          steps=[StepResult(name=str(step_name), status=ERROR, step_id=step_id, error=str(e))])
+    finally:
+        if owns_session:
+            session.close()
+
+
+def _parsed_json(response: dict[str, Any]) -> Any:
+    body = response.get("body_text") or ""
+    try:
+        return json.loads(body) if str(body).strip() else None
+    except (TypeError, ValueError):
+        return None
+
+
+def _capture_value(capture: dict[str, Any], response: dict[str, Any]) -> Any:
+    source = capture.get("source", "json_path")
+    target = capture.get("path") or capture.get("target") or capture.get("name")
+    if source == "json_path":
+        value = asserts.json_path_get(_parsed_json(response), str(target))
+        if value is asserts._MISSING:  # type: ignore[attr-defined]
+            return None
+        return value
+    if source == "header":
+        headers = {k.lower(): v for k, v in (response.get("headers") or {}).items()}
+        return headers.get(str(target).lower())
+    if source == "body_text":
+        return response.get("body_text", "")
+    return None
+
+
+def _apply_captures(step: dict[str, Any], response: dict[str, Any], ctx: TestContext) -> tuple[bool, str | None, list[str]]:
+    captured: list[str] = []
+    for capture in step.get("captures") or []:
+        name = str(capture.get("name", "")).strip()
+        if not name:
+            continue
+        value = _capture_value(capture, response)
+        if value is None and not capture.get("optional", False):
+            return False, f"capture {name!r} did not find a value", captured
+        if value is not None:
+            ctx.set_var(name, value)
+            captured.append(name)
+    return True, None, captured
+
+
+def execute_http(config: dict[str, Any], ctx: TestContext) -> TestResult:
+    if not isinstance(config.get("steps"), list):
+        result = _execute_http_step(config, ctx)
+        if result.status == PASSED and config.get("captures"):
+            ok, message, captured = _apply_captures({"captures": config.get("captures")}, result.response, ctx)
+            result.response["captures"] = captured
+            if not ok:
+                result.status = FAILED
+                result.error_category = "capture_failed"
+                result.error_message = message
+        return result
+
+    started = time.monotonic()
+    steps = normalize_steps(config)
+    all_steps: list[StepResult] = []
+    all_assertions: list[AssertionResult] = []
+    response_steps: list[dict[str, Any]] = []
+    final_status = PASSED
+    error_category = None
+    error_message = None
+    steps_passed = 0
+
+    session = requests.Session()
+    try:
+        for step in steps:
+            if ctx.should_cancel():
+                final_status = ERROR
+                error_category = "canceled"
+                error_message = "canceled during HTTP flow"
+                all_steps.append(StepResult(name=step["name"], status=ERROR, step_id=step["id"], error=error_message))
+                break
+            single = _execute_http_step(step, ctx, session=session)
+            for s in single.steps:
+                s.step_id = s.step_id or step["id"]
+                s.name = step.get("name") or s.name
+                all_steps.append(s)
+            for assertion in single.assertions:
+                assertion.message = f"{step['name']}: {assertion.message}" if assertion.message else step["name"]
+                if assertion.target:
+                    assertion.target = f"{step['id']}:{assertion.target}"
+                all_assertions.append(assertion)
+
+            captured: list[str] = []
+            if single.status == PASSED:
+                ok, capture_error, captured = _apply_captures(step, single.response, ctx)
+                if not ok:
+                    single.status = FAILED
+                    single.error_category = "capture_failed"
+                    single.error_message = capture_error
+                    if all_steps:
+                        all_steps[-1].status = FAILED
+                        all_steps[-1].error = capture_error
+            response_steps.append({
+                "id": step["id"], "name": step["name"], "method": step.get("method"),
+                "url": ctx.render(str(step.get("url", ""))), "status": single.status,
+                "captures": captured, "response": single.response,
+                "error_category": single.error_category, "error_message": single.error_message,
+            })
+            if single.status == PASSED:
+                steps_passed += 1
+                continue
+            final_status = single.status
+            error_category = single.error_category
+            error_message = single.error_message
+            break
     finally:
         session.close()
+
+    elapsed_ms = int((time.monotonic() - started) * 1000)
+    return TestResult(
+        status=final_status,
+        steps=all_steps,
+        assertions=all_assertions,
+        error_category=error_category,
+        error_message=error_message,
+        response={"steps": response_steps, "last_response": response_steps[-1]["response"] if response_steps else {}},
+        metrics={"elapsed_ms": elapsed_ms, "steps_total": len(steps), "steps_passed": steps_passed},
+    )
 
 
 def _classify_failure(results) -> str:

@@ -43,9 +43,10 @@ class StepResult:
     status: str
     duration_ms: int = 0
     error: str | None = None
+    step_id: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
-        return {"name": self.name, "status": self.status,
+        return {"id": self.step_id, "name": self.name, "status": self.status,
                 "duration_ms": self.duration_ms, "error": self.error}
 
 

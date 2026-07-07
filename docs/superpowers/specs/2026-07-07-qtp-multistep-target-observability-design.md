@@ -105,6 +105,18 @@ Discovery recursively scans `backend/tests/automations/`, imports Python modules
 The Developer Docs should teach this as the default workflow: create one Python file, subclass the base test, run discovery from the UI or API, then run or schedule the test.
 
 
+
+
+## QF Framework Usage
+
+Use QF Framework capabilities where they simplify the platform boundary: app/bootstrap conventions, dynamic endpoint registration, logging, configuration integration, and existing Flask/QF wiring. Keep domain logic, test execution, pagination, comments, tags, and target analytics as plain Python services so the architecture remains easy to understand and test. Do not add Kafka, ETL, or heavier QF subsystems unless a feature genuinely needs them.
+
+## Horizontal Scalability
+
+QTP API instances and worker instances must be horizontally scalable. New features must not depend on process-local state for correctness. APIs remain stateless behind a load balancer, and workers coordinate through PostgreSQL queue rows, transactional status updates, and `FOR UPDATE SKIP LOCKED` claiming. Comments, tags, target stats, pagination, request-step captures, and run results are persisted in PostgreSQL so any API instance can serve reads and any capable worker can execute queued work.
+
+Long-running execution state belongs in the database or the run context for a single claimed run. A worker may keep in-memory variables only while executing that run; captured values needed after execution must be persisted in run results. Scheduler instances must continue to enqueue through locked due-schedule rows so multiple scheduler replicas do not duplicate work.
+
 ## Framework Ergonomics
 
 The testing framework should be easy to understand and use. A new tester should be able to open one Python file, understand what app it targets, what steps it performs, what it asserts, and what it cleans up. Multi-step helpers should hide platform internals and use tester-facing names like step, request, capture, assert, and cleanup.

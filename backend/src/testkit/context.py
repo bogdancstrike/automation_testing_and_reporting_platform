@@ -38,6 +38,12 @@ class TestContext:
             return next(iter(self.targets.values()))
         return ResolvedTarget(key=key, base_url="")
 
+    def set_var(self, name: str, value: Any) -> None:
+        self.variables[str(name)] = "" if value is None else str(value)
+
+    def get_var(self, name: str, default: str = "") -> str:
+        return self.variables.get(name, default)
+
     def render(self, text: str) -> str:
         """Substitute {{var}} / {{secret}} tokens in a string."""
         if not text:

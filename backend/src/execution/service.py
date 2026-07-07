@@ -3,18 +3,18 @@ from __future__ import annotations
 
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from src.catalog.models import Target, TestDefinition
 from src.catalog.service import resolve_target
 from src.core.correlation import get_correlation_id
 from src.core.errors import NotFoundError, ValidationError
+from src.core.pagination import apply_sort, envelope, parse_page
 from src.execution import serializers
 from src.execution.failure_classifier import apply_defect
 from src.execution.models import RunQueue, TestRun
-from src.testkit.base import (TYPE_CLI, TYPE_HTTP, TYPE_PLAYWRIGHT, TYPE_PYTHON,
-                              TYPE_SELENIUM)
+from src.testkit.base import TYPE_CLI, TYPE_HTTP, TYPE_PLAYWRIGHT, TYPE_PYTHON, TYPE_SELENIUM
 
 _CAPABILITY = {
     TYPE_HTTP: "http", TYPE_PYTHON: "python", TYPE_PLAYWRIGHT: "playwright",
@@ -65,19 +65,41 @@ def _names(db: Session, runs: list[TestRun]) -> tuple[dict, dict]:
     return defs, tgts
 
 
-def list_runs(db: Session, filters: dict[str, Any]) -> list[dict]:
+def list_runs(db: Session, filters: dict[str, Any]) -> dict:
+    params = parse_page(filters, default_sort="queued_at", default_order="desc", max_page_size=100)
     stmt = select(TestRun)
     if filters.get("status"):
         stmt = stmt.where(TestRun.status == filters["status"])
     if filters.get("test_definition_id"):
         stmt = stmt.where(TestRun.test_definition_id == filters["test_definition_id"])
+    if filters.get("target_id"):
+        stmt = stmt.where(TestRun.target_id == filters["target_id"])
     if filters.get("trigger"):
         stmt = stmt.where(TestRun.trigger == filters["trigger"])
-    limit = min(int(filters.get("limit", 100)), 500)
-    stmt = stmt.order_by(TestRun.queued_at.desc()).limit(limit)
-    runs = list(db.scalars(stmt).all())
+    if filters.get("defect_type"):
+        stmt = stmt.where(TestRun.defect_type == filters["defect_type"])
+    if filters.get("error_category"):
+        stmt = stmt.where(TestRun.error_category == filters["error_category"])
+    if filters.get("target"):
+        target = db.scalars(select(Target).where(Target.key == filters["target"])).first()
+        stmt = stmt.where(TestRun.target_id == (target.id if target else "00000000-0000-0000-0000-000000000000"))
+    if params.q:
+        like = f"%{params.q}%"
+        matching_defs = select(TestDefinition.id).where(or_(TestDefinition.name.ilike(like), TestDefinition.key.ilike(like)))
+        matching_targets = select(Target.id).where(or_(Target.name.ilike(like), Target.key.ilike(like), Target.base_url.ilike(like)))
+        stmt = stmt.where(or_(TestRun.test_definition_id.in_(matching_defs), TestRun.target_id.in_(matching_targets), TestRun.worker_name.ilike(like)))
+
+    stmt = apply_sort(stmt, params, {
+        "queued_at": TestRun.queued_at, "started_at": TestRun.started_at,
+        "finished_at": TestRun.finished_at, "duration_ms": TestRun.duration_ms,
+        "status": TestRun.status, "trigger": TestRun.trigger,
+        "worker_name": TestRun.worker_name, "defect_type": TestRun.defect_type,
+        "error_category": TestRun.error_category,
+    })
+    total = int(db.scalar(select(func.count()).select_from(stmt.order_by(None).subquery())) or 0)
+    runs = list(db.scalars(stmt.offset((params.page - 1) * params.page_size).limit(params.page_size)).all())
     defs, tgts = _names(db, runs)
-    return [
+    items = [
         serializers.run_summary(
             r,
             test_name=defs[r.test_definition_id].name if r.test_definition_id in defs else None,
@@ -85,6 +107,7 @@ def list_runs(db: Session, filters: dict[str, Any]) -> list[dict]:
         )
         for r in runs
     ]
+    return envelope(items, total, params)
 
 
 def get_run_detail(db: Session, run_id: str) -> dict:
@@ -93,8 +116,7 @@ def get_run_detail(db: Session, run_id: str) -> dict:
         raise NotFoundError("run not found")
     d = db.get(TestDefinition, r.test_definition_id)
     t = db.get(Target, r.target_id) if r.target_id else None
-    return serializers.run_detail(r, test_name=d.name if d else None,
-                                  target_key=t.key if t else None)
+    return serializers.run_detail(r, test_name=d.name if d else None, target_key=t.key if t else None)
 
 
 def cancel_run(db: Session, run_id: str) -> dict:
@@ -104,11 +126,10 @@ def cancel_run(db: Session, run_id: str) -> dict:
     if r.status in ("queued",):
         r.status = "canceled"
         r.error_category = "canceled"
-        # Remove it from the queue so no worker claims it.
         for q in db.scalars(select(RunQueue).where(RunQueue.test_run_id == r.id)).all():
             q.status = "done"
     elif r.status in ("claimed", "preparing", "running"):
-        r.cancel_requested = True  # cooperative — the worker observes and stops
+        r.cancel_requested = True
     else:
         raise ValidationError(f"run in status {r.status!r} cannot be canceled")
     return {"id": r.id, "status": r.status, "cancel_requested": r.cancel_requested}
