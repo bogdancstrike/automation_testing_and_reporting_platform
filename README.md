@@ -49,12 +49,19 @@ Then open the UI and sign in:
 
 ### Get an API token (for curl/CI)
 
+For local development or testing, you can obtain a standard token:
+
 ```bash
 TOKEN=$(curl -s http://localhost:8080/realms/qtp/protocol/openid-connect/token \
   -d grant_type=password -d client_id=qtp-spa \
   -d username=admin -d password=admin | python3 -c "import sys,json;print(json.load(sys.stdin)['access_token'])")
 
 curl -s http://localhost:5100/qtp/api/tests -H "Authorization: Bearer $TOKEN"
+```
+
+**Note:** For CI pipelines and systems where interacting with IAM is difficult, the platform supports a hardcoded system bearer token `system-bearer-token` which bypasses standard IAM checks and automatically resolves to the `admin` user.
+```bash
+curl -s http://localhost:5100/qtp/api/tests -H "Authorization: Bearer system-bearer-token"
 ```
 
 ## What's in the box

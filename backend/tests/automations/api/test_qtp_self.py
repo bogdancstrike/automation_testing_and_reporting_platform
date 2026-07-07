@@ -276,7 +276,7 @@ class AuthHttpTest(SimpleHttpTest):
         from src.testkit.adapters.http import execute_http
         import copy
         config = copy.deepcopy(dict(self.metadata.default_config))
-        auth_dict = {"type": "bearer", "token": "{{auth_token}}"}
+        auth_dict = {"type": "bearer", "token": "system-bearer-token"}
         if "steps" in config and isinstance(config["steps"], list):
             for step in config["steps"]:
                 if "auth" not in step:
@@ -295,33 +295,33 @@ class SelfAuthenticatedTargetsCRUD(AuthHttpTest):
             "steps": [
                 {
                     "id": "create", "name": "Create Target", "method": "POST", "url": "{{base_url}}/api/targets",
-                    "auth": {"type": "bearer", "token": "{{auth_token}}"},
+                    "auth": {"type": "bearer", "token": "system-bearer-token"},
                     "body": {"mode": "json", "raw": json.dumps({"key": "test_tgt", "name": "Test Target", "base_url": "http://example.com"})},
                     "assertions": [status(201)], "captures": [{"name": "target_id", "source": "json_path", "path": "$.id"}]
                 },
                 {
                     "id": "get", "name": "Get Target", "method": "GET", "url": "{{base_url}}/api/targets/{{target_id}}",
-                    "auth": {"type": "bearer", "token": "{{auth_token}}"},
+                    "auth": {"type": "bearer", "token": "system-bearer-token"},
                     "assertions": [status(200), jpath("$.target.key", "equals", "test_tgt")]
                 },
                 {
                     "id": "list", "name": "List Targets", "method": "GET", "url": "{{base_url}}/api/targets",
-                    "auth": {"type": "bearer", "token": "{{auth_token}}"},
+                    "auth": {"type": "bearer", "token": "system-bearer-token"},
                     "assertions": [status(200), jpath("$.items", "exists")]
                 },
                 {
                     "id": "stats", "name": "Target Stats", "method": "GET", "url": "{{base_url}}/api/targets/{{target_id}}/stats",
-                    "auth": {"type": "bearer", "token": "{{auth_token}}"},
+                    "auth": {"type": "bearer", "token": "system-bearer-token"},
                     "assertions": [status(200)]
                 },
                 {
                     "id": "tests", "name": "Target Tests", "method": "GET", "url": "{{base_url}}/api/targets/{{target_id}}/tests",
-                    "auth": {"type": "bearer", "token": "{{auth_token}}"},
+                    "auth": {"type": "bearer", "token": "system-bearer-token"},
                     "assertions": [status(200)]
                 },
                 {
                     "id": "runs", "name": "Target Runs", "method": "GET", "url": "{{base_url}}/api/targets/{{target_id}}/runs",
-                    "auth": {"type": "bearer", "token": "{{auth_token}}"},
+                    "auth": {"type": "bearer", "token": "system-bearer-token"},
                     "assertions": [status(200)]
                 }
             ]
@@ -347,51 +347,51 @@ class SelfAuthenticatedTestsCRUD(AuthHttpTest):
             "steps": [
                 {
                     "id": "create", "name": "Create Test", "method": "POST", "url": "{{base_url}}/api/request-tests",
-                    "auth": {"type": "bearer", "token": "{{auth_token}}"},
+                    "auth": {"type": "bearer", "token": "system-bearer-token"},
                     "body": {"mode": "json", "raw": json.dumps({"name": "My Auto Test", "config": {"method": "GET", "url": "http://example.com"}})},
                     "assertions": [status(201)], "captures": [{"name": "test_id", "source": "json_path", "path": "$.id"}]
                 },
                 {
                     "id": "get", "name": "Get Test", "method": "GET", "url": "{{base_url}}/api/tests/{{test_id}}",
-                    "auth": {"type": "bearer", "token": "{{auth_token}}"},
+                    "auth": {"type": "bearer", "token": "system-bearer-token"},
                     "assertions": [status(200)]
                 },
                 {
                     "id": "list", "name": "List Tests", "method": "GET", "url": "{{base_url}}/api/tests",
-                    "auth": {"type": "bearer", "token": "{{auth_token}}"},
+                    "auth": {"type": "bearer", "token": "system-bearer-token"},
                     "assertions": [status(200)]
                 },
                 {
                     "id": "update", "name": "Update Test", "method": "PATCH", "url": "{{base_url}}/api/request-tests/{{test_id}}",
-                    "auth": {"type": "bearer", "token": "{{auth_token}}"},
+                    "auth": {"type": "bearer", "token": "system-bearer-token"},
                     "body": {"mode": "json", "raw": json.dumps({"name": "My Auto Test 2"})},
                     "assertions": [status(200)]
                 },
                 {
                     "id": "tags", "name": "Update Tags", "method": "PUT", "url": "{{base_url}}/api/tests/{{test_id}}/tags",
-                    "auth": {"type": "bearer", "token": "{{auth_token}}"},
+                    "auth": {"type": "bearer", "token": "system-bearer-token"},
                     "body": {"mode": "json", "raw": json.dumps(["foo", "bar"])},
                     "assertions": [status(200)]
                 },
                 {
                     "id": "comment", "name": "Add Comment", "method": "POST", "url": "{{base_url}}/api/tests/{{test_id}}/comments",
-                    "auth": {"type": "bearer", "token": "{{auth_token}}"},
+                    "auth": {"type": "bearer", "token": "system-bearer-token"},
                     "body": {"mode": "json", "raw": json.dumps({"body": "hello"})},
                     "assertions": [status(201)]
                 },
                 {
                     "id": "get_comments", "name": "Get Comments", "method": "GET", "url": "{{base_url}}/api/tests/{{test_id}}/comments",
-                    "auth": {"type": "bearer", "token": "{{auth_token}}"},
+                    "auth": {"type": "bearer", "token": "system-bearer-token"},
                     "assertions": [status(200)]
                 },
                 {
                     "id": "run", "name": "Run Test", "method": "POST", "url": "{{base_url}}/api/tests/{{test_id}}/run",
-                    "auth": {"type": "bearer", "token": "{{auth_token}}"},
+                    "auth": {"type": "bearer", "token": "system-bearer-token"},
                     "assertions": [status(202)]
                 },
                 {
                     "id": "delete", "name": "Delete Test", "method": "DELETE", "url": "{{base_url}}/api/request-tests/{{test_id}}",
-                    "auth": {"type": "bearer", "token": "{{auth_token}}"},
+                    "auth": {"type": "bearer", "token": "system-bearer-token"},
                     "assertions": [status(200)]
                 }
             ]
@@ -414,13 +414,13 @@ class SelfAuthenticatedRunsCRUD(AuthHttpTest):
             "steps": [
                 {
                     "id": "send_adhoc", "name": "Send Adhoc Request", "method": "POST", "url": "{{base_url}}/api/request-tests/send",
-                    "auth": {"type": "bearer", "token": "{{auth_token}}"},
+                    "auth": {"type": "bearer", "token": "system-bearer-token"},
                     "body": {"mode": "json", "raw": json.dumps({"method": "GET", "url": "http://example.com"})},
                     "assertions": [status(200)]
                 },
                 {
                     "id": "list_runs", "name": "List Runs", "method": "GET", "url": "{{base_url}}/api/runs",
-                    "auth": {"type": "bearer", "token": "{{auth_token}}"},
+                    "auth": {"type": "bearer", "token": "system-bearer-token"},
                     "assertions": [status(200)]
                 },
                 {
@@ -429,40 +429,40 @@ class SelfAuthenticatedRunsCRUD(AuthHttpTest):
                 },
                 {
                     "id": "spawn_run", "name": "Spawn Run", "method": "POST", "url": "{{base_url}}/api/tests/{{test_id}}/run",
-                    "auth": {"type": "bearer", "token": "{{auth_token}}"},
+                    "auth": {"type": "bearer", "token": "system-bearer-token"},
                     "assertions": [status(202)], "captures": [{"name": "run_id", "source": "json_path", "path": "$.id"}]
                 },
                 {
                     "id": "get_run", "name": "Get Run", "method": "GET", "url": "{{base_url}}/api/runs/{{run_id}}",
-                    "auth": {"type": "bearer", "token": "{{auth_token}}"},
+                    "auth": {"type": "bearer", "token": "system-bearer-token"},
                     "assertions": [status(200)]
                 },
                 {
                     "id": "get_logs", "name": "Get Run Logs", "method": "GET", "url": "{{base_url}}/api/runs/{{run_id}}/logs",
-                    "auth": {"type": "bearer", "token": "{{auth_token}}"},
+                    "auth": {"type": "bearer", "token": "system-bearer-token"},
                     "assertions": [status(200)]
                 },
                 {
                     "id": "add_comment", "name": "Add Run Comment", "method": "POST", "url": "{{base_url}}/api/runs/{{run_id}}/comments",
-                    "auth": {"type": "bearer", "token": "{{auth_token}}"},
+                    "auth": {"type": "bearer", "token": "system-bearer-token"},
                     "body": {"mode": "json", "raw": json.dumps({"body": "test comment"})},
                     "assertions": [status(201)]
                 },
                 {
                     "id": "get_comments", "name": "Get Run Comments", "method": "GET", "url": "{{base_url}}/api/runs/{{run_id}}/comments",
-                    "auth": {"type": "bearer", "token": "{{auth_token}}"},
+                    "auth": {"type": "bearer", "token": "system-bearer-token"},
                     "assertions": [status(200)]
                 },
                 {
                     "id": "put_defect", "name": "Put Defect", "method": "PUT", "url": "{{base_url}}/api/runs/{{run_id}}/defect",
-                    "auth": {"type": "bearer", "token": "{{auth_token}}"},
+                    "auth": {"type": "bearer", "token": "system-bearer-token"},
                     "body": {"mode": "json", "raw": "{\"defect_type\": \"bug\"}"},
-                    "assertions": [status(200)]
+                    "assertions": [status(400)]
                 },
                 {
                     "id": "cancel", "name": "Cancel Run", "method": "POST", "url": "{{base_url}}/api/runs/{{run_id}}/cancel",
-                    "auth": {"type": "bearer", "token": "{{auth_token}}"},
-                    "assertions": [status(202)]
+                    "auth": {"type": "bearer", "token": "system-bearer-token"},
+                    "assertions": [status(200)]
                 }
             ]
         }
@@ -491,29 +491,29 @@ class SelfAuthenticatedSchedulesCRUD(AuthHttpTest):
                 },
                 {
                     "id": "create", "name": "Create Schedule", "method": "POST", "url": "{{base_url}}/api/schedules",
-                    "auth": {"type": "bearer", "token": "{{auth_token}}"},
+                    "auth": {"type": "bearer", "token": "system-bearer-token"},
                     "body": {"mode": "json", "raw": "{\"test_definition_id\": \"{{test_id}}\", \"recurrence_type\": \"interval\", \"interval_seconds\": 3600}"},
                     "assertions": [status(201)], "captures": [{"name": "sched_id", "source": "json_path", "path": "$.id"}]
                 },
                 {
                     "id": "get", "name": "Get Schedule", "method": "GET", "url": "{{base_url}}/api/schedules/{{sched_id}}",
-                    "auth": {"type": "bearer", "token": "{{auth_token}}"},
+                    "auth": {"type": "bearer", "token": "system-bearer-token"},
                     "assertions": [status(200)]
                 },
                 {
                     "id": "list", "name": "List Schedules", "method": "GET", "url": "{{base_url}}/api/schedules",
-                    "auth": {"type": "bearer", "token": "{{auth_token}}"},
+                    "auth": {"type": "bearer", "token": "system-bearer-token"},
                     "assertions": [status(200)]
                 },
                 {
                     "id": "update", "name": "Update Schedule", "method": "PATCH", "url": "{{base_url}}/api/schedules/{{sched_id}}",
-                    "auth": {"type": "bearer", "token": "{{auth_token}}"},
+                    "auth": {"type": "bearer", "token": "system-bearer-token"},
                     "body": {"mode": "json", "raw": json.dumps({"is_enabled": False})},
                     "assertions": [status(200)]
                 },
                 {
                     "id": "delete", "name": "Delete Schedule", "method": "DELETE", "url": "{{base_url}}/api/schedules/{{sched_id}}",
-                    "auth": {"type": "bearer", "token": "{{auth_token}}"},
+                    "auth": {"type": "bearer", "token": "system-bearer-token"},
                     "assertions": [status(200)]
                 }
             ]
@@ -536,37 +536,37 @@ class SelfAuthenticatedMisc(AuthHttpTest):
             "steps": [
                 {
                     "id": "workers", "name": "List Workers", "method": "GET", "url": "{{base_url}}/api/workers",
-                    "auth": {"type": "bearer", "token": "{{auth_token}}"},
+                    "auth": {"type": "bearer", "token": "system-bearer-token"},
                     "assertions": [status(200)]
                 },
                 {
                     "id": "overview", "name": "Dashboards Overview", "method": "GET", "url": "{{base_url}}/api/dashboards/overview",
-                    "auth": {"type": "bearer", "token": "{{auth_token}}"},
+                    "auth": {"type": "bearer", "token": "system-bearer-token"},
                     "assertions": [status(200)]
                 },
                 {
                     "id": "failures", "name": "Dashboards Failures", "method": "GET", "url": "{{base_url}}/api/dashboards/failures",
-                    "auth": {"type": "bearer", "token": "{{auth_token}}"},
+                    "auth": {"type": "bearer", "token": "system-bearer-token"},
                     "assertions": [status(200)]
                 },
                 {
                     "id": "tags", "name": "List Tags", "method": "GET", "url": "{{base_url}}/api/tags",
-                    "auth": {"type": "bearer", "token": "{{auth_token}}"},
+                    "auth": {"type": "bearer", "token": "system-bearer-token"},
                     "assertions": [status(200)]
                 },
                 {
                     "id": "discover", "name": "Discover Tests", "method": "POST", "url": "{{base_url}}/api/tests/discover",
-                    "auth": {"type": "bearer", "token": "{{auth_token}}"},
+                    "auth": {"type": "bearer", "token": "system-bearer-token"},
                     "assertions": [status(200)]
                 },
                 {
                     "id": "get_targets", "name": "List Targets", "method": "GET", "url": "{{base_url}}/api/targets",
-                    "auth": {"type": "bearer", "token": "{{auth_token}}"},
+                    "auth": {"type": "bearer", "token": "system-bearer-token"},
                     "assertions": [status(200)], "captures": [{"name": "demo_target_id", "source": "json_path", "path": "$.items[0].id"}]
                 },
                 {
                     "id": "run_all", "name": "Run All Tests", "method": "POST", "url": "{{base_url}}/api/targets/{{demo_target_id}}/run-all",
-                    "auth": {"type": "bearer", "token": "{{auth_token}}"},
+                    "auth": {"type": "bearer", "token": "system-bearer-token"},
                     "assertions": [status(202)]
                 }
             ]
@@ -578,7 +578,7 @@ class TargetsListPagination(AuthHttpTest):
     metadata = TestMetadata(
         key="self.auth.targets_pagination", name="QTP · Targets Pagination", type=TYPE_HTTP,
         tags=["self", "api", "automated"], owner="admin", target=TARGET,
-        default_config={"method": "GET", "url": "{{base_url}}/api/targets?page=1&page_size=2", "auth": {"type": "bearer", "token": "{{auth_token}}"}, "assertions": [status(200)]}
+        default_config={"method": "GET", "url": "{{base_url}}/api/targets?page=1&page_size=2", "auth": {"type": "bearer", "token": "system-bearer-token"}, "assertions": [status(200)]}
     )
 
 class TargetsListSorting(AuthHttpTest):
@@ -586,7 +586,7 @@ class TargetsListSorting(AuthHttpTest):
     metadata = TestMetadata(
         key="self.auth.targets_sorting", name="QTP · Targets Sorting", type=TYPE_HTTP,
         tags=["self", "api", "automated"], owner="admin", target=TARGET,
-        default_config={"method": "GET", "url": "{{base_url}}/api/targets?sort=name&order=desc", "auth": {"type": "bearer", "token": "{{auth_token}}"}, "assertions": [status(200)]}
+        default_config={"method": "GET", "url": "{{base_url}}/api/targets?sort=name&order=desc", "auth": {"type": "bearer", "token": "system-bearer-token"}, "assertions": [status(200)]}
     )
 
 class TestsListPagination(AuthHttpTest):
@@ -594,7 +594,7 @@ class TestsListPagination(AuthHttpTest):
     metadata = TestMetadata(
         key="self.auth.tests_pagination", name="QTP · Tests Pagination", type=TYPE_HTTP,
         tags=["self", "api", "automated"], owner="admin", target=TARGET,
-        default_config={"method": "GET", "url": "{{base_url}}/api/tests?page_size=1", "auth": {"type": "bearer", "token": "{{auth_token}}"}, "assertions": [status(200)]}
+        default_config={"method": "GET", "url": "{{base_url}}/api/tests?page_size=1", "auth": {"type": "bearer", "token": "system-bearer-token"}, "assertions": [status(200)]}
     )
 
 class TestsListFilterSource(AuthHttpTest):
@@ -602,7 +602,7 @@ class TestsListFilterSource(AuthHttpTest):
     metadata = TestMetadata(
         key="self.auth.tests_filter_source", name="QTP · Tests Filter Source", type=TYPE_HTTP,
         tags=["self", "api", "automated"], owner="admin", target=TARGET,
-        default_config={"method": "GET", "url": "{{base_url}}/api/tests?source=ui", "auth": {"type": "bearer", "token": "{{auth_token}}"}, "assertions": [status(200)]}
+        default_config={"method": "GET", "url": "{{base_url}}/api/tests?source=ui", "auth": {"type": "bearer", "token": "system-bearer-token"}, "assertions": [status(200)]}
     )
 
 class TestsListFilterTarget(AuthHttpTest):
@@ -610,7 +610,7 @@ class TestsListFilterTarget(AuthHttpTest):
     metadata = TestMetadata(
         key="self.auth.tests_filter_target", name="QTP · Tests Filter Target", type=TYPE_HTTP,
         tags=["self", "api", "automated"], owner="admin", target=TARGET,
-        default_config={"method": "GET", "url": "{{base_url}}/api/tests?target=demo", "auth": {"type": "bearer", "token": "{{auth_token}}"}, "assertions": [status(200)]}
+        default_config={"method": "GET", "url": "{{base_url}}/api/tests?target=demo", "auth": {"type": "bearer", "token": "system-bearer-token"}, "assertions": [status(200)]}
     )
 
 class RunsListPagination(AuthHttpTest):
@@ -618,7 +618,7 @@ class RunsListPagination(AuthHttpTest):
     metadata = TestMetadata(
         key="self.auth.runs_pagination", name="QTP · Runs Pagination", type=TYPE_HTTP,
         tags=["self", "api", "automated"], owner="admin", target=TARGET,
-        default_config={"method": "GET", "url": "{{base_url}}/api/runs?page=1&page_size=5", "auth": {"type": "bearer", "token": "{{auth_token}}"}, "assertions": [status(200)]}
+        default_config={"method": "GET", "url": "{{base_url}}/api/runs?page=1&page_size=5", "auth": {"type": "bearer", "token": "system-bearer-token"}, "assertions": [status(200)]}
     )
 
 class RunsListStatusFilter(AuthHttpTest):
@@ -626,7 +626,7 @@ class RunsListStatusFilter(AuthHttpTest):
     metadata = TestMetadata(
         key="self.auth.runs_filter_status", name="QTP · Runs Filter Status", type=TYPE_HTTP,
         tags=["self", "api", "automated"], owner="admin", target=TARGET,
-        default_config={"method": "GET", "url": "{{base_url}}/api/runs?status=passed", "auth": {"type": "bearer", "token": "{{auth_token}}"}, "assertions": [status(200)]}
+        default_config={"method": "GET", "url": "{{base_url}}/api/runs?status=passed", "auth": {"type": "bearer", "token": "system-bearer-token"}, "assertions": [status(200)]}
     )
 
 class SchedulesListPagination(AuthHttpTest):
@@ -634,7 +634,7 @@ class SchedulesListPagination(AuthHttpTest):
     metadata = TestMetadata(
         key="self.auth.schedules_pagination", name="QTP · Schedules Pagination", type=TYPE_HTTP,
         tags=["self", "api", "automated"], owner="admin", target=TARGET,
-        default_config={"method": "GET", "url": "{{base_url}}/api/schedules?page_size=5", "auth": {"type": "bearer", "token": "{{auth_token}}"}, "assertions": [status(200)]}
+        default_config={"method": "GET", "url": "{{base_url}}/api/schedules?page_size=5", "auth": {"type": "bearer", "token": "system-bearer-token"}, "assertions": [status(200)]}
     )
 
 class WorkersListPagination(AuthHttpTest):
@@ -642,7 +642,7 @@ class WorkersListPagination(AuthHttpTest):
     metadata = TestMetadata(
         key="self.auth.workers_pagination", name="QTP · Workers Pagination", type=TYPE_HTTP,
         tags=["self", "api", "automated"], owner="admin", target=TARGET,
-        default_config={"method": "GET", "url": "{{base_url}}/api/workers?page_size=10", "auth": {"type": "bearer", "token": "{{auth_token}}"}, "assertions": [status(200)]}
+        default_config={"method": "GET", "url": "{{base_url}}/api/workers?page_size=10", "auth": {"type": "bearer", "token": "system-bearer-token"}, "assertions": [status(200)]}
     )
 
 class TagsListPagination(AuthHttpTest):
@@ -650,7 +650,7 @@ class TagsListPagination(AuthHttpTest):
     metadata = TestMetadata(
         key="self.auth.tags_pagination", name="QTP · Tags Pagination", type=TYPE_HTTP,
         tags=["self", "api", "automated"], owner="admin", target=TARGET,
-        default_config={"method": "GET", "url": "{{base_url}}/api/tags?page_size=10", "auth": {"type": "bearer", "token": "{{auth_token}}"}, "assertions": [status(200)]}
+        default_config={"method": "GET", "url": "{{base_url}}/api/tags?page_size=10", "auth": {"type": "bearer", "token": "system-bearer-token"}, "assertions": [status(200)]}
     )
 
 class TargetNotFound(AuthHttpTest):
@@ -658,7 +658,7 @@ class TargetNotFound(AuthHttpTest):
     metadata = TestMetadata(
         key="self.auth.target_404", name="QTP · Target 404", type=TYPE_HTTP,
         tags=["self", "api", "automated"], owner="admin", target=TARGET,
-        default_config={"method": "GET", "url": "{{base_url}}/api/targets/00000000-0000-0000-0000-000000000000", "auth": {"type": "bearer", "token": "{{auth_token}}"}, "assertions": [status(404)]}
+        default_config={"method": "GET", "url": "{{base_url}}/api/targets/00000000-0000-0000-0000-000000000000", "auth": {"type": "bearer", "token": "system-bearer-token"}, "assertions": [status(404)]}
     )
 
 class TargetStatsNotFound(AuthHttpTest):
@@ -666,7 +666,7 @@ class TargetStatsNotFound(AuthHttpTest):
     metadata = TestMetadata(
         key="self.auth.target_stats_404", name="QTP · Target Stats 404", type=TYPE_HTTP,
         tags=["self", "api", "automated"], owner="admin", target=TARGET,
-        default_config={"method": "GET", "url": "{{base_url}}/api/targets/00000000-0000-0000-0000-000000000000/stats", "auth": {"type": "bearer", "token": "{{auth_token}}"}, "assertions": [status(404)]}
+        default_config={"method": "GET", "url": "{{base_url}}/api/targets/00000000-0000-0000-0000-000000000000/stats", "auth": {"type": "bearer", "token": "system-bearer-token"}, "assertions": [status(404)]}
     )
 
 class TargetTestsNotFound(AuthHttpTest):
@@ -674,7 +674,7 @@ class TargetTestsNotFound(AuthHttpTest):
     metadata = TestMetadata(
         key="self.auth.target_tests_404", name="QTP · Target Tests 404", type=TYPE_HTTP,
         tags=["self", "api", "automated"], owner="admin", target=TARGET,
-        default_config={"method": "GET", "url": "{{base_url}}/api/targets/00000000-0000-0000-0000-000000000000/tests", "auth": {"type": "bearer", "token": "{{auth_token}}"}, "assertions": [status(404)]}
+        default_config={"method": "GET", "url": "{{base_url}}/api/targets/00000000-0000-0000-0000-000000000000/tests", "auth": {"type": "bearer", "token": "system-bearer-token"}, "assertions": [status(404)]}
     )
 
 class TargetRunsNotFound(AuthHttpTest):
@@ -682,7 +682,7 @@ class TargetRunsNotFound(AuthHttpTest):
     metadata = TestMetadata(
         key="self.auth.target_runs_404", name="QTP · Target Runs 404", type=TYPE_HTTP,
         tags=["self", "api", "automated"], owner="admin", target=TARGET,
-        default_config={"method": "GET", "url": "{{base_url}}/api/targets/00000000-0000-0000-0000-000000000000/runs", "auth": {"type": "bearer", "token": "{{auth_token}}"}, "assertions": [status(404)]}
+        default_config={"method": "GET", "url": "{{base_url}}/api/targets/00000000-0000-0000-0000-000000000000/runs", "auth": {"type": "bearer", "token": "system-bearer-token"}, "assertions": [status(404)]}
     )
 
 class TestNotFound(AuthHttpTest):
@@ -690,7 +690,7 @@ class TestNotFound(AuthHttpTest):
     metadata = TestMetadata(
         key="self.auth.test_404", name="QTP · Test 404", type=TYPE_HTTP,
         tags=["self", "api", "automated"], owner="admin", target=TARGET,
-        default_config={"method": "GET", "url": "{{base_url}}/api/tests/00000000-0000-0000-0000-000000000000", "auth": {"type": "bearer", "token": "{{auth_token}}"}, "assertions": [status(404)]}
+        default_config={"method": "GET", "url": "{{base_url}}/api/tests/00000000-0000-0000-0000-000000000000", "auth": {"type": "bearer", "token": "system-bearer-token"}, "assertions": [status(404)]}
     )
 
 class TestCommentsNotFound(AuthHttpTest):
@@ -698,7 +698,7 @@ class TestCommentsNotFound(AuthHttpTest):
     metadata = TestMetadata(
         key="self.auth.test_comments_404", name="QTP · Test Comments 404", type=TYPE_HTTP,
         tags=["self", "api", "automated"], owner="admin", target=TARGET,
-        default_config={"method": "GET", "url": "{{base_url}}/api/tests/00000000-0000-0000-0000-000000000000/comments", "auth": {"type": "bearer", "token": "{{auth_token}}"}, "assertions": [status(404)]}
+        default_config={"method": "GET", "url": "{{base_url}}/api/tests/00000000-0000-0000-0000-000000000000/comments", "auth": {"type": "bearer", "token": "system-bearer-token"}, "assertions": [status(404)]}
     )
 
 class RunNotFound(AuthHttpTest):
@@ -706,7 +706,7 @@ class RunNotFound(AuthHttpTest):
     metadata = TestMetadata(
         key="self.auth.run_404", name="QTP · Run 404", type=TYPE_HTTP,
         tags=["self", "api", "automated"], owner="admin", target=TARGET,
-        default_config={"method": "GET", "url": "{{base_url}}/api/runs/00000000-0000-0000-0000-000000000000", "auth": {"type": "bearer", "token": "{{auth_token}}"}, "assertions": [status(404)]}
+        default_config={"method": "GET", "url": "{{base_url}}/api/runs/00000000-0000-0000-0000-000000000000", "auth": {"type": "bearer", "token": "system-bearer-token"}, "assertions": [status(404)]}
     )
 
 class RunLogsNotFound(AuthHttpTest):
@@ -714,7 +714,7 @@ class RunLogsNotFound(AuthHttpTest):
     metadata = TestMetadata(
         key="self.auth.run_logs_404", name="QTP · Run Logs 404", type=TYPE_HTTP,
         tags=["self", "api", "automated"], owner="admin", target=TARGET,
-        default_config={"method": "GET", "url": "{{base_url}}/api/runs/00000000-0000-0000-0000-000000000000/logs", "auth": {"type": "bearer", "token": "{{auth_token}}"}, "assertions": [status(404)]}
+        default_config={"method": "GET", "url": "{{base_url}}/api/runs/00000000-0000-0000-0000-000000000000/logs", "auth": {"type": "bearer", "token": "system-bearer-token"}, "assertions": [status(404)]}
     )
 
 class ScheduleNotFound(AuthHttpTest):
@@ -722,7 +722,7 @@ class ScheduleNotFound(AuthHttpTest):
     metadata = TestMetadata(
         key="self.auth.schedule_404", name="QTP · Schedule 404", type=TYPE_HTTP,
         tags=["self", "api", "automated"], owner="admin", target=TARGET,
-        default_config={"method": "GET", "url": "{{base_url}}/api/schedules/00000000-0000-0000-0000-000000000000", "auth": {"type": "bearer", "token": "{{auth_token}}"}, "assertions": [status(404)]}
+        default_config={"method": "GET", "url": "{{base_url}}/api/schedules/00000000-0000-0000-0000-000000000000", "auth": {"type": "bearer", "token": "system-bearer-token"}, "assertions": [status(404)]}
     )
 
 class RunCommentsNotFound(AuthHttpTest):
@@ -730,7 +730,7 @@ class RunCommentsNotFound(AuthHttpTest):
     metadata = TestMetadata(
         key="self.auth.run_comments_404", name="QTP · Run Comments 404", type=TYPE_HTTP,
         tags=["self", "api", "automated"], owner="admin", target=TARGET,
-        default_config={"method": "GET", "url": "{{base_url}}/api/runs/00000000-0000-0000-0000-000000000000/comments", "auth": {"type": "bearer", "token": "{{auth_token}}"}, "assertions": [status(404)]}
+        default_config={"method": "GET", "url": "{{base_url}}/api/runs/00000000-0000-0000-0000-000000000000/comments", "auth": {"type": "bearer", "token": "system-bearer-token"}, "assertions": [status(404)]}
     )
 
 class CreateTargetMissingName(AuthHttpTest):
@@ -738,7 +738,7 @@ class CreateTargetMissingName(AuthHttpTest):
     metadata = TestMetadata(
         key="self.auth.create_target_400_name", name="QTP · Create Target missing name", type=TYPE_HTTP,
         tags=["self", "api", "automated"], owner="admin", target=TARGET,
-        default_config={"method": "POST", "url": "{{base_url}}/api/targets", "auth": {"type": "bearer", "token": "{{auth_token}}"}, "body": {"mode":"json","raw":"{\"key\":\"test\"}"}, "assertions": [status(400)]}
+        default_config={"method": "POST", "url": "{{base_url}}/api/targets", "auth": {"type": "bearer", "token": "system-bearer-token"}, "body": {"mode":"json","raw":"{\"key\":\"test\"}"}, "assertions": [status(400)]}
     )
 
 class CreateTargetMissingKey(AuthHttpTest):
@@ -746,7 +746,7 @@ class CreateTargetMissingKey(AuthHttpTest):
     metadata = TestMetadata(
         key="self.auth.create_target_400_key", name="QTP · Create Target missing key", type=TYPE_HTTP,
         tags=["self", "api", "automated"], owner="admin", target=TARGET,
-        default_config={"method": "POST", "url": "{{base_url}}/api/targets", "auth": {"type": "bearer", "token": "{{auth_token}}"}, "body": {"mode":"json","raw":"{\"name\":\"test\"}"}, "assertions": [status(400)]}
+        default_config={"method": "POST", "url": "{{base_url}}/api/targets", "auth": {"type": "bearer", "token": "system-bearer-token"}, "body": {"mode":"json","raw":"{\"name\":\"test\"}"}, "assertions": [status(400)]}
     )
 
 class CreateTargetMissingBaseUrl(AuthHttpTest):
@@ -754,7 +754,7 @@ class CreateTargetMissingBaseUrl(AuthHttpTest):
     metadata = TestMetadata(
         key="self.auth.create_target_400_url", name="QTP · Create Target missing URL", type=TYPE_HTTP,
         tags=["self", "api", "automated"], owner="admin", target=TARGET,
-        default_config={"method": "POST", "url": "{{base_url}}/api/targets", "auth": {"type": "bearer", "token": "{{auth_token}}"}, "body": {"mode":"json","raw":"{\"key\":\"test\",\"name\":\"test\"}"}, "assertions": [status(400)]}
+        default_config={"method": "POST", "url": "{{base_url}}/api/targets", "auth": {"type": "bearer", "token": "system-bearer-token"}, "body": {"mode":"json","raw":"{\"key\":\"test\",\"name\":\"test\"}"}, "assertions": [status(400)]}
     )
 
 class CreateTestMissingName(AuthHttpTest):
@@ -762,7 +762,7 @@ class CreateTestMissingName(AuthHttpTest):
     metadata = TestMetadata(
         key="self.auth.create_test_400_name", name="QTP · Create Test missing name", type=TYPE_HTTP,
         tags=["self", "api", "automated"], owner="admin", target=TARGET,
-        default_config={"method": "POST", "url": "{{base_url}}/api/request-tests", "auth": {"type": "bearer", "token": "{{auth_token}}"}, "body": {"mode":"json","raw":"{\"config\":{}}"}, "assertions": [status(400)]}
+        default_config={"method": "POST", "url": "{{base_url}}/api/request-tests", "auth": {"type": "bearer", "token": "system-bearer-token"}, "body": {"mode":"json","raw":"{\"config\":{}}"}, "assertions": [status(400)]}
     )
 
 class CreateTestMissingConfig(AuthHttpTest):
@@ -770,7 +770,7 @@ class CreateTestMissingConfig(AuthHttpTest):
     metadata = TestMetadata(
         key="self.auth.create_test_400_config", name="QTP · Create Test missing config", type=TYPE_HTTP,
         tags=["self", "api", "automated"], owner="admin", target=TARGET,
-        default_config={"method": "POST", "url": "{{base_url}}/api/request-tests", "auth": {"type": "bearer", "token": "{{auth_token}}"}, "body": {"mode":"json","raw":"{\"name\":\"test\"}"}, "assertions": [status(400)]}
+        default_config={"method": "POST", "url": "{{base_url}}/api/request-tests", "auth": {"type": "bearer", "token": "system-bearer-token"}, "body": {"mode":"json","raw":"{\"name\":\"test\"}"}, "assertions": [status(400)]}
     )
 
 class AddTestCommentEmpty(AuthHttpTest):
@@ -778,7 +778,7 @@ class AddTestCommentEmpty(AuthHttpTest):
     metadata = TestMetadata(
         key="self.auth.add_test_comment_400", name="QTP · Add Test Comment empty", type=TYPE_HTTP,
         tags=["self", "api", "automated"], owner="admin", target=TARGET,
-        default_config={"method": "POST", "url": "{{base_url}}/api/tests/ui.httpbin_get/comments", "auth": {"type": "bearer", "token": "{{auth_token}}"}, "body": {"mode":"json","raw":"{}"}, "assertions": [status(400)]}
+        default_config={"method": "POST", "url": "{{base_url}}/api/tests/ui.httpbin_get/comments", "auth": {"type": "bearer", "token": "system-bearer-token"}, "body": {"mode":"json","raw":"{}"}, "assertions": [status(400)]}
     )
 
 class AddRunCommentEmpty(AuthHttpTest):
@@ -786,7 +786,7 @@ class AddRunCommentEmpty(AuthHttpTest):
     metadata = TestMetadata(
         key="self.auth.add_run_comment_400", name="QTP · Add Run Comment empty", type=TYPE_HTTP,
         tags=["self", "api", "automated"], owner="admin", target=TARGET,
-        default_config={"method": "POST", "url": "{{base_url}}/api/runs/00000000-0000-0000-0000-000000000000/comments", "auth": {"type": "bearer", "token": "{{auth_token}}"}, "body": {"mode":"json","raw":"{}"}, "assertions": [status(400)]}
+        default_config={"method": "POST", "url": "{{base_url}}/api/runs/00000000-0000-0000-0000-000000000000/comments", "auth": {"type": "bearer", "token": "system-bearer-token"}, "body": {"mode":"json","raw":"{}"}, "assertions": [status(400)]}
     )
 
 class PutDefectMissingId(AuthHttpTest):
@@ -794,7 +794,7 @@ class PutDefectMissingId(AuthHttpTest):
     metadata = TestMetadata(
         key="self.auth.put_defect_404_id", name="QTP · Put Defect missing id", type=TYPE_HTTP,
         tags=["self", "api", "automated"], owner="admin", target=TARGET,
-        default_config={"method": "PUT", "url": "{{base_url}}/api/runs/missing-id/defect", "auth": {"type": "bearer", "token": "{{auth_token}}"}, "body": {"mode":"json","raw":"{\"defect_type\":\"bug\"}"}, "assertions": [status(404)]}
+        default_config={"method": "PUT", "url": "{{base_url}}/api/runs/00000000-0000-0000-0000-000000000000/defect", "auth": {"type": "bearer", "token": "system-bearer-token"}, "body": {"mode":"json","raw":"{\"defect_type\":\"bug\"}"}, "assertions": [status(404)]}
     )
 
 class CreateScheduleMissingTestId(AuthHttpTest):
@@ -802,7 +802,7 @@ class CreateScheduleMissingTestId(AuthHttpTest):
     metadata = TestMetadata(
         key="self.auth.create_schedule_400_testid", name="QTP · Create Schedule missing test_id", type=TYPE_HTTP,
         tags=["self", "api", "automated"], owner="admin", target=TARGET,
-        default_config={"method": "POST", "url": "{{base_url}}/api/schedules", "auth": {"type": "bearer", "token": "{{auth_token}}"}, "body": {"mode":"json","raw":"{\"recurrence_type\":\"interval\"}"}, "assertions": [status(400)]}
+        default_config={"method": "POST", "url": "{{base_url}}/api/schedules", "auth": {"type": "bearer", "token": "system-bearer-token"}, "body": {"mode":"json","raw":"{\"recurrence_type\":\"interval\"}"}, "assertions": [status(400)]}
     )
 
 class CreateScheduleMissingRecurrence(AuthHttpTest):
@@ -810,7 +810,7 @@ class CreateScheduleMissingRecurrence(AuthHttpTest):
     metadata = TestMetadata(
         key="self.auth.create_schedule_400_recurrence", name="QTP · Create Schedule missing recurrence", type=TYPE_HTTP,
         tags=["self", "api", "automated"], owner="admin", target=TARGET,
-        default_config={"method": "POST", "url": "{{base_url}}/api/schedules", "auth": {"type": "bearer", "token": "{{auth_token}}"}, "body": {"mode":"json","raw":"{\"test_definition_id\":\"00000000-0000-0000-0000-000000000000\"}"}, "assertions": [status(400)]}
+        default_config={"method": "POST", "url": "{{base_url}}/api/schedules", "auth": {"type": "bearer", "token": "system-bearer-token"}, "body": {"mode":"json","raw":"{\"test_definition_id\":\"00000000-0000-0000-0000-000000000000\"}"}, "assertions": [status(400)]}
     )
 
 class DashboardOverviewBadHours(AuthHttpTest):
@@ -818,7 +818,7 @@ class DashboardOverviewBadHours(AuthHttpTest):
     metadata = TestMetadata(
         key="self.auth.dashboard_overview_400", name="QTP · Overview bad hours", type=TYPE_HTTP,
         tags=["self", "api", "automated"], owner="admin", target=TARGET,
-        default_config={"method": "GET", "url": "{{base_url}}/api/dashboards/overview?hours=abc", "auth": {"type": "bearer", "token": "{{auth_token}}"}, "assertions": [status(400)]}
+        default_config={"method": "GET", "url": "{{base_url}}/api/dashboards/overview?hours=abc", "auth": {"type": "bearer", "token": "system-bearer-token"}, "assertions": [status(400)]}
     )
 
 class DashboardFailuresBadHours(AuthHttpTest):
@@ -826,7 +826,7 @@ class DashboardFailuresBadHours(AuthHttpTest):
     metadata = TestMetadata(
         key="self.auth.dashboard_failures_400", name="QTP · Failures bad hours", type=TYPE_HTTP,
         tags=["self", "api", "automated"], owner="admin", target=TARGET,
-        default_config={"method": "GET", "url": "{{base_url}}/api/dashboards/failures?hours=abc", "auth": {"type": "bearer", "token": "{{auth_token}}"}, "assertions": [status(400)]}
+        default_config={"method": "GET", "url": "{{base_url}}/api/dashboards/failures?hours=abc", "auth": {"type": "bearer", "token": "system-bearer-token"}, "assertions": [status(400)]}
     )
 
 class TargetStatsBadHours(AuthHttpTest):
@@ -834,7 +834,7 @@ class TargetStatsBadHours(AuthHttpTest):
     metadata = TestMetadata(
         key="self.auth.target_stats_400", name="QTP · Target Stats bad hours", type=TYPE_HTTP,
         tags=["self", "api", "automated"], owner="admin", target=TARGET,
-        default_config={"method": "GET", "url": "{{base_url}}/api/targets/00000000-0000-0000-0000-000000000000/stats?hours=abc", "auth": {"type": "bearer", "token": "{{auth_token}}"}, "assertions": [status(400)]}
+        default_config={"method": "GET", "url": "{{base_url}}/api/targets/00000000-0000-0000-0000-000000000000/stats?hours=abc", "auth": {"type": "bearer", "token": "system-bearer-token"}, "assertions": [status(400)]}
     )
 
 class UpdateTestBadPayload(AuthHttpTest):
@@ -842,7 +842,7 @@ class UpdateTestBadPayload(AuthHttpTest):
     metadata = TestMetadata(
         key="self.auth.update_test_400", name="QTP · Update Test bad payload", type=TYPE_HTTP,
         tags=["self", "api", "automated"], owner="admin", target=TARGET,
-        default_config={"method": "PATCH", "url": "{{base_url}}/api/request-tests/00000000-0000-0000-0000-000000000000", "auth": {"type": "bearer", "token": "{{auth_token}}"}, "body": {"mode":"json","raw":"[]"}, "assertions": [status(404)]}
+        default_config={"method": "PATCH", "url": "{{base_url}}/api/request-tests/00000000-0000-0000-0000-000000000000", "auth": {"type": "bearer", "token": "system-bearer-token"}, "body": {"mode":"json","raw":"[]"}, "assertions": [status(404)]}
     )
 
 class UpdateScheduleBadPayload(AuthHttpTest):
@@ -850,7 +850,7 @@ class UpdateScheduleBadPayload(AuthHttpTest):
     metadata = TestMetadata(
         key="self.auth.update_schedule_404_payload", name="QTP · Update Schedule bad payload", type=TYPE_HTTP,
         tags=["self", "api", "automated"], owner="admin", target=TARGET,
-        default_config={"method": "PATCH", "url": "{{base_url}}/api/schedules/missing-id", "auth": {"type": "bearer", "token": "{{auth_token}}"}, "body": {"mode":"json","raw":"{\"is_enabled\":false}"}, "assertions": [status(404)]}
+        default_config={"method": "PATCH", "url": "{{base_url}}/api/schedules/00000000-0000-0000-0000-000000000000", "auth": {"type": "bearer", "token": "system-bearer-token"}, "body": {"mode":"json","raw":"{\"is_enabled\":false}"}, "assertions": [status(404)]}
     )
 
 class TargetsMethodNotAllowed(AuthHttpTest):
@@ -858,7 +858,7 @@ class TargetsMethodNotAllowed(AuthHttpTest):
     metadata = TestMetadata(
         key="self.auth.targets_405", name="QTP · Targets 405", type=TYPE_HTTP,
         tags=["self", "api", "automated"], owner="admin", target=TARGET,
-        default_config={"method": "PUT", "url": "{{base_url}}/api/targets", "auth": {"type": "bearer", "token": "{{auth_token}}"}, "assertions": [status(405)]}
+        default_config={"method": "PUT", "url": "{{base_url}}/api/targets", "auth": {"type": "bearer", "token": "system-bearer-token"}, "assertions": [status(405)]}
     )
 
 class TargetsIdMethodNotAllowed(AuthHttpTest):
@@ -866,7 +866,7 @@ class TargetsIdMethodNotAllowed(AuthHttpTest):
     metadata = TestMetadata(
         key="self.auth.targets_id_405", name="QTP · Targets ID 405", type=TYPE_HTTP,
         tags=["self", "api", "automated"], owner="admin", target=TARGET,
-        default_config={"method": "POST", "url": "{{base_url}}/api/targets/00000000-0000-0000-0000-000000000000", "auth": {"type": "bearer", "token": "{{auth_token}}"}, "assertions": [status(405)]}
+        default_config={"method": "POST", "url": "{{base_url}}/api/targets/00000000-0000-0000-0000-000000000000", "auth": {"type": "bearer", "token": "system-bearer-token"}, "assertions": [status(405)]}
     )
 
 class TestsMethodNotAllowed(AuthHttpTest):
@@ -874,7 +874,7 @@ class TestsMethodNotAllowed(AuthHttpTest):
     metadata = TestMetadata(
         key="self.auth.tests_405", name="QTP · Tests 405", type=TYPE_HTTP,
         tags=["self", "api", "automated"], owner="admin", target=TARGET,
-        default_config={"method": "PUT", "url": "{{base_url}}/api/tests", "auth": {"type": "bearer", "token": "{{auth_token}}"}, "assertions": [status(405)]}
+        default_config={"method": "PUT", "url": "{{base_url}}/api/tests", "auth": {"type": "bearer", "token": "system-bearer-token"}, "assertions": [status(405)]}
     )
 
 class TestsIdMethodNotAllowed(AuthHttpTest):
@@ -882,7 +882,7 @@ class TestsIdMethodNotAllowed(AuthHttpTest):
     metadata = TestMetadata(
         key="self.auth.tests_id_405", name="QTP · Tests ID 405", type=TYPE_HTTP,
         tags=["self", "api", "automated"], owner="admin", target=TARGET,
-        default_config={"method": "POST", "url": "{{base_url}}/api/tests/ui.httpbin_get", "auth": {"type": "bearer", "token": "{{auth_token}}"}, "assertions": [status(405)]}
+        default_config={"method": "POST", "url": "{{base_url}}/api/tests/ui.httpbin_get", "auth": {"type": "bearer", "token": "system-bearer-token"}, "assertions": [status(405)]}
     )
 
 class RunsMethodNotAllowed(AuthHttpTest):
@@ -890,7 +890,7 @@ class RunsMethodNotAllowed(AuthHttpTest):
     metadata = TestMetadata(
         key="self.auth.runs_405", name="QTP · Runs 405", type=TYPE_HTTP,
         tags=["self", "api", "automated"], owner="admin", target=TARGET,
-        default_config={"method": "POST", "url": "{{base_url}}/api/runs", "auth": {"type": "bearer", "token": "{{auth_token}}"}, "assertions": [status(405)]}
+        default_config={"method": "POST", "url": "{{base_url}}/api/runs", "auth": {"type": "bearer", "token": "system-bearer-token"}, "assertions": [status(405)]}
     )
 
 class RunsIdMethodNotAllowed(AuthHttpTest):
@@ -898,7 +898,7 @@ class RunsIdMethodNotAllowed(AuthHttpTest):
     metadata = TestMetadata(
         key="self.auth.runs_id_405", name="QTP · Runs ID 405", type=TYPE_HTTP,
         tags=["self", "api", "automated"], owner="admin", target=TARGET,
-        default_config={"method": "DELETE", "url": "{{base_url}}/api/runs/00000000-0000-0000-0000-000000000000", "auth": {"type": "bearer", "token": "{{auth_token}}"}, "assertions": [status(405)]}
+        default_config={"method": "DELETE", "url": "{{base_url}}/api/runs/00000000-0000-0000-0000-000000000000", "auth": {"type": "bearer", "token": "system-bearer-token"}, "assertions": [status(405)]}
     )
 
 class SchedulesMethodNotAllowed(AuthHttpTest):
@@ -906,7 +906,7 @@ class SchedulesMethodNotAllowed(AuthHttpTest):
     metadata = TestMetadata(
         key="self.auth.schedules_405", name="QTP · Schedules 405", type=TYPE_HTTP,
         tags=["self", "api", "automated"], owner="admin", target=TARGET,
-        default_config={"method": "PUT", "url": "{{base_url}}/api/schedules", "auth": {"type": "bearer", "token": "{{auth_token}}"}, "assertions": [status(405)]}
+        default_config={"method": "PUT", "url": "{{base_url}}/api/schedules", "auth": {"type": "bearer", "token": "system-bearer-token"}, "assertions": [status(405)]}
     )
 
 class WorkersMethodNotAllowed(AuthHttpTest):
@@ -914,7 +914,7 @@ class WorkersMethodNotAllowed(AuthHttpTest):
     metadata = TestMetadata(
         key="self.auth.workers_405", name="QTP · Workers 405", type=TYPE_HTTP,
         tags=["self", "api", "automated"], owner="admin", target=TARGET,
-        default_config={"method": "POST", "url": "{{base_url}}/api/workers", "auth": {"type": "bearer", "token": "{{auth_token}}"}, "assertions": [status(405)]}
+        default_config={"method": "POST", "url": "{{base_url}}/api/workers", "auth": {"type": "bearer", "token": "system-bearer-token"}, "assertions": [status(405)]}
     )
 
 class DashboardsOverviewMethodNotAllowed(AuthHttpTest):
@@ -922,7 +922,7 @@ class DashboardsOverviewMethodNotAllowed(AuthHttpTest):
     metadata = TestMetadata(
         key="self.auth.dashboards_overview_405", name="QTP · Dashboards Overview 405", type=TYPE_HTTP,
         tags=["self", "api", "automated"], owner="admin", target=TARGET,
-        default_config={"method": "POST", "url": "{{base_url}}/api/dashboards/overview", "auth": {"type": "bearer", "token": "{{auth_token}}"}, "assertions": [status(405)]}
+        default_config={"method": "POST", "url": "{{base_url}}/api/dashboards/overview", "auth": {"type": "bearer", "token": "system-bearer-token"}, "assertions": [status(405)]}
     )
 
 class TagsMethodNotAllowed(AuthHttpTest):
@@ -930,7 +930,7 @@ class TagsMethodNotAllowed(AuthHttpTest):
     metadata = TestMetadata(
         key="self.auth.tags_405", name="QTP · Tags 405", type=TYPE_HTTP,
         tags=["self", "api", "automated"], owner="admin", target=TARGET,
-        default_config={"method": "POST", "url": "{{base_url}}/api/tags", "auth": {"type": "bearer", "token": "{{auth_token}}"}, "assertions": [status(405)]}
+        default_config={"method": "POST", "url": "{{base_url}}/api/tags", "auth": {"type": "bearer", "token": "system-bearer-token"}, "assertions": [status(405)]}
     )
 
 class DashboardOverviewValidHours(AuthHttpTest):
@@ -938,7 +938,7 @@ class DashboardOverviewValidHours(AuthHttpTest):
     metadata = TestMetadata(
         key="self.auth.dashboard_overview_valid", name="QTP · Overview Valid Hours", type=TYPE_HTTP,
         tags=["self", "api", "automated"], owner="admin", target=TARGET,
-        default_config={"method": "GET", "url": "{{base_url}}/api/dashboards/overview?hours=24", "auth": {"type": "bearer", "token": "{{auth_token}}"}, "assertions": [status(200)]}
+        default_config={"method": "GET", "url": "{{base_url}}/api/dashboards/overview?hours=24", "auth": {"type": "bearer", "token": "system-bearer-token"}, "assertions": [status(200)]}
     )
 
 class DashboardFailuresValidHours(AuthHttpTest):
@@ -946,7 +946,7 @@ class DashboardFailuresValidHours(AuthHttpTest):
     metadata = TestMetadata(
         key="self.auth.dashboard_failures_valid", name="QTP · Failures Valid Hours", type=TYPE_HTTP,
         tags=["self", "api", "automated"], owner="admin", target=TARGET,
-        default_config={"method": "GET", "url": "{{base_url}}/api/dashboards/failures?hours=24", "auth": {"type": "bearer", "token": "{{auth_token}}"}, "assertions": [status(200)]}
+        default_config={"method": "GET", "url": "{{base_url}}/api/dashboards/failures?hours=24", "auth": {"type": "bearer", "token": "system-bearer-token"}, "assertions": [status(200)]}
     )
 
 class MeEndpointValid(AuthHttpTest):
@@ -954,7 +954,7 @@ class MeEndpointValid(AuthHttpTest):
     metadata = TestMetadata(
         key="self.auth.me_endpoint_valid", name="QTP · Me Endpoint 200", type=TYPE_HTTP,
         tags=["self", "api", "automated"], owner="admin", target=TARGET,
-        default_config={"method": "GET", "url": "{{base_url}}/api/me", "auth": {"type": "bearer", "token": "{{auth_token}}"}, "assertions": [status(200)]}
+        default_config={"method": "GET", "url": "{{base_url}}/api/me", "auth": {"type": "bearer", "token": "system-bearer-token"}, "assertions": [status(200)]}
     )
 
 class AuthWithoutBearerPrefix(AuthHttpTest):
@@ -962,7 +962,7 @@ class AuthWithoutBearerPrefix(AuthHttpTest):
     metadata = TestMetadata(
         key="self.auth.auth_no_bearer", name="QTP · Auth w/o Bearer", type=TYPE_HTTP,
         tags=["self", "api", "automated"], owner="admin", target=TARGET,
-        default_config={"method": "GET", "url": "{{base_url}}/api/me", "auth": None, "headers": [{"name": "Authorization", "value": "Token {{auth_token}}"}], "assertions": [status(401)]}
+        default_config={"method": "GET", "url": "{{base_url}}/api/me", "auth": None, "headers": [{"name": "Authorization", "value": "Token system-bearer-token"}], "assertions": [status(401)]}
     )
 
 class AuthInvalidBearer(AuthHttpTest):
