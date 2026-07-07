@@ -181,6 +181,15 @@ export default function DocsPage() {
       <Col xs={0} lg={5}>
         <Anchor
           style={{ position: "sticky", top: 20 }}
+          onClick={(e, link) => {
+            e.preventDefault();
+            const id = link.href.replace('#', '');
+            const element = document.getElementById(id);
+            if (element) {
+              element.scrollIntoView({ behavior: 'smooth' });
+              window.history.pushState(null, '', link.href);
+            }
+          }}
           items={[
             { key: "concepts", href: "#concepts", title: "Concepts" },
             { key: "two-ways", href: "#two-ways", title: "Two ways to add a test" },

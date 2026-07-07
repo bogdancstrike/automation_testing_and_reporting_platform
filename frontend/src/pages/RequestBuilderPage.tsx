@@ -2,7 +2,7 @@ import { useState } from "react";
 import {
   Row, Col, Card, Select, Input, Button, Tabs, Table, Space, Typography,
   Tag, App, Modal, Form, Alert, Segmented, List, Popconfirm, InputNumber, Empty, Tooltip,
-  Layout, theme, Divider, Dropdown, MenuProps,
+  Layout, theme, Divider, Dropdown, MenuProps, Splitter,
 } from "antd";
 import {
   SendOutlined, PlusOutlined, DeleteOutlined, SaveOutlined, ClockCircleOutlined,
@@ -407,7 +407,9 @@ export default function RequestBuilderPage() {
                         <Typography.Text type="secondary" style={{ fontSize: 11, minWidth: 42, display: "inline-block" }}>
                           {cfgMethod || "FLOW"}
                         </Typography.Text>
-                        <Typography.Text ellipsis style={{ maxWidth: 160 }}>{t.name}</Typography.Text>
+                        <Tooltip title={t.name} placement="right">
+                          <Typography.Text ellipsis style={{ maxWidth: 160 }}>{t.name}</Typography.Text>
+                        </Tooltip>
                       </Space>
                     </Space>
                   </List.Item>
@@ -479,8 +481,8 @@ export default function RequestBuilderPage() {
           )}
 
           {/* Main Request Pane */}
-          <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-            <div style={{ flex: 1, overflowY: "auto", padding: 24, background: token.colorBgContainer }}>
+          <Splitter layout="vertical" style={{ flex: 1 }}>
+            <Splitter.Panel style={{ overflowY: "auto", padding: 24, background: token.colorBgContainer }}>
               {mode === "flow" && (
                 <Space style={{ marginBottom: 16, width: "100%", justifyContent: "space-between" }}>
                   <Space>
@@ -518,10 +520,10 @@ export default function RequestBuilderPage() {
                 { key: "assertions", label: `Assertions (${(currentStep.assertions || []).length})`, children: <AssertionEditor rows={currentStep.assertions || []} setRows={(r) => updateCurrentStep({ assertions: r })} /> },
                 { key: "captures", label: `Captures (${(currentStep.captures || []).length})`, children: <CaptureEditor rows={currentStep.captures || []} setRows={(r) => updateCurrentStep({ captures: r })} /> },
               ]} />
-            </div>
+            </Splitter.Panel>
 
             {/* Response Area Container (Splitter) */}
-            <div style={{ height: "40%", minHeight: 200, borderTop: `1px solid ${token.colorBorderSecondary}`, background: "#fafafa", overflowY: "auto", position: "relative" }}>
+            <Splitter.Panel defaultSize="40%" min="20%" style={{ background: "#fafafa", overflowY: "auto", position: "relative", borderTop: `1px solid ${token.colorBorderSecondary}` }}>
               {!result ? (
                 <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: token.colorTextQuaternary }}>
                   <Space direction="vertical" align="center">
@@ -532,8 +534,8 @@ export default function RequestBuilderPage() {
               ) : (
                 <ResponseView result={result} />
               )}
-            </div>
-          </div>
+            </Splitter.Panel>
+          </Splitter>
         </div>
       </Content>
 

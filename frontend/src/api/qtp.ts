@@ -67,6 +67,6 @@ export const qtp = {
 
   workers: () => api.get<{ items: WorkerInfo[] }>("/api/workers").then(list<WorkerInfo>()),
 
-  overview: (hours = 24) => api.get<Overview>(`/api/dashboards/overview?hours=${hours}`),
-  failures: (hours = 168) => api.get<Failures>(`/api/dashboards/failures?hours=${hours}`),
+  overview: (params?: { hours?: number; start_time?: string; end_time?: string }) => api.get<Overview>(`/api/dashboards/overview${qs(params)}`),
+  failures: (params?: { hours?: number; start_time?: string; end_time?: string }) => api.get<Failures>(`/api/dashboards/failures${qs(params)}`),
 };

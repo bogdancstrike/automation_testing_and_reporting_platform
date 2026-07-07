@@ -1,7 +1,7 @@
 """Reporting service: dashboard aggregates over runs and failures."""
 from __future__ import annotations
 
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 from sqlalchemy import Float, cast, func, select
 from sqlalchemy.orm import Session
@@ -17,12 +17,14 @@ def _iso(dt):
     return dt.isoformat() if dt else None
 
 
-def overview(db: Session, *, hours: int = 24) -> dict:
-    since = utcnow() - timedelta(hours=hours)
+def overview(db: Session, *, hours: int = 24, start: datetime | None = None, end: datetime | None = None) -> dict:
+    end = end or utcnow()
+    since = start or (end - timedelta(hours=hours))
 
     status_counts = dict(
         db.execute(
-            select(TestRun.status, func.count()).where(TestRun.queued_at >= since)
+            select(TestRun.status, func.count())
+            .where(TestRun.queued_at >= since, TestRun.queued_at <= end)
             .group_by(TestRun.status)
         ).all()
     )
@@ -38,7 +40,7 @@ def overview(db: Session, *, hours: int = 24) -> dict:
             func.percentile_cont(0.5).within_group(cast(TestRun.duration_ms, Float)),
             func.percentile_cont(0.95).within_group(cast(TestRun.duration_ms, Float)),
             func.avg(cast(TestRun.duration_ms, Float)),
-        ).where(TestRun.queued_at >= since, TestRun.duration_ms.isnot(None))
+        ).where(TestRun.queued_at >= since, TestRun.queued_at <= end, TestRun.duration_ms.isnot(None))
     ).first()
     p50, p95, avg = (durations or (None, None, None))
 
@@ -46,7 +48,7 @@ def overview(db: Session, *, hours: int = 24) -> dict:
     bucket = func.date_trunc("hour", TestRun.queued_at)
     trend_rows = db.execute(
         select(bucket.label("h"), TestRun.status, func.count())
-        .where(TestRun.queued_at >= since)
+        .where(TestRun.queued_at >= since, TestRun.queued_at <= end)
         .group_by("h", TestRun.status).order_by("h")
     ).all()
     trend: dict[str, dict] = {}
@@ -64,7 +66,7 @@ def overview(db: Session, *, hours: int = 24) -> dict:
     # Per-target health.
     tgt_rows = db.execute(
         select(TestRun.target_id, TestRun.status, func.count())
-        .where(TestRun.queued_at >= since, TestRun.target_id.isnot(None))
+        .where(TestRun.queued_at >= since, TestRun.queued_at <= end, TestRun.target_id.isnot(None))
         .group_by(TestRun.target_id, TestRun.status)
     ).all()
     per_target: dict[str, dict] = {}
@@ -97,8 +99,9 @@ def overview(db: Session, *, hours: int = 24) -> dict:
     }
 
 
-def failures(db: Session, *, hours: int = 168) -> dict:
-    since = utcnow() - timedelta(hours=hours)
+def failures(db: Session, *, hours: int = 168, start: datetime | None = None, end: datetime | None = None) -> dict:
+    end = end or utcnow()
+    since = start or (end - timedelta(hours=hours))
 
     sig_rows = db.scalars(
         select(FailureSignature).order_by(FailureSignature.occurrences.desc()).limit(20)
@@ -112,7 +115,7 @@ def failures(db: Session, *, hours: int = 168) -> dict:
 
     defect_rows = db.execute(
         select(TestRun.defect_type, func.count())
-        .where(TestRun.queued_at >= since, TestRun.status.in_(["failed", "error", "timeout"]))
+        .where(TestRun.queued_at >= since, TestRun.queued_at <= end, TestRun.status.in_(["failed", "error", "timeout"]))
         .group_by(TestRun.defect_type)
     ).all()
     defect_distribution = {(dt or "untriaged"): c for dt, c in defect_rows}
