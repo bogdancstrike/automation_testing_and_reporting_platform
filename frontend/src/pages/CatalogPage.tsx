@@ -8,6 +8,7 @@ import { StatusTag, TypeTag } from "../components/tags";
 import type { QueryParams } from "../api/types";
 
 function sortOrder(order?: string) { return order === "ascend" ? "asc" : order === "descend" ? "desc" : undefined; }
+function displayDate(value?: string) { return value ? value.replace("T", " ").slice(0, 19) : "—"; }
 
 export default function CatalogPage() {
   const { message } = App.useApp();
@@ -73,6 +74,7 @@ export default function CatalogPage() {
           { title: "Source", dataIndex: "source", sorter: true, render: (s) => <Tag color={s === "code" ? "purple" : "cyan"}>{s}</Tag> },
           { title: "App", dataIndex: "target_key", sorter: true, render: (v) => <Tag color="geekblue">{v}</Tag> },
           { title: "Tags", dataIndex: "tags", render: (tags) => (tags || []).map((x: string) => <Tag key={x}>{x}</Tag>) },
+          { title: "Added at", dataIndex: "created_at", sorter: true, render: displayDate },
           { title: "Last result", dataIndex: "last_run_status", sorter: true, render: (s) => <StatusTag status={s} /> },
           { title: "Run", key: "run", width: 64, render: (_, r) => <Button size="small" type="text" icon={<PlayCircleOutlined />} onClick={(e) => { e.stopPropagation(); run.mutate(r.id); }} /> },
         ]}
