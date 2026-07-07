@@ -404,7 +404,7 @@ def update_request_test(db: Session, test_id: str, payload: dict[str, Any]) -> d
 def delete_request_test(db: Session, test_id: str) -> dict:
     from sqlalchemy import delete as sa_delete
     from src.execution.models import RunLog, RunQueue, TestRun, TestRunAssertion, TestRunStep
-    from src.scheduling.models import Schedule
+    from src.scheduling.models import Schedule, ScheduleTest
 
     d = db.get(TestDefinition, test_id)
     if not d:
@@ -419,7 +419,17 @@ def delete_request_test(db: Session, test_id: str) -> dict:
         db.execute(sa_delete(TestRunAssertion).where(TestRunAssertion.test_run_id.in_(run_ids)))
         db.execute(sa_delete(RunQueue).where(RunQueue.test_run_id.in_(run_ids)))
         db.execute(sa_delete(TestRun).where(TestRun.id.in_(run_ids)))
-    db.execute(sa_delete(Schedule).where(Schedule.test_definition_id == test_id))
+    schedule_ids = list(db.scalars(select(ScheduleTest.schedule_id).where(ScheduleTest.test_definition_id == test_id)).all())
+    db.execute(sa_delete(ScheduleTest).where(ScheduleTest.test_definition_id == test_id))
+    for schedule_id in schedule_ids:
+        schedule = db.get(Schedule, schedule_id)
+        if not schedule:
+            continue
+        replacement = db.scalars(select(ScheduleTest).where(ScheduleTest.schedule_id == schedule_id).order_by(ScheduleTest.created_at)).first()
+        if replacement:
+            schedule.test_definition_id = replacement.test_definition_id
+        else:
+            db.delete(schedule)
     db.execute(sa_delete(TestRevision).where(TestRevision.test_definition_id == test_id))
     db.execute(sa_delete(TestDefinition).where(TestDefinition.id == test_id))
     return {"deleted": test_id}
@@ -434,7 +444,7 @@ def get_target_detail(db: Session, target_id: str) -> dict:
 
 def _get_target_detail(db: Session, target_id: str) -> dict:
     from src.execution.models import TestRun
-    from src.scheduling.models import Schedule
+    from src.scheduling.models import ScheduleTest
 
     target = _target_or_404(db, target_id)
     tests_stmt = select(TestDefinition.id).where(
@@ -456,7 +466,10 @@ def _get_target_detail(db: Session, target_id: str) -> dict:
     p50, p95, avg = (durations or (None, None, None))
     scheduled = 0
     if test_ids:
-        scheduled = int(db.scalar(select(func.count()).select_from(Schedule).where(Schedule.test_definition_id.in_(test_ids))) or 0)
+        scheduled = int(db.scalar(
+            select(func.count(func.distinct(ScheduleTest.schedule_id)))
+            .where(ScheduleTest.test_definition_id.in_(test_ids))
+        ) or 0)
     return {
         "target": serializers.target(target),
         "test_count": len(test_ids),

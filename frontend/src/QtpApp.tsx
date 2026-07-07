@@ -113,8 +113,8 @@ function AppShell({ mode, setMode }: { mode: ThemeMode; setMode: (mode: ThemeMod
       <Layout>
         <Header className="qtp-header" style={{ background: token.colorBgContainer }}>
           <div className="qtp-header-title">
-            <Typography.Text strong>Automation control plane</Typography.Text>
-            <Typography.Text type="secondary">Tests, targets, schedules, and execution telemetry</Typography.Text>
+            <Typography.Text strong>Scenarios - Automation Testing Control Plane</Typography.Text>
+            <Typography.Text type="secondary">Scenarios, targets, schedules, and execution history</Typography.Text>
           </div>
           <Space size={10}>
             <Tooltip title={darkMode ? "Switch to light mode" : "Switch to dark mode"}>

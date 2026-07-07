@@ -5,14 +5,44 @@ import ReactECharts from "echarts-for-react";
 import dayjs from "dayjs";
 import { qtp } from "../api/qtp";
 import { StatusTag, DefectTag } from "../components/tags";
+import { apiSortOrder, menuFilter, textFilter } from "../components/remoteTable";
+import type { QueryParams } from "../api/types";
 import { useNavigate } from "react-router-dom";
 
 const { RangePicker } = DatePicker;
+
+function prefixedSortOrder(params: QueryParams, prefix: string, field: string) {
+  if (params[`${prefix}_sort`] !== field) return null;
+  return params[`${prefix}_order`] === "asc" ? "ascend" : "descend";
+}
+
+function nextDashboardTableParams(
+  prev: QueryParams,
+  filters: Record<string, any>,
+  sorter: any,
+  prefix: string,
+  filterMap: Record<string, string>,
+  defaults: { sort: string; order: "asc" | "desc" },
+): QueryParams {
+  const order = apiSortOrder(sorter?.order);
+  const next: QueryParams = {
+    ...prev,
+    [`${prefix}_sort`]: order ? (sorter?.field || sorter?.columnKey || defaults.sort) : defaults.sort,
+    [`${prefix}_order`]: order || defaults.order,
+  };
+  Object.entries(filterMap).forEach(([tableKey, paramKey]) => {
+    const values = filters?.[tableKey];
+    next[paramKey] = values && values.length ? values.map(String).join(",") : undefined;
+  });
+  return next;
+}
 
 export default function OverviewPage() {
   const nav = useNavigate();
   const [timeRange, setTimeRange] = useState("24h");
   const [customRange, setCustomRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(null);
+  const [targetTableParams, setTargetTableParams] = useState<QueryParams>({ per_target_sort: "total", per_target_order: "desc" });
+  const [failureTableParams, setFailureTableParams] = useState<QueryParams>({ recent_failed_sort: "finished_at", recent_failed_order: "desc" });
 
   const getQueryParams = () => {
     if (timeRange === "custom" && customRange) {
@@ -23,8 +53,10 @@ export default function OverviewPage() {
   };
 
   const params = getQueryParams();
-  const { data: ov } = useQuery({ queryKey: ["overview", timeRange, customRange], queryFn: () => qtp.overview(params), refetchInterval: 5000 });
-  const { data: fail } = useQuery({ queryKey: ["failures", timeRange, customRange], queryFn: () => qtp.failures(params), refetchInterval: 8000 });
+  const overviewParams = { ...params, ...targetTableParams };
+  const failureParams = { ...params, ...failureTableParams };
+  const { data: ov } = useQuery({ queryKey: ["overview", timeRange, customRange, targetTableParams], queryFn: () => qtp.overview(overviewParams), refetchInterval: 5000 });
+  const { data: fail } = useQuery({ queryKey: ["failures", timeRange, customRange, failureTableParams], queryFn: () => qtp.failures(failureParams), refetchInterval: 8000 });
 
   const totals = ov?.totals || {};
   const trend = ov?.trend || [];
@@ -127,11 +159,21 @@ export default function OverviewPage() {
               size="small"
               pagination={{ pageSize: 5 }}
               dataSource={perTarget}
+              onChange={(_, filters, sorter: any) => setTargetTableParams((p) => nextDashboardTableParams(
+                p,
+                filters,
+                sorter,
+                "per_target",
+                { per_target_q: "per_target_q", per_target_health: "per_target_health" },
+                { sort: "total", order: "desc" },
+              ))}
               columns={[
-                { title: "Target", dataIndex: "target_key" },
-                { title: "Runs", dataIndex: "total", width: 80 },
+                { title: "Target", dataIndex: "target_key", sorter: true, sortOrder: prefixedSortOrder(targetTableParams, "per_target", "target_key"), ...textFilter("per_target_q", targetTableParams, "Search target") },
+                { title: "Runs", dataIndex: "total", width: 80, sorter: true, sortOrder: prefixedSortOrder(targetTableParams, "per_target", "total") },
+                { title: "Passed", dataIndex: "passed", width: 86, sorter: true, sortOrder: prefixedSortOrder(targetTableParams, "per_target", "passed") },
+                { title: "Failed", dataIndex: "failed", width: 86, sorter: true, sortOrder: prefixedSortOrder(targetTableParams, "per_target", "failed") },
                 {
-                  title: "Health", render: (_: any, r: any) => {
+                  title: "Health", dataIndex: "health_rate", sorter: true, sortOrder: prefixedSortOrder(targetTableParams, "per_target", "health_rate"), ...menuFilter("per_target_health", targetTableParams, [{ text: "healthy", value: "healthy" }, { text: "degraded", value: "degraded" }]), render: (_: any, r: any) => {
                     const pct = r.total ? Math.round((r.passed / r.total) * 100) : 0;
                     return <Progress percent={pct} size="small" status={pct < 100 ? "active" : "success"} />;
                   },
@@ -152,12 +194,26 @@ export default function OverviewPage() {
               pagination={{ pageSize: 5 }}
               dataSource={fail?.recent_failed || []}
               onRow={(r: any) => ({ onClick: () => nav(`/runs/${r.id}`), style: { cursor: "pointer" } })}
+              onChange={(_, filters, sorter: any) => setFailureTableParams((p) => nextDashboardTableParams(
+                p,
+                filters,
+                sorter,
+                "recent_failed",
+                {
+                  recent_failed_q: "recent_failed_q",
+                  recent_failed_status: "recent_failed_status",
+                  recent_failed_error_category: "recent_failed_error_category",
+                  recent_failed_defect_type: "recent_failed_defect_type",
+                  recent_failed_finished_at: "recent_failed_finished_at",
+                },
+                { sort: "finished_at", order: "desc" },
+              ))}
               columns={[
-                { title: "Test", dataIndex: "test_name" },
-                { title: "Status", dataIndex: "status", render: (s) => <StatusTag status={s} /> },
-                { title: "Category", dataIndex: "error_category" },
-                { title: "Defect", dataIndex: "defect_type", render: (d) => <DefectTag defect={d} /> },
-                { title: "Time", dataIndex: "finished_at", render: (v) => v?.replace("T", " ").slice(0, 19) }
+                { title: "Scenario", dataIndex: "test_name", sorter: true, sortOrder: prefixedSortOrder(failureTableParams, "recent_failed", "test_name"), ...textFilter("recent_failed_q", failureTableParams, "Search scenario") },
+                { title: "Status", dataIndex: "status", sorter: true, sortOrder: prefixedSortOrder(failureTableParams, "recent_failed", "status"), ...menuFilter("recent_failed_status", failureTableParams, ["failed", "error", "timeout"].map((value) => ({ text: value, value }))), render: (s) => <StatusTag status={s} /> },
+                { title: "Category", dataIndex: "error_category", sorter: true, sortOrder: prefixedSortOrder(failureTableParams, "recent_failed", "error_category"), ...textFilter("recent_failed_error_category", failureTableParams, "Search category") },
+                { title: "Defect", dataIndex: "defect_type", sorter: true, sortOrder: prefixedSortOrder(failureTableParams, "recent_failed", "defect_type"), ...menuFilter("recent_failed_defect_type", failureTableParams, ["product_bug", "automation_bug", "system_issue", "to_investigate", "no_defect"].map((value) => ({ text: value.replace(/_/g, " "), value }))), render: (d) => <DefectTag defect={d} /> },
+                { title: "Time", dataIndex: "finished_at", sorter: true, sortOrder: prefixedSortOrder(failureTableParams, "recent_failed", "finished_at"), ...textFilter("recent_failed_finished_at", failureTableParams, "YYYY-MM-DD"), render: (v) => v?.replace("T", " ").slice(0, 19) }
               ]}
               locale={{ emptyText: <Empty description="No failures 🎉" /> }}
             />

@@ -10,6 +10,7 @@ from __future__ import annotations
 import os
 import sys
 import time
+import uuid
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -136,10 +137,45 @@ def ensure_schema_compatibility() -> None:
         "ALTER TABLE test_runs ADD COLUMN IF NOT EXISTS stats_reset_reason TEXT",
         "CREATE INDEX IF NOT EXISTS ix_test_runs_triggered_by ON test_runs (triggered_by)",
         "CREATE INDEX IF NOT EXISTS ix_test_runs_stats_reset_at ON test_runs (stats_reset_at)",
+        """
+        CREATE TABLE IF NOT EXISTS schedule_tests (
+            id UUID PRIMARY KEY,
+            schedule_id UUID NOT NULL REFERENCES schedules(id) ON DELETE CASCADE,
+            test_definition_id UUID NOT NULL REFERENCES test_definitions(id),
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+        )
+        """,
+        "CREATE UNIQUE INDEX IF NOT EXISTS uq_schedule_tests_schedule_test ON schedule_tests (schedule_id, test_definition_id)",
+        "CREATE INDEX IF NOT EXISTS ix_schedule_tests_schedule_id ON schedule_tests (schedule_id)",
+        "CREATE INDEX IF NOT EXISTS ix_schedule_tests_test_definition_id ON schedule_tests (test_definition_id)",
     ]
     with get_engine().begin() as conn:
         for statement in statements:
             conn.execute(text(statement))
+        rows = conn.execute(text("""
+            SELECT s.id, s.test_definition_id
+            FROM schedules s
+            WHERE s.test_definition_id IS NOT NULL
+              AND NOT EXISTS (
+                  SELECT 1
+                  FROM schedule_tests st
+                  WHERE st.schedule_id = s.id
+                    AND st.test_definition_id = s.test_definition_id
+              )
+        """)).mappings().all()
+        for row in rows:
+            conn.execute(
+                text("""
+                    INSERT INTO schedule_tests (id, schedule_id, test_definition_id)
+                    VALUES (:id, :schedule_id, :test_definition_id)
+                    ON CONFLICT DO NOTHING
+                """),
+                {
+                    "id": str(uuid.uuid4()),
+                    "schedule_id": row["id"],
+                    "test_definition_id": row["test_definition_id"],
+                },
+            )
 
 
 if __name__ == "__main__":

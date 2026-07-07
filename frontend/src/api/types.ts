@@ -107,7 +107,20 @@ export interface RunDetail extends RunSummary {
 export interface Schedule {
   id: string;
   test_definition_id: string;
+  test_definition_ids?: string[];
+  tests?: {
+    id: string;
+    key: string;
+    name: string;
+    type: string;
+    target_key: string;
+    status: string;
+  }[];
+  scenario_count?: number;
   test_name?: string;
+  target_key?: string;
+  target_keys?: string[];
+  total_runs?: number;
   name: string;
   recurrence_type: string;
   interval_seconds?: number;

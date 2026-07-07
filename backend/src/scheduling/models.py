@@ -4,7 +4,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -36,4 +36,16 @@ class Schedule(Base):
     next_run_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, index=True)
     last_enqueued_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class ScheduleTest(Base):
+    __tablename__ = "schedule_tests"
+    __table_args__ = (UniqueConstraint("schedule_id", "test_definition_id", name="uq_schedule_tests_schedule_test"),)
+
+    id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True, default=_uuid)
+    schedule_id: Mapped[str] = mapped_column(
+        UUID(as_uuid=False), ForeignKey("schedules.id", ondelete="CASCADE"), index=True)
+    test_definition_id: Mapped[str] = mapped_column(
+        UUID(as_uuid=False), ForeignKey("test_definitions.id"), index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

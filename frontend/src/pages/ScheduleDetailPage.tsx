@@ -46,10 +46,12 @@ export default function ScheduleDetailPage() {
                 {s.recurrence_type === "cron" ? <Tag>cron: {s.cron_expression}</Tag> : s.recurrence_type === "interval" ? <Tag>every {s.interval_seconds}s</Tag> : <Tag>once</Tag>}
               </Descriptions.Item>
               <Descriptions.Item label="Target">
-                {s.target_key ? <Tag color="geekblue">{s.target_key}</Tag> : "—"}
+                {s.target_keys?.length
+                  ? s.target_keys.map((target: string) => <Tag key={target} color="geekblue">{target}</Tag>)
+                  : s.target_key ? <Tag color="geekblue">{s.target_key}</Tag> : "—"}
               </Descriptions.Item>
-              <Descriptions.Item label="Test">
-                <a onClick={() => nav(`/scenarios/${s.test_definition_id}`)}>{s.test_name || s.test_definition_id}</a>
+              <Descriptions.Item label="Scenarios">
+                {s.scenario_count || s.tests?.length || 1}
               </Descriptions.Item>
               <Descriptions.Item label="Environment">{s.environment}</Descriptions.Item>
               <Descriptions.Item label="Next Run At">{s.next_run_at?.replace("T", " ").slice(0, 19) || "—"}</Descriptions.Item>
@@ -82,6 +84,23 @@ export default function ScheduleDetailPage() {
           </Card>
         </Col>
       </Row>
+
+      <Card size="small" title="Scheduled Scenarios" style={{ marginTop: 16 }}>
+        <Table
+          rowKey="id"
+          size="small"
+          pagination={false}
+          dataSource={s.tests?.length ? s.tests : [{ id: s.test_definition_id, name: s.test_name, key: s.test_definition_id, target_key: s.target_key }]}
+          onRow={(scenario: any) => ({ onClick: () => nav(`/scenarios/${scenario.id}`), style: { cursor: "pointer" } })}
+          columns={[
+            { title: "Name", dataIndex: "name", render: (value, scenario: any) => <a>{value || scenario.id}</a> },
+            { title: "Key", dataIndex: "key", render: (value) => <Typography.Text code>{value || "—"}</Typography.Text> },
+            { title: "Type", dataIndex: "type", render: (value) => value ? <Tag>{value}</Tag> : "—" },
+            { title: "Target", dataIndex: "target_key", render: (value) => value ? <Tag color="geekblue">{value}</Tag> : "—" },
+            { title: "Status", dataIndex: "status", render: (value) => value ? <Tag>{value}</Tag> : "—" },
+          ]}
+        />
+      </Card>
 
       <Card size="small" title="Recent Runs" style={{ marginTop: 16 }}>
         <Table

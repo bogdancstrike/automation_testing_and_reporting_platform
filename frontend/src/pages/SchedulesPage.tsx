@@ -4,9 +4,8 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { qtp } from "../api/qtp";
+import { antSortOrder, menuFilter, nextTableParams, textFilter } from "../components/remoteTable";
 import type { QueryParams } from "../api/types";
-
-function sortOrder(order?: string) { return order === "ascend" ? "asc" : order === "descend" ? "desc" : undefined; }
 
 export default function SchedulesPage() {
   const { message } = App.useApp();
@@ -19,6 +18,7 @@ export default function SchedulesPage() {
 
   const { data: page, isLoading } = useQuery({ queryKey: ["schedulesPage", params], queryFn: () => qtp.schedulesPage(params) });
   const { data: testsPage } = useQuery({ queryKey: ["testsOptions"], queryFn: () => qtp.testsPage({ page_size: 100, sort: "name", order: "asc" }) });
+  const { data: targets = [] } = useQuery({ queryKey: ["targetsOptions"], queryFn: qtp.targets });
   const tests = testsPage?.items || [];
 
   const create = useMutation({
@@ -35,32 +35,67 @@ export default function SchedulesPage() {
         <Typography.Title level={3} style={{ margin: 0 }}>Schedules</Typography.Title>
         <Button type="primary" icon={<PlusOutlined />} onClick={() => setOpen(true)}>New schedule</Button>
       </Space>
-      <Space style={{ marginBottom: 12 }} wrap>
-        <Input.Search placeholder="search schedule / test" allowClear onSearch={(q) => setParams((p) => ({ ...p, q, page: 1 }))} style={{ width: 280 }} />
-        <Select allowClear placeholder="recurrence" style={{ width: 150 }} onChange={(recurrence_type) => setParams((p) => ({ ...p, recurrence_type, page: 1 }))} options={["interval", "cron", "once"].map((value) => ({ value }))} />
-      </Space>
       <Table
         rowKey="id"
         loading={isLoading}
         dataSource={page?.items || []}
         onRow={(r: any) => ({ onClick: () => nav(`/schedules/${r.id}`), style: { cursor: "pointer" } })}
         pagination={{ current: page?.page || 1, pageSize: page?.page_size || 20, total: page?.total || 0, showSizeChanger: true }}
-        onChange={(pagination, _filters, sorter: any) => setParams((p) => ({ ...p, page: pagination.current || 1, page_size: pagination.pageSize || 20, sort: sorter?.field || p.sort, order: sortOrder(sorter?.order) || p.order }))}
+        onChange={(pagination, filters, sorter: any, extra) => setParams((p) => nextTableParams(
+          p,
+          pagination,
+          filters,
+          sorter,
+          extra,
+          {
+            name: "name",
+            scenario: "scenario",
+            target: "target",
+            recurrence_type: "recurrence_type",
+            next_run_at: "next_run_at",
+            is_enabled: "is_enabled",
+          },
+          { sort: "created_at", order: "desc", pageSize: 20 },
+        ))}
         columns={[
-          { title: "Name", dataIndex: "name", sorter: true },
-          { title: "Test", dataIndex: "test_name" },
-          { title: "Target", dataIndex: "target_key", render: (t) => t ? <Tag color="geekblue">{t}</Tag> : "—" },
-          { title: "Recurrence", dataIndex: "recurrence_type", sorter: true, render: (_, s) => s.recurrence_type === "cron" ? <Tag>cron: {s.cron_expression}</Tag> : s.recurrence_type === "interval" ? <Tag>every {s.interval_seconds}s</Tag> : <Tag>once</Tag> },
-          { title: "Next run", dataIndex: "next_run_at", sorter: true, render: (v) => v?.replace("T", " ").slice(0, 19) || "—" },
+          { title: "Name", dataIndex: "name", sorter: true, sortOrder: antSortOrder(params, "name"), ...textFilter("name", params, "Search schedule") },
+          {
+            title: "Scenarios",
+            dataIndex: "scenario_count",
+            sorter: true,
+            sortOrder: antSortOrder(params, "scenario_count"),
+            ...textFilter("scenario", params, "Search scenario"),
+            render: (_: any, s: any) => {
+              const tests = s.tests || [];
+              if (!tests.length) return "—";
+              return (
+                <Space size={[4, 4]} wrap>
+                  {tests.slice(0, 3).map((t: any) => <Tag key={t.id}>{t.name}</Tag>)}
+                  {tests.length > 3 && <Tag>+{tests.length - 3}</Tag>}
+                </Space>
+              );
+            },
+          },
+          {
+            title: "Targets",
+            dataIndex: "target_keys",
+            ...menuFilter("target", params, targets.map((t) => ({ text: t.key, value: t.key }))),
+            render: (_: any, s: any) => {
+              const keys = s.target_keys?.length ? s.target_keys : (s.target_key ? [s.target_key] : []);
+              return keys.length ? keys.map((t: string) => <Tag key={t} color="geekblue">{t}</Tag>) : "—";
+            },
+          },
+          { title: "Recurrence", dataIndex: "recurrence_type", sorter: true, sortOrder: antSortOrder(params, "recurrence_type"), ...menuFilter("recurrence_type", params, ["interval", "cron", "once"].map((value) => ({ text: value, value }))), render: (_, s) => s.recurrence_type === "cron" ? <Tag>cron: {s.cron_expression}</Tag> : s.recurrence_type === "interval" ? <Tag>every {s.interval_seconds}s</Tag> : <Tag>once</Tag> },
+          { title: "Next run", dataIndex: "next_run_at", sorter: true, sortOrder: antSortOrder(params, "next_run_at"), ...textFilter("next_run_at", params, "YYYY-MM-DD"), render: (v) => v?.replace("T", " ").slice(0, 19) || "—" },
           { title: "Runs", dataIndex: "total_runs" },
-          { title: "Enabled", dataIndex: "is_enabled", sorter: true, render: (_, s) => <div onClick={(e) => e.stopPropagation()}><Switch size="small" checked={s.is_enabled} onChange={() => toggle.mutate(s)} /></div> },
+          { title: "Enabled", dataIndex: "is_enabled", sorter: true, sortOrder: antSortOrder(params, "is_enabled"), ...menuFilter("is_enabled", params, [{ text: "enabled", value: "true" }, { text: "disabled", value: "false" }]), render: (_, s) => <div onClick={(e) => e.stopPropagation()}><Switch size="small" checked={s.is_enabled} onChange={() => toggle.mutate(s)} /></div> },
           { title: "", render: (_, s) => <Button size="small" danger type="text" onClick={(e) => { e.stopPropagation(); remove.mutate(s.id); }}>Delete</Button> },
         ]}
       />
 
       <Modal title="New schedule" open={open} onCancel={() => setOpen(false)} onOk={() => form.validateFields().then((v) => create.mutate(v))} confirmLoading={create.isPending}>
         <Form form={form} layout="vertical" initialValues={{ recurrence_type: "interval", interval_seconds: 300, is_enabled: true, timezone: "UTC" }}>
-          <Form.Item name="test_definition_id" label="Test" rules={[{ required: true }]}><Select showSearch optionFilterProp="label" options={tests.map((t) => ({ value: t.id, label: `${t.name} (${t.key})` }))} /></Form.Item>
+          <Form.Item name="test_definition_ids" label="Scenarios" rules={[{ required: true }]}><Select mode="multiple" showSearch optionFilterProp="label" options={tests.map((t) => ({ value: t.id, label: `${t.name} (${t.key})` }))} /></Form.Item>
           <Form.Item name="name" label="Name"><Input placeholder="optional" /></Form.Item>
           <Form.Item name="recurrence_type" label="Recurrence"><Select options={["interval", "cron", "once"].map((value) => ({ value }))} /></Form.Item>
           {rtype === "interval" && <Form.Item name="interval_seconds" label="Interval (seconds)" rules={[{ required: true }]}><InputNumber min={5} style={{ width: "100%" }} /></Form.Item>}
