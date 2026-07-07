@@ -97,6 +97,12 @@ def _list_runs(db: Session, filters: dict[str, Any]) -> dict:
     if filters.get("target"):
         target = db.scalars(select(Target).where(Target.key == filters["target"])).first()
         stmt = stmt.where(TestRun.target_id == (target.id if target else "00000000-0000-0000-0000-000000000000"))
+    if filters.get("tags"):
+        tags = [t.strip() for t in filters["tags"].split(",") if t.strip()]
+        if tags:
+            stmt = stmt.where(TestRun.test_definition_id.in_(
+                select(TestDefinition.id).where(TestDefinition.tags.contains(tags))
+            ))
     if params.q:
         like = f"%{params.q}%"
         matching_defs = select(TestDefinition.id).where(or_(TestDefinition.name.ilike(like), TestDefinition.key.ilike(like)))
@@ -118,6 +124,7 @@ def _list_runs(db: Session, filters: dict[str, Any]) -> dict:
             r,
             test_name=defs[r.test_definition_id].name if r.test_definition_id in defs else None,
             target_key=tgts[r.target_id].key if r.target_id in tgts else None,
+            tags=defs[r.test_definition_id].tags if r.test_definition_id in defs else [],
         )
         for r in runs
     ]
@@ -130,7 +137,7 @@ def get_run_detail(db: Session, run_id: str) -> dict:
         raise NotFoundError("run not found")
     d = db.get(TestDefinition, r.test_definition_id)
     t = db.get(Target, r.target_id) if r.target_id else None
-    return serializers.run_detail(r, test_name=d.name if d else None, target_key=t.key if t else None)
+    return serializers.run_detail(r, test_name=d.name if d else None, target_key=t.key if t else None, tags=d.tags if d else [])
 
 
 def cancel_run(db: Session, run_id: str) -> dict:

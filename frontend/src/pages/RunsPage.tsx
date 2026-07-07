@@ -1,4 +1,4 @@
-import { Table, Typography, Select, Space, Switch, Input } from "antd";
+import { Table, Typography, Select, Space, Switch, Input, Tag } from "antd";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
@@ -18,6 +18,7 @@ export default function RunsPage() {
     refetchInterval: live ? 3000 : false,
   });
   const { data: targets = [] } = useQuery({ queryKey: ["targetsOptions"], queryFn: qtp.targets });
+  const { data: allTags = [] } = useQuery({ queryKey: ["allTags"], queryFn: () => qtp.tags("") });
   const runs = page?.items || [];
 
   return (
@@ -39,6 +40,8 @@ export default function RunsPage() {
           options={targets.map((t) => ({ value: t.key, label: t.key }))} />
         <Select allowClear placeholder="defect" style={{ width: 180 }} onChange={(defect_type) => setParams((p) => ({ ...p, defect_type, page: 1 }))}
           options={["product_bug", "automation_bug", "system_issue", "to_investigate", "no_defect"].map((value) => ({ value, label: value.replace(/_/g, " ") }))} />
+        <Select mode="tags" allowClear placeholder="tags" style={{ width: 180 }} onChange={(tags) => setParams((p) => ({ ...p, tags: tags.join(","), page: 1 }))}
+          options={allTags.map((tag: string) => ({ value: tag, label: tag }))} />
         <Input.Search placeholder="failure category" allowClear onSearch={(error_category) => setParams((p) => ({ ...p, error_category, page: 1 }))} style={{ width: 190 }} />
       </Space>
       <Table
@@ -56,6 +59,7 @@ export default function RunsPage() {
           { title: "Status", dataIndex: "status", sorter: true, render: (s) => <StatusTag status={s} /> },
           { title: "Trigger", dataIndex: "trigger", sorter: true },
           { title: "Target", dataIndex: "target_key" },
+          { title: "Tags", dataIndex: "tags", render: (tags) => tags?.length ? <Space size={2} wrap>{tags.map((t: string) => <Tag key={t} style={{ margin: 0, padding: "0 4px", fontSize: 11 }}>{t}</Tag>)}</Space> : "—" },
           { title: "Worker", dataIndex: "worker_name", sorter: true, render: (v) => v || "—" },
           { title: "Duration", dataIndex: "duration_ms", sorter: true, render: (m) => <Duration ms={m} /> },
           { title: "Defect", dataIndex: "defect_type", sorter: true, render: (d, r) => (["failed", "error", "timeout"].includes(r.status) ? <DefectTag defect={d} /> : null) },
