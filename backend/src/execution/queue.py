@@ -33,6 +33,33 @@ def heartbeat(db: Session, name: str, *, status: str | None = None,
             w.current_run_id = current_run_id
 
 
+def heartbeat_upsert(db: Session, name: str, capabilities: tuple[str, ...]) -> None:
+    """Touch a worker's heartbeat, re-creating its row if it was reaped.
+
+    Used by the worker liveness loop. Re-creating on a missing row means a live
+    worker that was briefly reaped (e.g. it stalled past the stale window) simply
+    re-appears on its next heartbeat, while a genuinely dead worker stays gone.
+    Only ``last_heartbeat`` is touched on an existing row, so the busy/idle status
+    set by the run executor is preserved.
+    """
+    w = db.get(Worker, name)
+    if w is None:
+        db.add(Worker(name=name, capabilities=list(capabilities), status="idle",
+                      last_heartbeat=utcnow()))
+    else:
+        w.last_heartbeat = utcnow()
+
+
+def reap_dead_workers(db: Session) -> int:
+    """Delete worker rows whose heartbeat went stale, so `/workers` reflects only
+    the workers that are actually running (scale down → the row disappears)."""
+    cutoff = utcnow() - timedelta(seconds=Config.WORKER_STALE_SECONDS)
+    dead = db.scalars(select(Worker).where(Worker.last_heartbeat < cutoff)).all()
+    for w in dead:
+        db.delete(w)
+    return len(dead)
+
+
 def claim_next(db: Session, name: str, capabilities: tuple[str, ...]) -> TestRun | None:
     """Claim one queued item this worker is capable of running."""
     now = utcnow()

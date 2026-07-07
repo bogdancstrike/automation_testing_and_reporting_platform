@@ -33,7 +33,7 @@ def run_liveness_loop() -> None:
     while not _stop:
         try:
             with session_scope() as db:
-                queue.heartbeat(db, instance)
+                queue.heartbeat_upsert(db, instance, caps)
         except Exception as e:  # pragma: no cover
             log.warning(f"heartbeat failed: {e}")
         time.sleep(Config.WORKER_HEARTBEAT_SECONDS)

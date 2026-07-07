@@ -15,7 +15,7 @@ from sqlalchemy import text
 
 from src.config import Config
 from src.core.db import session_scope
-from src.execution.queue import reap_stale
+from src.execution.queue import reap_dead_workers, reap_stale
 from src.scheduling.service import process_due
 from framework.tracing import get_tracer
 from framework.commons.logger import logger as log
@@ -47,12 +47,16 @@ def run_scheduler() -> None:
                         try:
                             enqueued = process_due(db)
                             reaped = reap_stale(db)
+                            dropped = reap_dead_workers(db)
                             span.set_attribute("scheduler.enqueued", enqueued)
                             span.set_attribute("scheduler.reaped", reaped)
+                            span.set_attribute("scheduler.workers_dropped", dropped)
                             if enqueued:
                                 log.info(f"scheduler enqueued {enqueued} run(s)")
                             if reaped:
                                 log.info(f"scheduler reaped {reaped} stale run(s)")
+                            if dropped:
+                                log.info(f"scheduler dropped {dropped} dead worker(s)")
                         finally:
                             db.execute(
                                 text("SELECT pg_advisory_unlock(:k)"),

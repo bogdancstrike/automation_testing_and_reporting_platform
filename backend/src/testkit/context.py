@@ -6,7 +6,9 @@ a URL.
 """
 from __future__ import annotations
 
+import contextlib
 import re
+import time
 from dataclasses import dataclass, field
 from typing import Any, Callable
 
@@ -29,6 +31,15 @@ class TestContext:
     # Called by the runner; returns True when the run has been canceled.
     cancel_check: Callable[[], bool] | None = None
     _logs: list[dict[str, Any]] = field(default_factory=list)
+
+    # ── Imperative scenario state (filled while a Scenario.test() runs) ─────
+    _steps: list[Any] = field(default_factory=list)
+    _assertions: list[Any] = field(default_factory=list)
+    _current_step: str | None = None
+    _last_response: dict[str, Any] | None = None
+    _http: Any = None
+    _cli: Any = None
+    _browser: Any = None
 
     # ── Targets / variables ────────────────────────────────────────────────
     def target(self, key: str = "default") -> ResolvedTarget:
@@ -72,6 +83,81 @@ class TestContext:
 
     def should_cancel(self) -> bool:
         return bool(self.cancel_check and self.cancel_check())
+
+    # ── Imperative scenario API ────────────────────────────────────────────
+    @property
+    def http(self) -> Any:
+        """Fluent HTTP client bound to the resolved target (SSRF-guarded)."""
+        if self._http is None:
+            from src.testkit.clients import HttpClient
+            self._http = HttpClient(self)
+        return self._http
+
+    @property
+    def cli(self) -> Any:
+        """Run local commands / container CLIs and assert on exit code + output."""
+        if self._cli is None:
+            from src.testkit.clients import CliClient
+            self._cli = CliClient(self)
+        return self._cli
+
+    @property
+    def browser(self) -> Any:
+        """Playwright browser session bound to the resolved target base URL."""
+        if self._browser is None:
+            from src.testkit.clients import BrowserClient
+            self._browser = BrowserClient(self)
+        return self._browser
+
+    @contextlib.contextmanager
+    def step(self, name: str):
+        """Group actions/assertions into a named step shown in run detail.
+
+            with ctx.step("Check Health"):
+                ctx.http.get("/health").should.have_status(200)
+        """
+        from src.testkit.fluent import AssertionFailure
+        from src.testkit.result import ERROR, FAILED, PASSED, StepResult
+
+        started = time.monotonic()
+        prev, self._current_step = self._current_step, name
+        status, error = PASSED, None
+        self.log("info", f"step: {name}")
+        try:
+            yield
+        except AssertionFailure as e:
+            status, error = FAILED, str(e)
+            raise
+        except Exception as e:  # noqa: BLE001
+            status, error = ERROR, str(e)
+            raise
+        finally:
+            dur = int((time.monotonic() - started) * 1000)
+            self._steps.append(StepResult(
+                name=name, status=status, duration_ms=dur, error=error,
+                step_id=f"step-{len(self._steps) + 1}"))
+            self._current_step = prev
+
+    def _record_assertion(self, assertion: Any) -> None:
+        self._assertions.append(assertion)
+
+    def assert_that(self, source: str, operator: str, expected: Any, actual: Any,
+                    passed: bool, *, target: str | None = None, message: str = "") -> None:
+        """Record a custom AssertionResult (used by non-HTTP clients); fail-fast."""
+        from src.testkit.fluent import AssertionFailure
+        from src.testkit.result import AssertionResult
+
+        ar = AssertionResult(source=source, operator=operator, expected=expected,
+                             actual=actual, passed=passed, target=target, message=message)
+        self._assertions.append(ar)
+        if not passed:
+            raise AssertionFailure(message or f"expected {source} {operator} {expected!r}, got {actual!r}")
+
+    def _begin_scenario(self) -> None:
+        self._steps = []
+        self._assertions = []
+        self._current_step = None
+        self._last_response = None
 
     def _redact(self, text: str) -> str:
         for secret in self.secret_values():

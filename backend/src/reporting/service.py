@@ -7,6 +7,7 @@ from sqlalchemy import Float, cast, func, select
 from sqlalchemy.orm import Session
 
 from src.catalog.models import Target, TestDefinition
+from src.config import Config
 from src.core.clock import utcnow
 from src.execution.models import FailureSignature, TestRun, Worker
 
@@ -136,14 +137,23 @@ def failures(db: Session, *, hours: int = 168, start: datetime | None = None, en
 
 
 def workers(db: Session) -> list[dict]:
+    """Workers currently running, by fresh heartbeat.
+
+    Only live workers are returned, so the list reflects exactly the replicas
+    that are up: start one → one row; scale to five → five rows; scale back down
+    and the stopped replicas drop off within one stale window (and their rows are
+    deleted by reap_dead_workers on the scheduler tick).
+    """
     now = utcnow()
+    stale_after = Config.WORKER_STALE_SECONDS
     out = []
     for w in db.scalars(select(Worker).order_by(Worker.name)).all():
-        stale = (now - w.last_heartbeat).total_seconds() > 30 if w.last_heartbeat else True
+        age = (now - w.last_heartbeat).total_seconds() if w.last_heartbeat else None
+        if age is None or age > stale_after:
+            continue  # not alive — don't show it as a running worker
         out.append({
             "name": w.name, "capabilities": w.capabilities or [],
-            "status": "offline" if stale else w.status,
-            "current_run_id": w.current_run_id, "runs_completed": w.runs_completed,
-            "last_heartbeat": _iso(w.last_heartbeat),
+            "status": w.status, "current_run_id": w.current_run_id,
+            "runs_completed": w.runs_completed, "last_heartbeat": _iso(w.last_heartbeat),
         })
     return out
