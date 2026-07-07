@@ -119,5 +119,5 @@ _Last updated: 2026-07-07._
 - [x] Backend tracing spans for run execution, flow execution, HTTP steps, discovery, target stats, comments, and tags
 - [x] `/runs/{id}` has an `Open scenario` shortcut to `/scenarios/{id}`
 - [x] `/schedules` can create schedules with multiple scenarios; `/schedules/{id}` lists all included scenarios and recent runs for the shared schedule
-- [ ] Add the requested qtp_self scenario suites in `backend/scenarios/automation/qtp_self/`: 10 each for `CliTest`, `PlaywrightTest`, `SeleniumTest`, and `PythonTest`
-- [ ] Update the worker image/runtime dependencies for Playwright and Selenium workloads
+- [x] Add the requested qtp_self scenario suites in `backend/scenarios/automation/qtp_self/`: 10 each for `CliTest`, `PlaywrightTest`, `SeleniumTest`, and `PythonTest`
+- [x] Update the worker image/runtime dependencies for Playwright and Selenium workloads

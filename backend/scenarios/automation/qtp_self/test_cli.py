@@ -10,8 +10,10 @@ class QtpSelfCliTest1(CliTest):
     )
 
     def test(self, ctx):
-        ctx.cli.run('echo hello')
-        ctx.assert_true(True, 'always pass')
+        res = ctx.cli.run('curl -s https://dogapi.dog/api/v2/facts')
+        ctx.log('info', f'CLI Output: {res.stdout[:500]}')
+        print(f'CLI Output: {res.stdout[:500]}')
+        ctx.assert_that('test', 'equals', True, True, True, message='always pass')
 
 class QtpSelfCliTest2(CliTest):
     metadata = TestMetadata(
@@ -23,8 +25,10 @@ class QtpSelfCliTest2(CliTest):
     )
 
     def test(self, ctx):
-        ctx.cli.run('echo hello')
-        ctx.assert_true(True, 'always pass')
+        res = ctx.cli.run('curl -s https://dogapi.dog/api/v2/facts')
+        ctx.log('info', f'CLI Output: {res.stdout[:500]}')
+        print(f'CLI Output: {res.stdout[:500]}')
+        ctx.assert_that('test', 'equals', True, True, True, message='always pass')
 
 class QtpSelfCliTest3(CliTest):
     metadata = TestMetadata(
@@ -36,8 +40,10 @@ class QtpSelfCliTest3(CliTest):
     )
 
     def test(self, ctx):
-        ctx.cli.run('echo hello')
-        ctx.assert_true(True, 'always pass')
+        res = ctx.cli.run('curl -s https://dogapi.dog/api/v2/facts')
+        ctx.log('info', f'CLI Output: {res.stdout[:500]}')
+        print(f'CLI Output: {res.stdout[:500]}')
+        ctx.assert_that('test', 'equals', True, True, True, message='always pass')
 
 class QtpSelfCliTest4(CliTest):
     metadata = TestMetadata(
@@ -49,8 +55,10 @@ class QtpSelfCliTest4(CliTest):
     )
 
     def test(self, ctx):
-        ctx.cli.run('echo hello')
-        ctx.assert_true(True, 'always pass')
+        res = ctx.cli.run('curl -s https://dogapi.dog/api/v2/facts')
+        ctx.log('info', f'CLI Output: {res.stdout[:500]}')
+        print(f'CLI Output: {res.stdout[:500]}')
+        ctx.assert_that('test', 'equals', True, True, True, message='always pass')
 
 class QtpSelfCliTest5(CliTest):
     metadata = TestMetadata(
@@ -62,8 +70,10 @@ class QtpSelfCliTest5(CliTest):
     )
 
     def test(self, ctx):
-        ctx.cli.run('echo hello')
-        ctx.assert_true(True, 'always pass')
+        res = ctx.cli.run('curl -s https://dogapi.dog/api/v2/facts')
+        ctx.log('info', f'CLI Output: {res.stdout[:500]}')
+        print(f'CLI Output: {res.stdout[:500]}')
+        ctx.assert_that('test', 'equals', True, True, True, message='always pass')
 
 class QtpSelfCliTest6(CliTest):
     metadata = TestMetadata(
@@ -75,8 +85,10 @@ class QtpSelfCliTest6(CliTest):
     )
 
     def test(self, ctx):
-        ctx.cli.run('echo hello')
-        ctx.assert_true(True, 'always pass')
+        res = ctx.cli.run('curl -s https://dogapi.dog/api/v2/facts')
+        ctx.log('info', f'CLI Output: {res.stdout[:500]}')
+        print(f'CLI Output: {res.stdout[:500]}')
+        ctx.assert_that('test', 'equals', True, True, True, message='always pass')
 
 class QtpSelfCliTest7(CliTest):
     metadata = TestMetadata(
@@ -88,8 +100,10 @@ class QtpSelfCliTest7(CliTest):
     )
 
     def test(self, ctx):
-        ctx.cli.run('echo hello')
-        ctx.assert_true(True, 'always pass')
+        res = ctx.cli.run('curl -s https://dogapi.dog/api/v2/facts')
+        ctx.log('info', f'CLI Output: {res.stdout[:500]}')
+        print(f'CLI Output: {res.stdout[:500]}')
+        ctx.assert_that('test', 'equals', True, True, True, message='always pass')
 
 class QtpSelfCliTest8(CliTest):
     metadata = TestMetadata(
@@ -101,8 +115,10 @@ class QtpSelfCliTest8(CliTest):
     )
 
     def test(self, ctx):
-        ctx.cli.run('echo hello')
-        ctx.assert_true(True, 'always pass')
+        res = ctx.cli.run('curl -s https://dogapi.dog/api/v2/facts')
+        ctx.log('info', f'CLI Output: {res.stdout[:500]}')
+        print(f'CLI Output: {res.stdout[:500]}')
+        ctx.assert_that('test', 'equals', True, True, True, message='always pass')
 
 class QtpSelfCliTest9(CliTest):
     metadata = TestMetadata(
@@ -114,8 +130,10 @@ class QtpSelfCliTest9(CliTest):
     )
 
     def test(self, ctx):
-        ctx.cli.run('echo hello')
-        ctx.assert_true(True, 'always pass')
+        res = ctx.cli.run('curl -s https://dogapi.dog/api/v2/facts')
+        ctx.log('info', f'CLI Output: {res.stdout[:500]}')
+        print(f'CLI Output: {res.stdout[:500]}')
+        ctx.assert_that('test', 'equals', True, True, True, message='always pass')
 
 class QtpSelfCliTest10(CliTest):
     metadata = TestMetadata(
@@ -127,6 +145,8 @@ class QtpSelfCliTest10(CliTest):
     )
 
     def test(self, ctx):
-        ctx.cli.run('echo hello')
-        ctx.assert_true(True, 'always pass')
+        res = ctx.cli.run('curl -s https://dogapi.dog/api/v2/facts')
+        ctx.log('info', f'CLI Output: {res.stdout[:500]}')
+        print(f'CLI Output: {res.stdout[:500]}')
+        ctx.assert_that('test', 'equals', True, True, True, message='always pass')
 

@@ -10,8 +10,14 @@ class QtpSelfPlaywrightTest1(PlaywrightTest):
     )
 
     def test(self, ctx):
-        ctx.browser.page.goto('http://localhost:5173')
-        ctx.assert_true(True, 'always pass')
+        page = ctx.browser.visit('http://qtp-frontend:5173/overview').page
+        page.wait_for_selector('body', timeout=5000)
+        page.wait_for_timeout(2000) # Wait a bit for React to render
+        info = page.locator('body').inner_text()[:200].replace('
+', ' ')
+        ctx.log('info', f'Scraped from Playwright: {info}')
+        print(f'Playwright scraped info: {info}')
+        ctx.assert_that('test', 'equals', True, True, True, message='always pass')
 
 class QtpSelfPlaywrightTest2(PlaywrightTest):
     metadata = TestMetadata(
@@ -23,8 +29,14 @@ class QtpSelfPlaywrightTest2(PlaywrightTest):
     )
 
     def test(self, ctx):
-        ctx.browser.page.goto('http://localhost:5173')
-        ctx.assert_true(True, 'always pass')
+        page = ctx.browser.visit('http://qtp-frontend:5173/overview').page
+        page.wait_for_selector('body', timeout=5000)
+        page.wait_for_timeout(2000) # Wait a bit for React to render
+        info = page.locator('body').inner_text()[:200].replace('
+', ' ')
+        ctx.log('info', f'Scraped from Playwright: {info}')
+        print(f'Playwright scraped info: {info}')
+        ctx.assert_that('test', 'equals', True, True, True, message='always pass')
 
 class QtpSelfPlaywrightTest3(PlaywrightTest):
     metadata = TestMetadata(
@@ -36,8 +48,14 @@ class QtpSelfPlaywrightTest3(PlaywrightTest):
     )
 
     def test(self, ctx):
-        ctx.browser.page.goto('http://localhost:5173')
-        ctx.assert_true(True, 'always pass')
+        page = ctx.browser.visit('http://qtp-frontend:5173/overview').page
+        page.wait_for_selector('body', timeout=5000)
+        page.wait_for_timeout(2000) # Wait a bit for React to render
+        info = page.locator('body').inner_text()[:200].replace('
+', ' ')
+        ctx.log('info', f'Scraped from Playwright: {info}')
+        print(f'Playwright scraped info: {info}')
+        ctx.assert_that('test', 'equals', True, True, True, message='always pass')
 
 class QtpSelfPlaywrightTest4(PlaywrightTest):
     metadata = TestMetadata(
@@ -49,8 +67,14 @@ class QtpSelfPlaywrightTest4(PlaywrightTest):
     )
 
     def test(self, ctx):
-        ctx.browser.page.goto('http://localhost:5173')
-        ctx.assert_true(True, 'always pass')
+        page = ctx.browser.visit('http://qtp-frontend:5173/overview').page
+        page.wait_for_selector('body', timeout=5000)
+        page.wait_for_timeout(2000) # Wait a bit for React to render
+        info = page.locator('body').inner_text()[:200].replace('
+', ' ')
+        ctx.log('info', f'Scraped from Playwright: {info}')
+        print(f'Playwright scraped info: {info}')
+        ctx.assert_that('test', 'equals', True, True, True, message='always pass')
 
 class QtpSelfPlaywrightTest5(PlaywrightTest):
     metadata = TestMetadata(
@@ -62,8 +86,14 @@ class QtpSelfPlaywrightTest5(PlaywrightTest):
     )
 
     def test(self, ctx):
-        ctx.browser.page.goto('http://localhost:5173')
-        ctx.assert_true(True, 'always pass')
+        page = ctx.browser.visit('http://qtp-frontend:5173/overview').page
+        page.wait_for_selector('body', timeout=5000)
+        page.wait_for_timeout(2000) # Wait a bit for React to render
+        info = page.locator('body').inner_text()[:200].replace('
+', ' ')
+        ctx.log('info', f'Scraped from Playwright: {info}')
+        print(f'Playwright scraped info: {info}')
+        ctx.assert_that('test', 'equals', True, True, True, message='always pass')
 
 class QtpSelfPlaywrightTest6(PlaywrightTest):
     metadata = TestMetadata(
@@ -75,8 +105,14 @@ class QtpSelfPlaywrightTest6(PlaywrightTest):
     )
 
     def test(self, ctx):
-        ctx.browser.page.goto('http://localhost:5173')
-        ctx.assert_true(True, 'always pass')
+        page = ctx.browser.visit('http://qtp-frontend:5173/overview').page
+        page.wait_for_selector('body', timeout=5000)
+        page.wait_for_timeout(2000) # Wait a bit for React to render
+        info = page.locator('body').inner_text()[:200].replace('
+', ' ')
+        ctx.log('info', f'Scraped from Playwright: {info}')
+        print(f'Playwright scraped info: {info}')
+        ctx.assert_that('test', 'equals', True, True, True, message='always pass')
 
 class QtpSelfPlaywrightTest7(PlaywrightTest):
     metadata = TestMetadata(
@@ -88,8 +124,14 @@ class QtpSelfPlaywrightTest7(PlaywrightTest):
     )
 
     def test(self, ctx):
-        ctx.browser.page.goto('http://localhost:5173')
-        ctx.assert_true(True, 'always pass')
+        page = ctx.browser.visit('http://qtp-frontend:5173/overview').page
+        page.wait_for_selector('body', timeout=5000)
+        page.wait_for_timeout(2000) # Wait a bit for React to render
+        info = page.locator('body').inner_text()[:200].replace('
+', ' ')
+        ctx.log('info', f'Scraped from Playwright: {info}')
+        print(f'Playwright scraped info: {info}')
+        ctx.assert_that('test', 'equals', True, True, True, message='always pass')
 
 class QtpSelfPlaywrightTest8(PlaywrightTest):
     metadata = TestMetadata(
@@ -101,8 +143,14 @@ class QtpSelfPlaywrightTest8(PlaywrightTest):
     )
 
     def test(self, ctx):
-        ctx.browser.page.goto('http://localhost:5173')
-        ctx.assert_true(True, 'always pass')
+        page = ctx.browser.visit('http://qtp-frontend:5173/overview').page
+        page.wait_for_selector('body', timeout=5000)
+        page.wait_for_timeout(2000) # Wait a bit for React to render
+        info = page.locator('body').inner_text()[:200].replace('
+', ' ')
+        ctx.log('info', f'Scraped from Playwright: {info}')
+        print(f'Playwright scraped info: {info}')
+        ctx.assert_that('test', 'equals', True, True, True, message='always pass')
 
 class QtpSelfPlaywrightTest9(PlaywrightTest):
     metadata = TestMetadata(
@@ -114,8 +162,14 @@ class QtpSelfPlaywrightTest9(PlaywrightTest):
     )
 
     def test(self, ctx):
-        ctx.browser.page.goto('http://localhost:5173')
-        ctx.assert_true(True, 'always pass')
+        page = ctx.browser.visit('http://qtp-frontend:5173/overview').page
+        page.wait_for_selector('body', timeout=5000)
+        page.wait_for_timeout(2000) # Wait a bit for React to render
+        info = page.locator('body').inner_text()[:200].replace('
+', ' ')
+        ctx.log('info', f'Scraped from Playwright: {info}')
+        print(f'Playwright scraped info: {info}')
+        ctx.assert_that('test', 'equals', True, True, True, message='always pass')
 
 class QtpSelfPlaywrightTest10(PlaywrightTest):
     metadata = TestMetadata(
@@ -127,6 +181,12 @@ class QtpSelfPlaywrightTest10(PlaywrightTest):
     )
 
     def test(self, ctx):
-        ctx.browser.page.goto('http://localhost:5173')
-        ctx.assert_true(True, 'always pass')
+        page = ctx.browser.visit('http://qtp-frontend:5173/overview').page
+        page.wait_for_selector('body', timeout=5000)
+        page.wait_for_timeout(2000) # Wait a bit for React to render
+        info = page.locator('body').inner_text()[:200].replace('
+', ' ')
+        ctx.log('info', f'Scraped from Playwright: {info}')
+        print(f'Playwright scraped info: {info}')
+        ctx.assert_that('test', 'equals', True, True, True, message='always pass')
 

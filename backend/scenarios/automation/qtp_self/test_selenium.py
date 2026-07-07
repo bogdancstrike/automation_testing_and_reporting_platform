@@ -10,8 +10,28 @@ class QtpSelfSeleniumTest1(SeleniumTest):
     )
 
     def test(self, ctx):
-        pass  # placeholder
-        ctx.assert_true(True, 'always pass')
+        from selenium import webdriver
+        from selenium.webdriver.chrome.options import Options
+        from selenium.webdriver.common.by import By
+        from selenium.webdriver.support.ui import WebDriverWait
+        from selenium.webdriver.support import expected_conditions as EC
+        import time
+
+        options = Options()
+        options.add_argument('--headless')
+        options.add_argument('--no-sandbox')
+        options.add_argument('--disable-dev-shm-usage')
+        driver = webdriver.Chrome(options=options)
+        try:
+            driver.get('http://qtp-frontend:5173/overview')
+            WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.TAG_NAME, "body")))
+            time.sleep(2) # Wait a bit for React to render
+            info = driver.find_element(By.TAG_NAME, "body").text[:200].replace('\n', ' ')
+            ctx.log('info', f'Scraped from Selenium: {info}')
+            print(f'Selenium scraped info: {info}')
+            ctx.assert_that('test', 'equals', True, True, True, message='always pass')
+        finally:
+            driver.quit()
 
 class QtpSelfSeleniumTest2(SeleniumTest):
     metadata = TestMetadata(
@@ -23,8 +43,28 @@ class QtpSelfSeleniumTest2(SeleniumTest):
     )
 
     def test(self, ctx):
-        pass  # placeholder
-        ctx.assert_true(True, 'always pass')
+        from selenium import webdriver
+        from selenium.webdriver.chrome.options import Options
+        from selenium.webdriver.common.by import By
+        from selenium.webdriver.support.ui import WebDriverWait
+        from selenium.webdriver.support import expected_conditions as EC
+        import time
+
+        options = Options()
+        options.add_argument('--headless')
+        options.add_argument('--no-sandbox')
+        options.add_argument('--disable-dev-shm-usage')
+        driver = webdriver.Chrome(options=options)
+        try:
+            driver.get('http://qtp-frontend:5173/overview')
+            WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.TAG_NAME, "body")))
+            time.sleep(2) # Wait a bit for React to render
+            info = driver.find_element(By.TAG_NAME, "body").text[:200].replace('\n', ' ')
+            ctx.log('info', f'Scraped from Selenium: {info}')
+            print(f'Selenium scraped info: {info}')
+            ctx.assert_that('test', 'equals', True, True, True, message='always pass')
+        finally:
+            driver.quit()
 
 class QtpSelfSeleniumTest3(SeleniumTest):
     metadata = TestMetadata(
@@ -36,8 +76,28 @@ class QtpSelfSeleniumTest3(SeleniumTest):
     )
 
     def test(self, ctx):
-        pass  # placeholder
-        ctx.assert_true(True, 'always pass')
+        from selenium import webdriver
+        from selenium.webdriver.chrome.options import Options
+        from selenium.webdriver.common.by import By
+        from selenium.webdriver.support.ui import WebDriverWait
+        from selenium.webdriver.support import expected_conditions as EC
+        import time
+
+        options = Options()
+        options.add_argument('--headless')
+        options.add_argument('--no-sandbox')
+        options.add_argument('--disable-dev-shm-usage')
+        driver = webdriver.Chrome(options=options)
+        try:
+            driver.get('http://qtp-frontend:5173/overview')
+            WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.TAG_NAME, "body")))
+            time.sleep(2) # Wait a bit for React to render
+            info = driver.find_element(By.TAG_NAME, "body").text[:200].replace('\n', ' ')
+            ctx.log('info', f'Scraped from Selenium: {info}')
+            print(f'Selenium scraped info: {info}')
+            ctx.assert_that('test', 'equals', True, True, True, message='always pass')
+        finally:
+            driver.quit()
 
 class QtpSelfSeleniumTest4(SeleniumTest):
     metadata = TestMetadata(
@@ -49,8 +109,28 @@ class QtpSelfSeleniumTest4(SeleniumTest):
     )
 
     def test(self, ctx):
-        pass  # placeholder
-        ctx.assert_true(True, 'always pass')
+        from selenium import webdriver
+        from selenium.webdriver.chrome.options import Options
+        from selenium.webdriver.common.by import By
+        from selenium.webdriver.support.ui import WebDriverWait
+        from selenium.webdriver.support import expected_conditions as EC
+        import time
+
+        options = Options()
+        options.add_argument('--headless')
+        options.add_argument('--no-sandbox')
+        options.add_argument('--disable-dev-shm-usage')
+        driver = webdriver.Chrome(options=options)
+        try:
+            driver.get('http://qtp-frontend:5173/overview')
+            WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.TAG_NAME, "body")))
+            time.sleep(2) # Wait a bit for React to render
+            info = driver.find_element(By.TAG_NAME, "body").text[:200].replace('\n', ' ')
+            ctx.log('info', f'Scraped from Selenium: {info}')
+            print(f'Selenium scraped info: {info}')
+            ctx.assert_that('test', 'equals', True, True, True, message='always pass')
+        finally:
+            driver.quit()
 
 class QtpSelfSeleniumTest5(SeleniumTest):
     metadata = TestMetadata(
@@ -62,8 +142,28 @@ class QtpSelfSeleniumTest5(SeleniumTest):
     )
 
     def test(self, ctx):
-        pass  # placeholder
-        ctx.assert_true(True, 'always pass')
+        from selenium import webdriver
+        from selenium.webdriver.chrome.options import Options
+        from selenium.webdriver.common.by import By
+        from selenium.webdriver.support.ui import WebDriverWait
+        from selenium.webdriver.support import expected_conditions as EC
+        import time
+
+        options = Options()
+        options.add_argument('--headless')
+        options.add_argument('--no-sandbox')
+        options.add_argument('--disable-dev-shm-usage')
+        driver = webdriver.Chrome(options=options)
+        try:
+            driver.get('http://qtp-frontend:5173/overview')
+            WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.TAG_NAME, "body")))
+            time.sleep(2) # Wait a bit for React to render
+            info = driver.find_element(By.TAG_NAME, "body").text[:200].replace('\n', ' ')
+            ctx.log('info', f'Scraped from Selenium: {info}')
+            print(f'Selenium scraped info: {info}')
+            ctx.assert_that('test', 'equals', True, True, True, message='always pass')
+        finally:
+            driver.quit()
 
 class QtpSelfSeleniumTest6(SeleniumTest):
     metadata = TestMetadata(
@@ -75,8 +175,28 @@ class QtpSelfSeleniumTest6(SeleniumTest):
     )
 
     def test(self, ctx):
-        pass  # placeholder
-        ctx.assert_true(True, 'always pass')
+        from selenium import webdriver
+        from selenium.webdriver.chrome.options import Options
+        from selenium.webdriver.common.by import By
+        from selenium.webdriver.support.ui import WebDriverWait
+        from selenium.webdriver.support import expected_conditions as EC
+        import time
+
+        options = Options()
+        options.add_argument('--headless')
+        options.add_argument('--no-sandbox')
+        options.add_argument('--disable-dev-shm-usage')
+        driver = webdriver.Chrome(options=options)
+        try:
+            driver.get('http://qtp-frontend:5173/overview')
+            WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.TAG_NAME, "body")))
+            time.sleep(2) # Wait a bit for React to render
+            info = driver.find_element(By.TAG_NAME, "body").text[:200].replace('\n', ' ')
+            ctx.log('info', f'Scraped from Selenium: {info}')
+            print(f'Selenium scraped info: {info}')
+            ctx.assert_that('test', 'equals', True, True, True, message='always pass')
+        finally:
+            driver.quit()
 
 class QtpSelfSeleniumTest7(SeleniumTest):
     metadata = TestMetadata(
@@ -88,8 +208,28 @@ class QtpSelfSeleniumTest7(SeleniumTest):
     )
 
     def test(self, ctx):
-        pass  # placeholder
-        ctx.assert_true(True, 'always pass')
+        from selenium import webdriver
+        from selenium.webdriver.chrome.options import Options
+        from selenium.webdriver.common.by import By
+        from selenium.webdriver.support.ui import WebDriverWait
+        from selenium.webdriver.support import expected_conditions as EC
+        import time
+
+        options = Options()
+        options.add_argument('--headless')
+        options.add_argument('--no-sandbox')
+        options.add_argument('--disable-dev-shm-usage')
+        driver = webdriver.Chrome(options=options)
+        try:
+            driver.get('http://qtp-frontend:5173/overview')
+            WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.TAG_NAME, "body")))
+            time.sleep(2) # Wait a bit for React to render
+            info = driver.find_element(By.TAG_NAME, "body").text[:200].replace('\n', ' ')
+            ctx.log('info', f'Scraped from Selenium: {info}')
+            print(f'Selenium scraped info: {info}')
+            ctx.assert_that('test', 'equals', True, True, True, message='always pass')
+        finally:
+            driver.quit()
 
 class QtpSelfSeleniumTest8(SeleniumTest):
     metadata = TestMetadata(
@@ -101,8 +241,28 @@ class QtpSelfSeleniumTest8(SeleniumTest):
     )
 
     def test(self, ctx):
-        pass  # placeholder
-        ctx.assert_true(True, 'always pass')
+        from selenium import webdriver
+        from selenium.webdriver.chrome.options import Options
+        from selenium.webdriver.common.by import By
+        from selenium.webdriver.support.ui import WebDriverWait
+        from selenium.webdriver.support import expected_conditions as EC
+        import time
+
+        options = Options()
+        options.add_argument('--headless')
+        options.add_argument('--no-sandbox')
+        options.add_argument('--disable-dev-shm-usage')
+        driver = webdriver.Chrome(options=options)
+        try:
+            driver.get('http://qtp-frontend:5173/overview')
+            WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.TAG_NAME, "body")))
+            time.sleep(2) # Wait a bit for React to render
+            info = driver.find_element(By.TAG_NAME, "body").text[:200].replace('\n', ' ')
+            ctx.log('info', f'Scraped from Selenium: {info}')
+            print(f'Selenium scraped info: {info}')
+            ctx.assert_that('test', 'equals', True, True, True, message='always pass')
+        finally:
+            driver.quit()
 
 class QtpSelfSeleniumTest9(SeleniumTest):
     metadata = TestMetadata(
@@ -114,8 +274,28 @@ class QtpSelfSeleniumTest9(SeleniumTest):
     )
 
     def test(self, ctx):
-        pass  # placeholder
-        ctx.assert_true(True, 'always pass')
+        from selenium import webdriver
+        from selenium.webdriver.chrome.options import Options
+        from selenium.webdriver.common.by import By
+        from selenium.webdriver.support.ui import WebDriverWait
+        from selenium.webdriver.support import expected_conditions as EC
+        import time
+
+        options = Options()
+        options.add_argument('--headless')
+        options.add_argument('--no-sandbox')
+        options.add_argument('--disable-dev-shm-usage')
+        driver = webdriver.Chrome(options=options)
+        try:
+            driver.get('http://qtp-frontend:5173/overview')
+            WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.TAG_NAME, "body")))
+            time.sleep(2) # Wait a bit for React to render
+            info = driver.find_element(By.TAG_NAME, "body").text[:200].replace('\n', ' ')
+            ctx.log('info', f'Scraped from Selenium: {info}')
+            print(f'Selenium scraped info: {info}')
+            ctx.assert_that('test', 'equals', True, True, True, message='always pass')
+        finally:
+            driver.quit()
 
 class QtpSelfSeleniumTest10(SeleniumTest):
     metadata = TestMetadata(
@@ -127,6 +307,26 @@ class QtpSelfSeleniumTest10(SeleniumTest):
     )
 
     def test(self, ctx):
-        pass  # placeholder
-        ctx.assert_true(True, 'always pass')
+        from selenium import webdriver
+        from selenium.webdriver.chrome.options import Options
+        from selenium.webdriver.common.by import By
+        from selenium.webdriver.support.ui import WebDriverWait
+        from selenium.webdriver.support import expected_conditions as EC
+        import time
+
+        options = Options()
+        options.add_argument('--headless')
+        options.add_argument('--no-sandbox')
+        options.add_argument('--disable-dev-shm-usage')
+        driver = webdriver.Chrome(options=options)
+        try:
+            driver.get('http://qtp-frontend:5173/overview')
+            WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.TAG_NAME, "body")))
+            time.sleep(2) # Wait a bit for React to render
+            info = driver.find_element(By.TAG_NAME, "body").text[:200].replace('\n', ' ')
+            ctx.log('info', f'Scraped from Selenium: {info}')
+            print(f'Selenium scraped info: {info}')
+            ctx.assert_that('test', 'equals', True, True, True, message='always pass')
+        finally:
+            driver.quit()
 

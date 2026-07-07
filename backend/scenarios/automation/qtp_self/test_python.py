@@ -10,8 +10,8 @@ class QtpSelfPythonTest1(PythonTest):
     )
 
     def test(self, ctx):
-        ctx.log.info('Running Python')
-        ctx.assert_true(True, 'always pass')
+        ctx.log('info', 'Running Python')
+        ctx.assert_that('test', 'equals', True, True, True, message='always pass')
 
 class QtpSelfPythonTest2(PythonTest):
     metadata = TestMetadata(
@@ -23,8 +23,8 @@ class QtpSelfPythonTest2(PythonTest):
     )
 
     def test(self, ctx):
-        ctx.log.info('Running Python')
-        ctx.assert_true(True, 'always pass')
+        ctx.log('info', 'Running Python')
+        ctx.assert_that('test', 'equals', True, True, True, message='always pass')
 
 class QtpSelfPythonTest3(PythonTest):
     metadata = TestMetadata(
@@ -36,8 +36,8 @@ class QtpSelfPythonTest3(PythonTest):
     )
 
     def test(self, ctx):
-        ctx.log.info('Running Python')
-        ctx.assert_true(True, 'always pass')
+        ctx.log('info', 'Running Python')
+        ctx.assert_that('test', 'equals', True, True, True, message='always pass')
 
 class QtpSelfPythonTest4(PythonTest):
     metadata = TestMetadata(
@@ -49,8 +49,8 @@ class QtpSelfPythonTest4(PythonTest):
     )
 
     def test(self, ctx):
-        ctx.log.info('Running Python')
-        ctx.assert_true(True, 'always pass')
+        ctx.log('info', 'Running Python')
+        ctx.assert_that('test', 'equals', True, True, True, message='always pass')
 
 class QtpSelfPythonTest5(PythonTest):
     metadata = TestMetadata(
@@ -62,8 +62,8 @@ class QtpSelfPythonTest5(PythonTest):
     )
 
     def test(self, ctx):
-        ctx.log.info('Running Python')
-        ctx.assert_true(True, 'always pass')
+        ctx.log('info', 'Running Python')
+        ctx.assert_that('test', 'equals', True, True, True, message='always pass')
 
 class QtpSelfPythonTest6(PythonTest):
     metadata = TestMetadata(
@@ -75,8 +75,8 @@ class QtpSelfPythonTest6(PythonTest):
     )
 
     def test(self, ctx):
-        ctx.log.info('Running Python')
-        ctx.assert_true(True, 'always pass')
+        ctx.log('info', 'Running Python')
+        ctx.assert_that('test', 'equals', True, True, True, message='always pass')
 
 class QtpSelfPythonTest7(PythonTest):
     metadata = TestMetadata(
@@ -88,8 +88,8 @@ class QtpSelfPythonTest7(PythonTest):
     )
 
     def test(self, ctx):
-        ctx.log.info('Running Python')
-        ctx.assert_true(True, 'always pass')
+        ctx.log('info', 'Running Python')
+        ctx.assert_that('test', 'equals', True, True, True, message='always pass')
 
 class QtpSelfPythonTest8(PythonTest):
     metadata = TestMetadata(
@@ -101,8 +101,8 @@ class QtpSelfPythonTest8(PythonTest):
     )
 
     def test(self, ctx):
-        ctx.log.info('Running Python')
-        ctx.assert_true(True, 'always pass')
+        ctx.log('info', 'Running Python')
+        ctx.assert_that('test', 'equals', True, True, True, message='always pass')
 
 class QtpSelfPythonTest9(PythonTest):
     metadata = TestMetadata(
@@ -114,8 +114,8 @@ class QtpSelfPythonTest9(PythonTest):
     )
 
     def test(self, ctx):
-        ctx.log.info('Running Python')
-        ctx.assert_true(True, 'always pass')
+        ctx.log('info', 'Running Python')
+        ctx.assert_that('test', 'equals', True, True, True, message='always pass')
 
 class QtpSelfPythonTest10(PythonTest):
     metadata = TestMetadata(
@@ -127,6 +127,6 @@ class QtpSelfPythonTest10(PythonTest):
     )
 
     def test(self, ctx):
-        ctx.log.info('Running Python')
-        ctx.assert_true(True, 'always pass')
+        ctx.log('info', 'Running Python')
+        ctx.assert_that('test', 'equals', True, True, True, message='always pass')
 
