@@ -1,0 +1,73 @@
+{
+  "realm": "qtp",
+  "enabled": true,
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "loginTheme": "keycloak",
+  "accessTokenLifespan": 1800,
+  "roles": {
+    "realm": [
+      { "name": "qtp_admin", "description": "Full platform administration" },
+      { "name": "qtp_project_admin", "description": "Project settings, targets, environments, secrets" },
+      { "name": "qtp_test_author", "description": "Create and edit tests" },
+      { "name": "qtp_operator", "description": "Run tests, pause schedules, triage" },
+      { "name": "qtp_viewer", "description": "Read-only dashboards and runs" },
+      { "name": "qtp_auditor", "description": "Audit and security review" }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "qtp-api",
+      "name": "QTP API (resource server)",
+      "enabled": true,
+      "publicClient": false,
+      "bearerOnly": true,
+      "protocol": "openid-connect"
+    },
+    {
+      "clientId": "qtp-spa",
+      "name": "QTP SPA",
+      "enabled": true,
+      "publicClient": true,
+      "protocol": "openid-connect",
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "implicitFlowEnabled": false,
+      "rootUrl": "http://localhost:5173",
+      "baseUrl": "/",
+      "redirectUris": ["http://localhost:5173/*"],
+      "webOrigins": ["http://localhost:5173", "+"],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "+"
+      },
+      "protocolMappers": [
+        {
+          "name": "qtp-api-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "qtp-api",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
+        }
+      ]
+    }
+  ],
+  "users": [
+    {
+      "username": "admin",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "admin@qtp.local",
+      "firstName": "QTP",
+      "lastName": "Admin",
+      "credentials": [
+        { "type": "password", "value": "admin", "temporary": false }
+      ],
+      "realmRoles": ["qtp_admin"]
+    }
+  ]
+}

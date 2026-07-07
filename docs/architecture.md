@@ -831,6 +831,7 @@ frontend/src/
     DashboardPage.tsx
     TargetsPage.tsx
     WorkersPage.tsx
+    DocsPage.tsx
     AdminPage.tsx
   components/
     common/
@@ -846,6 +847,7 @@ Navigation groups:
 - Tests: Catalog, Suites, Request Builder, Schedules.
 - Operations: Workers, Queue, Artifacts, Imports, Audit.
 - Admin: Projects, Targets, Environments, Secrets, Users.
+- Developer Docs: an in-app documentation tab (see section 17.1).
 
 Expected UI views:
 
@@ -871,6 +873,35 @@ Live run status uses TanStack Query polling by default, with an optional SSE
 stream (Redis-backed) when configured; the sync Flask/RESTX stack does not
 require WebSockets for the baseline experience. Use Ant Design tokens through a
 root `ConfigProvider`; avoid broad global `.ant-*` CSS overrides.
+
+### 17.1 In-App Developer Documentation
+
+The UI ships a first-class **Developer Docs** tab (`DocsPage.tsx`) so a developer
+never has to leave the platform to learn how to extend it. It is a rendered,
+navigable guide — not a link to an external wiki — covering:
+
+- **Concepts**: definitions, revisions, targets, runs, assertions, defect types,
+  and how "test any app by URL" works.
+- **Author a code-based test in Python**: subclass `BaseAutomationTest`, declare
+  `TestMetadata`, resolve the target from `TestContext`, and implement the
+  lifecycle hooks (`validate_config → setup → execute → cleanup → teardown`),
+  with a full copy-pasteable example and where the file lives
+  (`tests/automations/...`).
+- **Register it**: how discovery imports configured modules, the idempotent
+  create/revision behavior, and how to trigger `POST /api/tests/discover` from
+  the UI.
+- **Create a request test from the UI**: the request builder, target/URL,
+  assertions on the response body/headers/timing, save, and edit.
+- **Run it**: on demand (`Run now` / `POST /api/tests/{id}/run`) and on a
+  recurrence (schedules: interval/cron), with the exact API payloads.
+- **The assertion catalogue**: every source and operator, with JSON examples.
+- **Extend the platform**: adding a new adapter/executor and a new dashboard
+  widget, cross-referencing section 23.
+- **API reference**: the endpoint map with request/response shapes and how to
+  obtain a bearer token.
+
+The content is authored as structured sections with syntax-highlighted code
+snippets and lives alongside the app so it stays versioned with the code.
 
 ## 18. Dashboard And Reporting Model
 

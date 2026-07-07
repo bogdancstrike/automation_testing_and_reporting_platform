@@ -22,7 +22,7 @@ services:
 
   # ── PostgreSQL (QTP data) ────────────────────────────────────────────────
   postgres:
-    image: postgres:15-alpine
+    image: postgres:17-alpine
     container_name: qtp-postgres
     networks: [qtpnet]
     ports:
@@ -42,7 +42,7 @@ services:
 
   # ── Keycloak (dev mode, realm imported from file) ────────────────────────
   keycloak:
-    image: quay.io/keycloak/keycloak:26.0
+    image: quay.io/keycloak/keycloak:26.1
     container_name: qtp-keycloak
     networks: [qtpnet]
     ports:

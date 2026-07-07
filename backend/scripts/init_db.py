@@ -85,7 +85,7 @@ def main() -> int:
                     "url": "{{base_url}}/get?team=qtp",
                     "assertions": [
                         {"type": "status_code", "operator": "equals", "expected": 200},
-                        {"type": "json_path", "path": "$.args.team", "operator": "equals", "expected": "qtp"},
+                        {"type": "json_path", "path": "$.args.team", "operator": "contains", "expected": "qtp"},
                         {"type": "response_time_ms", "operator": "lte", "expected": 5000},
                     ],
                 },

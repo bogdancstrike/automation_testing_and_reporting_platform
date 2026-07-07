@@ -1,0 +1,82 @@
+# QTP Implementation TODO
+
+Living checklist of what is implemented vs. remaining. Reflects the code in
+`backend/` and `frontend/`. See `architecture.md` and `implementation_plan.md`
+for the full design.
+
+_Last updated: 2026-07-07._
+
+## Legend
+- [x] done and verified
+- [~] partial / simplified for the first runnable slice
+- [ ] not started
+
+## Infrastructure & deploy
+- [x] `docker-compose.yml`: postgres 17, keycloak 26.1 (realm import), httpbin demo target, init, api, worker, scheduler, frontend
+- [x] Backend `Dockerfile` (installs QF wheel + requirements)
+- [x] Top-level `config.py` shim (QF requires importable `config.Config`)
+- [x] Keycloak realm seed (`keycloak/realm-export.json`) — single `admin`/`admin` user with `qtp_admin`
+- [x] DB init + seed (`backend/scripts/init_db.py`): project, demo target, discovery, sample UI test, schedule, one run
+- [ ] Frontend `Dockerfile` (nginx serving built SPA)
+- [ ] `.dockerignore` for backend/frontend build contexts
+- [ ] Alembic migrations (currently `create_all` at init; migrations dir still TODO)
+
+## Backend — framework/QF wiring
+- [x] `main.py` boots FrameworkApp (enable_etl=False) and serves the Flask app
+- [x] `worker.py` / `scheduler.py` entrypoints
+- [x] `maps/endpoint.json` (27 routes under `/qtp`), handlers as `src.api.*`
+- [x] CORS + correlation-id + error handlers installed on the Flask app
+
+## Backend — core & IAM
+- [x] `core/db.py` (engine, session_scope), `errors.py`, `correlation.py`, `clock.py`
+- [x] `core/net_guard.py` SSRF: resolve host, block private/loopback/link-local/metadata, per-redirect re-check, allowlist
+- [x] `iam` Keycloak JWT verify (JWKS internal-fetch / public-issuer split), Principal, role decorators
+- [x] `AUTH_DISABLED` mode for local smoke tests
+- [~] Users/RBAC: single admin from Keycloak; no DB `users`/`user_project_roles` tables yet
+- [ ] Encrypted secrets store (`secrets` table) — not implemented (demo uses inline/no secrets)
+- [ ] Audit events table + service
+
+## Backend — testkit SDK
+- [x] `BaseAutomationTest` + lifecycle hooks (`validate_config/setup/execute/cleanup/teardown`)
+- [x] `TestContext` (target resolution, `{{var}}` templating, secret redaction, cancel token)
+- [x] `TestResult` / `StepResult` / `AssertionResult`
+- [x] Assertion engine — full operator taxonomy + minimal JSONPath
+- [x] Registry discovery (unique keys, type/config validation)
+- [x] HTTP adapter — real execution via net_guard, manual redirect + per-hop SSRF, body capture, assertions
+- [~] CLI/Playwright/Selenium adapters — stubbed (return clear ERROR; not runnable in demo image)
+
+## Backend — domain
+- [x] Catalog: projects, targets, test definitions, revisions, discovery, UI request tests
+- [x] Execution: queue (FOR UPDATE SKIP LOCKED, capability-aware), runner, lifecycle, steps/assertions/logs
+- [x] Failure classification + failure signatures + defect-type auto-suggestion
+- [x] Scheduling: once/interval/cron recurrence (croniter), due processing, CRUD
+- [x] Reporting: overview (totals, pass/error rate, p50/p95, trend, per-target, backlog), failures, workers
+- [x] Worker loop (register/claim/execute/heartbeat/reap-stale) + scheduler loop
+- [~] Suites, result ingestion, materialized views — modeled in docs, not built yet
+- [ ] Cancellation of a *running* run (cooperative flag exists; queued-cancel works; running-cancel not fully exercised)
+
+## Backend — verification (done locally against real Postgres + httpbin)
+- [x] init_db creates tables + seeds
+- [x] worker claims + executes the code healthcheck (passed) and UI request test
+- [x] body `json_path` assertions evaluated; failure → signature + `to_investigate` defect
+- [x] dashboard overview aggregates correct
+- [ ] Full HTTP-layer test through the running API with a real Keycloak token (pending compose bring-up)
+
+## Frontend (AntD SPA)
+- [ ] Vite React TS scaffold + `Dockerfile`/nginx
+- [ ] Keycloak login (keycloak-js, PKCE) + session store + route guards
+- [ ] API client (bearer token, base `/qtp`, normalized errors)
+- [ ] Layout shell (sidebar nav, header, theme)
+- [ ] Pages: Overview, Test Catalog, Test Detail, Request Builder, Runs, Run Detail, Schedules, Targets, Workers
+- [ ] **Developer Docs tab** (architecture 17.1): author code tests, register, run on-demand/scheduled, assertion catalogue, API reference, snippets
+- [ ] Defect-type triage control + failure analytics widgets
+
+## Tests (automated)
+- [~] One example automation test (`tests/automations/api/test_healthcheck.py`)
+- [ ] Backend unit/integration test suite (pytest) for services, recurrence, assertions, queue
+- [ ] Frontend component/E2E tests
+
+## Docs
+- [x] `architecture.md`, `implementation_plan.md` updated (Testkube+ReportPortal framing, targets, cleanup hook, docs tab)
+- [x] `docs/TODO.md` (this file)
+- [ ] Root `README.md` with quickstart (`docker compose up`, URLs, admin/admin)

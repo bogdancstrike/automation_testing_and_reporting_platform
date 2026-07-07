@@ -525,6 +525,13 @@ including per-target and defect analytics.
   `imports.ts`, `workers.ts`.
 - Implement shared components: `StatusTag`, `TestTypeTag`, `DefectTag`,
   `DurationText`, `RunStatusIcon`, `PageHeaderActions`.
+- Implement `DocsPage.tsx` — the in-app **Developer Docs** tab (architecture
+  section 17.1): a navigable, syntax-highlighted guide covering concepts, how to
+  author a code-based Python test (`BaseAutomationTest` + lifecycle hooks) and
+  register it via discovery, how to create a request test from the UI, how to run
+  on demand and on a schedule, the full assertion catalogue, extension points,
+  and the API reference with token instructions. Include copy-pasteable code
+  snippets and concrete use cases.
 
 **Verification:**
 
@@ -749,6 +756,9 @@ QTP is ready for a first production pilot when:
 - dashboards show run totals, success/error rate, defect distribution, per-target
   health, failed tests, slow tests, flaky tests, queue backlog, and worker
   health;
+- the UI includes a Developer Docs tab explaining, with runnable snippets, how to
+  add tests in Python and from the UI, register them, and run them on demand or on
+  a schedule;
 - authentication is required on all non-health endpoints and RBAC protects
   project, target, run, schedule, secret, import, and audit actions;
 - SSRF egress controls (resolved-IP validation, connection pinning, per-redirect
