@@ -342,72 +342,83 @@ class CreateOrderTest(HttpTest):
               Sometimes you need to do things outside of HTTP, like querying a database, publishing a Kafka message, or validating complex business logic. The <code>PythonTest</code> class gives you a blank canvas.
             </Paragraph>
             <Code language="python">{`from src.testkit import TYPE_PYTHON, PythonTest, TestMetadata
-import psycopg2
+import requests
 
-class DatabaseReconciliationTest(PythonTest):
+class ExamplePythonTest(PythonTest):
     metadata = TestMetadata(
-        key="db.reconciliation",
-        name="Check DB sync state",
+        key="qtp_self.python.test_2",
+        name="Example.com HTTP (Python)",
         type=TYPE_PYTHON,
-        target="backend_services",
+        target="qtp_self",
+        tags=["python", "http"]
     )
 
     def test(self, ctx):
-        ctx.log.info("Connecting to primary database...")
-        conn = psycopg2.connect("postgresql://user:pass@db:5432/app")
-        cursor = conn.cursor()
+        ctx.log('info', 'Running HTTP request test against example.com')
+
+        response = requests.get('https://example.com/', headers={'accept': 'text/html'}, timeout=10)
         
-        cursor.execute("SELECT count(*) FROM async_jobs WHERE status = 'FAILED'")
-        failed_count = cursor.fetchone()[0]
-        
-        # Explicitly record an assertion
-        ctx.assert_true(
-            failed_count < 10,
-            f"Failed job queue too high: {failed_count}"
+        ctx.log('info', f'Status code: {response.status_code}')
+
+        # Explicitly record assertions in QTP evidence
+        ctx.assert_that(
+            'status_code',
+            'equals',
+            response.status_code,
+            200,
+            True,
+            message='Example.com should return 200'
         )
-        
-        # Use cleanup block to close resources reliably
-    def cleanup(self, ctx):
-        # Always runs even if test() throws an exception
-        pass`}</Code>
+
+        ctx.assert_that(
+            'contains_example_domain',
+            'equals',
+            'Example Domain' in response.text,
+            True,
+            True,
+            message='Response should contain Example Domain'
+        )`}</Code>
 
             <H2 id="authoring-browser" icon={<DesktopOutlined />}>Authoring: Browser Tests</H2>
             <Paragraph>
               For UI smoke tests, QTP supports Playwright. The <code>PlaywrightTest</code> class provides a managed browser context.
             </Paragraph>
             <Code language="python">{`from src.testkit import TYPE_PLAYWRIGHT, PlaywrightTest, TestMetadata
-from playwright.sync_api import expect
 
-class LoginUiTest(PlaywrightTest):
+class QtpSelfPlaywrightTest1(PlaywrightTest):
     metadata = TestMetadata(
-        key="ui.login_flow",
-        name="User Login Flow via Browser",
+        key='qtp_self.browser.test_1',
+        name='QTP Self PlaywrightTest Test 1',
         type=TYPE_PLAYWRIGHT,
-        target="webapp",
+        target='qtp_self',
+        tags=['qtp_self', 'browser']
     )
 
     def test(self, ctx):
-        # ctx.browser is a managed playwright Page object
-        page = ctx.browser.page
-        
-        # base_url is applied automatically for relative paths
-        page.goto("/login")
-        
-        page.fill("input[name='username']", "testuser")
-        page.fill("input[name='password']", "secure123")
-        page.click("button[type='submit']")
-        
-        # Playwright assertions are captured in QTP evidence
-        expect(page.locator(".dashboard-header")).to_be_visible()
-        
-        # Capture screenshots on specific steps
-        ctx.browser.screenshot(name="dashboard_loaded")`}</Code>
+        # ctx.browser is a managed playwright context wrapper
+        page = ctx.browser.visit('https://example.com/').page
+
+        page.wait_for_selector('body', timeout=5000)
+
+        title = page.locator('h1').inner_text(timeout=5000).strip()
+        body_text = page.locator('body').inner_text(timeout=5000).strip()
+
+        ctx.log('info', f'Title: {title}')
+
+        # Playwright assertions are captured in QTP evidence using assert_that
+        ctx.assert_that(
+            'example_title',
+            'equals',
+            title,
+            'Example Domain',
+            True,
+            message='Example.com title should be visible'
+        )`}</Code>
 
             <Paragraph style={{ marginTop: '16px' }}>
               For legacy or specialized grids, QTP also supports Selenium WebDriver via <code>SeleniumTest</code>.
             </Paragraph>
             <Code language="python">{`from src.testkit import TYPE_SELENIUM, SeleniumTest, TestMetadata
-from selenium import webdriver
 from selenium.webdriver.common.by import By
 
 class LegacyUiTest(SeleniumTest):
@@ -419,41 +430,51 @@ class LegacyUiTest(SeleniumTest):
     )
 
     def test(self, ctx):
-        from selenium.webdriver.chrome.options import Options
-        options = Options()
-        options.add_argument('--headless')
-        driver = webdriver.Chrome(options=options)
+        # ctx.driver is a managed Selenium WebDriver instance
+        driver = ctx.driver
+        driver.get("https://example.com/")
         
-        try:
-            driver.get(ctx.target.base_url + "/login")
-            driver.find_element(By.NAME, "username").send_keys("admin")
-            driver.find_element(By.CSS_SELECTOR, "button[type='submit']").click()
-            ctx.assert_true("Dashboard" in driver.title, "Dashboard did not load")
-        finally:
-            driver.quit()`}</Code>
+        title = driver.find_element(By.TAG_NAME, "h1").text
+        
+        ctx.assert_that(
+            'title_visible',
+            'equals',
+            title,
+            'Example Domain',
+            True,
+            message="Title should match"
+        )`}</Code>
 
             <H2 id="authoring-cli" icon={<CodeOutlined />}>Authoring: CLI Tools</H2>
             <Paragraph>
               Use <code>CliTest</code> to run shell commands or custom binaries. This is great for infrastructure checks or wrapping existing bash-based scripts.
             </Paragraph>
-            <Code language="python">{`from src.testkit import TYPE_CLI, CliTest, TestMetadata
+            <Code language="python">{`from src.testkit import CliTest, TYPE_CLI, TestMetadata
 
-class CertCheckTest(CliTest):
+class QtpSelfCliTest1(CliTest):
     metadata = TestMetadata(
-        key="infra.cert_check",
-        name="Verify SSL Certificate Expiry",
+        key='qtp_self.cli.test_1',
+        name='QTP Self CliTest Test 1',
         type=TYPE_CLI,
-        target="public_api",
+        target='qtp_self',
+        tags=['qtp_self', 'cli']
     )
 
     def test(self, ctx):
-        domain = "api.example.com"
-        
         # Runs command inside the worker container
-        result = ctx.cli.run(f"curl -sIv https://{domain} 2>&1 | grep 'expire date'")
+        res = ctx.cli.run('curl -s https://dogapi.dog/api/v2/facts')
         
-        ctx.assert_true(result.exit_code == 0, "Curl command failed")
-        ctx.log.info(f"Cert output: {result.stdout}")`}</Code>
+        ctx.log('info', f'CLI Output: {res.stdout[:500]}')
+        
+        # Validate properties on the result or explicitly record a pass
+        ctx.assert_that(
+            'command_success',
+            'equals', 
+            res.exit_code, 
+            0, 
+            True, 
+            message='Command should exit with 0'
+        )`}</Code>
 
             <H2 id="assertions" icon={<SafetyOutlined />}>Assertions & Captures</H2>
             <Paragraph>

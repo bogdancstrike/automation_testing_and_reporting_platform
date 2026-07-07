@@ -2,7 +2,7 @@
   <h1>🎯 QSINT Testing Platform (QTP)</h1>
   <p><b>An automation testing control plane + framework for running, scheduling, observing, and analyzing automated tests against any target application.</b></p>
   
-  ![Python](https://img.shields.io/badge/Python-3.11+-blue.svg?logo=python)
+  ![Python](https://img.shields.io/badge/Python-3.12+-blue.svg?logo=python)
   ![React](https://img.shields.io/badge/React-18-blue.svg?logo=react)
   ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17-blue.svg?logo=postgresql)
   ![Kafka](https://img.shields.io/badge/Kafka-Enabled-black.svg?logo=apachekafka)
@@ -163,19 +163,32 @@ Sometimes you need to do things outside of HTTP, like querying a database, publi
 
 ```python
 from src.testkit import TYPE_PYTHON, PythonTest, TestMetadata
-import psycopg2
+import requests
 
-class DatabaseReconciliationTest(PythonTest):
-    metadata = TestMetadata(key="db.sync", name="Check DB sync state", type=TYPE_PYTHON, target="db_target")
+class ExamplePythonTest(PythonTest):
+    metadata = TestMetadata(
+        key="qtp_self.python.test_2",
+        name="Example.com HTTP (Python)",
+        type=TYPE_PYTHON,
+        target="qtp_self",
+        tags=["python", "http"]
+    )
 
     def test(self, ctx):
-        conn = psycopg2.connect("postgresql://user:pass@db:5432/app")
-        cursor = conn.cursor()
-        cursor.execute("SELECT count(*) FROM async_jobs WHERE status = 'FAILED'")
-        failed_count = cursor.fetchone()[0]
+        ctx.log('info', 'Running HTTP request test against example.com')
+        response = requests.get('https://example.com/', headers={'accept': 'text/html'}, timeout=10)
         
-        # Explicitly record an assertion
-        ctx.assert_true(failed_count < 10, f"Failed job queue too high: {failed_count}")
+        ctx.log('info', f'Status code: {response.status_code}')
+
+        # Explicitly record assertions in QTP evidence
+        ctx.assert_that(
+            'status_code',
+            'equals',
+            response.status_code,
+            200,
+            True,
+            message='Example.com should return 200'
+        )
 ```
 
 ### 3. Browser Tests (Playwright/Selenium)
@@ -183,35 +196,48 @@ For UI smoke tests, QTP supports Playwright with a managed browser context.
 
 ```python
 from src.testkit import TYPE_PLAYWRIGHT, PlaywrightTest, TestMetadata
-from playwright.sync_api import expect
 
-class LoginUiTest(PlaywrightTest):
-    metadata = TestMetadata(key="ui.login", name="User Login Flow", type=TYPE_PLAYWRIGHT, target="webapp")
+class QtpSelfPlaywrightTest1(PlaywrightTest):
+    metadata = TestMetadata(
+        key='qtp_self.browser.test_1',
+        name='QTP Self Playwright Test',
+        type=TYPE_PLAYWRIGHT,
+        target='qtp_self'
+    )
 
     def test(self, ctx):
-        page = ctx.browser.page
-        page.goto("/login")  # base_url is applied automatically
+        # ctx.browser is a managed playwright context wrapper
+        page = ctx.browser.visit('https://example.com/').page
         
-        page.fill("input[name='username']", "testuser")
-        page.fill("input[name='password']", "secure123")
-        page.click("button[type='submit']")
+        page.wait_for_selector('body', timeout=5000)
+        title = page.locator('h1').inner_text(timeout=5000).strip()
         
         # Playwright assertions are captured in QTP evidence
-        expect(page.locator(".dashboard-header")).to_be_visible()
+        ctx.assert_that(
+            'example_title',
+            'equals',
+            title,
+            'Example Domain',
+            True,
+            message='Example.com title should be visible'
+        )
 ```
 
 ### 4. CLI Tools
 Use `CliTest` to run shell commands or custom binaries. Great for infrastructure checks or wrapping existing bash-based scripts.
 
 ```python
-from src.testkit import TYPE_CLI, CliTest, TestMetadata
+from src.testkit import CliTest, TYPE_CLI, TestMetadata
 
-class CertCheckTest(CliTest):
-    metadata = TestMetadata(key="infra.cert", name="Check Cert", type=TYPE_CLI, target="public_api")
+class QtpSelfCliTest1(CliTest):
+    metadata = TestMetadata(key='qtp_self.cli.test_1', name='QTP CLI Test', type=TYPE_CLI, target='qtp_self')
 
     def test(self, ctx):
-        result = ctx.cli.run("curl -sIv https://api.example.com 2>&1 | grep 'expire date'")
-        ctx.assert_true(result.exit_code == 0, "Curl command failed")
+        # Runs command inside the worker container
+        res = ctx.cli.run('curl -s https://dogapi.dog/api/v2/facts')
+        
+        # Validate properties on the result or explicitly record a pass
+        ctx.assert_that('command_success', 'equals', res.exit_code, 0, True, message='Command should exit with 0')
 ```
 
 ### 5. Assertions & Captures
