@@ -135,8 +135,26 @@ You can write tests in standard Python inside `backend/scenarios/automation/`. N
 ### 1. HTTP APIs
 The `HttpTest` base class is optimized for REST and GraphQL APIs. It provides a fluent assertion syntax and automatically logs full request/response payloads as evidence.
 
+**Single-Step Checks**
 ```python
 from src.testkit import TYPE_HTTP, HttpTest, TestMetadata
+
+class SelfHealth(HttpTest):
+    metadata = TestMetadata(
+        key="self.health",
+        name="QTP · health returns ok",
+        type=TYPE_HTTP,
+        target="qtp_self"
+    )
+
+    def test(self, ctx):
+        response = ctx.http.get("/health")
+
+        response.should.have_status(200)
+        response.should.respond_within_ms(3000)
+        response.json.should.have_field("status").equal_to("ok")
+        response.json.should.have_field("service").equal_to("qtp")
+```
 
 class SelfMultiStepHealthLivenessReadiness(HttpTest):
     metadata = TestMetadata(key="self.multi_health", name="QTP · Health/Liveness", type=TYPE_HTTP, target="qtp_self")
@@ -256,23 +274,43 @@ For legacy or specialized grids, QTP also supports Selenium WebDriver via `Selen
 ```python
 from src.testkit import TYPE_SELENIUM, SeleniumTest, TestMetadata
 
-class LegacyUiTest(SeleniumTest):
-    metadata = TestMetadata(key="ui.legacy_flow", name="Legacy UI Flow", type=TYPE_SELENIUM, target="webapp")
+class QtpSelfSeleniumTest1(SeleniumTest):
+    metadata = TestMetadata(
+        key='qtp_self.selenium.test_1',
+        name='QTP Self Selenium Test',
+        type=TYPE_SELENIUM,
+        target='qtp_self'
+    )
 
     def test(self, ctx):
         from selenium import webdriver
         from selenium.webdriver.chrome.options import Options
         from selenium.webdriver.common.by import By
+        from selenium.webdriver.support.ui import WebDriverWait
+        from selenium.webdriver.support import expected_conditions as EC
         
         options = Options()
         options.add_argument('--headless=new')
+        options.add_argument('--no-sandbox')
         driver = webdriver.Chrome(options=options)
         
         try:
-            driver.get("https://example.com/")
-            title = driver.find_element(By.TAG_NAME, "h1").text
+            driver.get('https://example.com/')
             
-            ctx.assert_that('title_visible', 'equals', title, 'Example Domain', True, message="Title matches")
+            WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located((By.TAG_NAME, 'body'))
+            )
+            
+            title = driver.find_element(By.TAG_NAME, 'h1').text.strip()
+            
+            ctx.assert_that(
+                'example_title',
+                'equals',
+                title,
+                'Example Domain',
+                True,
+                message='Example.com title should be visible'
+            )
         finally:
             driver.quit()
 ```
@@ -328,28 +366,65 @@ Schedules act as the heartbeat of your system's quality:
 ### CI/CD Integration
 Your CI tool shouldn't execute the tests itself; it should trigger QTP, wait for the result, and fail the pipeline if QTP reports a failure.
 
-```bash
-#!/usr/bin/env bash
-set -euo pipefail
+**GitHub Actions**
+```yaml
+name: QTP E2E Tests
+on: [deployment_status]
 
-# 1. Trigger the Scenario Run
-RUN_RESP=$(curl -sf -X POST "$QTP_URL/api/tests/$SCENARIO_ID/run" \
-  -H "Authorization: Bearer $QTP_TOKEN" -H "Content-Type: application/json" -d '{"tags": ["ci"]}')
-RUN_ID=$(echo "$RUN_RESP" | jq -r '.id')
+jobs:
+  run_qtp_tests:
+    if: github.event.deployment_status.state == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger and Poll QTP Scenario
+        env:
+          QTP_URL: ${{ secrets.QTP_URL }}
+          QTP_TOKEN: ${{ secrets.QTP_TOKEN }}
+          SCENARIO_ID: "checkout.e2e"
+        run: |
+          RUN_RESP=$(curl -sf -X POST "$QTP_URL/api/tests/$SCENARIO_ID/run" \
+            -H "Authorization: Bearer $QTP_TOKEN" -H "Content-Type: application/json" -d '{"tags": ["github-actions"]}')
+          RUN_ID=$(echo "$RUN_RESP" | jq -r '.id')
+          echo "Run initiated: $RUN_ID"
+          
+          STATUS="running"
+          while [ "$STATUS" = "running" ] || [ "$STATUS" = "queued" ]; do
+            sleep 5
+            STATUS=$(curl -sf -X GET "$QTP_URL/api/runs/$RUN_ID" -H "Authorization: Bearer $QTP_TOKEN" | jq -r '.status')
+          done
+          
+          if [ "$STATUS" != "passed" ]; then
+            echo "Test failed with status: $STATUS"
+            exit 1
+          fi
+```
 
-# 2. Poll for Completion
-STATUS="running"
-while [ "$STATUS" = "running" ] || [ "$STATUS" = "queued" ]; do
-  sleep 5
-  STATUS=$(curl -sf -X GET "$QTP_URL/api/runs/$RUN_ID" -H "Authorization: Bearer $QTP_TOKEN" | jq -r '.status')
-done
-
-# 3. Handle Result
-if [ "$STATUS" != "passed" ]; then
-  echo "Test failed with status: $STATUS"
-  exit 1
-fi
-echo "Test passed successfully!"
+**GitLab CI**
+```yaml
+qtp_e2e_tests:
+  stage: test
+  image: alpine:latest
+  before_script:
+    - apk add --no-cache curl jq
+  variables:
+    SCENARIO_ID: "checkout.e2e"
+  script:
+    - |
+      RUN_RESP=$(curl -sf -X POST "$QTP_URL/api/tests/$SCENARIO_ID/run" \
+        -H "Authorization: Bearer $QTP_TOKEN" -H "Content-Type: application/json" -d '{"tags": ["gitlab-ci"]}')
+      RUN_ID=$(echo "$RUN_RESP" | jq -r '.id')
+      echo "Run initiated: $RUN_ID"
+      
+      STATUS="running"
+      while [ "$STATUS" = "running" ] || [ "$STATUS" = "queued" ]; do
+        sleep 5
+        STATUS=$(curl -sf -X GET "$QTP_URL/api/runs/$RUN_ID" -H "Authorization: Bearer $QTP_TOKEN" | jq -r '.status')
+      done
+      
+      if [ "$STATUS" != "passed" ]; then
+        echo "Test failed with status: $STATUS"
+        exit 1
+      fi
 ```
 
 ---

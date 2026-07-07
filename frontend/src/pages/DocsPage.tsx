@@ -304,26 +304,25 @@ class DemoApiTest(HttpTest):
             <Paragraph>
               The <code>HttpTest</code> base class is optimized for REST and GraphQL APIs. It provides a fluent assertion syntax and automatically logs full request/response payloads as evidence.
             </Paragraph>
+            
+            <H3>Single-Step Checks</H3>
             <Code language="python">{`from src.testkit import TYPE_HTTP, HttpTest, TestMetadata
 
-class SelfMultiStepHealthLivenessReadiness(HttpTest):
+class SelfHealth(HttpTest):
     metadata = TestMetadata(
-        key="self.multi_health",
-        name="QTP · Multi-step Health/Liveness/Readiness",
+        key="self.health",
+        name="QTP · health returns ok",
         type=TYPE_HTTP,
         target="qtp_self"
     )
 
     def test(self, ctx):
-        with ctx.step("Check Health"):
-            response = ctx.http.get("/health")
-            response.should.have_status(200)
-            response.json.should.have_field("status").equal_to("ok")
+        response = ctx.http.get("/health")
 
-        with ctx.step("Check Liveness"):
-            response = ctx.http.get("/liveness")
-            response.should.have_status(200)
-            response.json.should.have_field("status").equal_to("alive")`}</Code>
+        response.should.have_status(200)
+        response.should.respond_within_ms(3000)
+        response.json.should.have_field("status").equal_to("ok")
+        response.json.should.have_field("service").equal_to("qtp")`}</Code>
 
             <H3>Stateful Multi-Step Workflows</H3>
             <Paragraph>
@@ -413,10 +412,9 @@ class ExamplePythonTest(PythonTest):
 class QtpSelfPlaywrightTest1(PlaywrightTest):
     metadata = TestMetadata(
         key='qtp_self.browser.test_1',
-        name='QTP Self PlaywrightTest Test 1',
+        name='QTP Self Playwright Test',
         type=TYPE_PLAYWRIGHT,
-        target='qtp_self',
-        tags=['qtp_self', 'browser']
+        target='qtp_self'
     )
 
     def test(self, ctx):
@@ -426,11 +424,8 @@ class QtpSelfPlaywrightTest1(PlaywrightTest):
         page.wait_for_selector('body', timeout=5000)
 
         title = page.locator('h1').inner_text(timeout=5000).strip()
-        body_text = page.locator('body').inner_text(timeout=5000).strip()
 
-        ctx.log('info', f'Title: {title}')
-
-        # Playwright assertions are captured in QTP evidence using assert_that
+        # Playwright assertions are captured in QTP evidence
         ctx.assert_that(
             'example_title',
             'equals',
@@ -445,34 +440,42 @@ class QtpSelfPlaywrightTest1(PlaywrightTest):
             </Paragraph>
             <Code language="python">{`from src.testkit import TYPE_SELENIUM, SeleniumTest, TestMetadata
 
-class LegacyUiTest(SeleniumTest):
+class QtpSelfSeleniumTest1(SeleniumTest):
     metadata = TestMetadata(
-        key="ui.legacy_flow",
-        name="Legacy UI Flow",
+        key='qtp_self.selenium.test_1',
+        name='QTP Self Selenium Test',
         type=TYPE_SELENIUM,
-        target="webapp",
+        target='qtp_self'
     )
 
     def test(self, ctx):
         from selenium import webdriver
         from selenium.webdriver.chrome.options import Options
         from selenium.webdriver.common.by import By
+        from selenium.webdriver.support.ui import WebDriverWait
+        from selenium.webdriver.support import expected_conditions as EC
         
         options = Options()
         options.add_argument('--headless=new')
+        options.add_argument('--no-sandbox')
         driver = webdriver.Chrome(options=options)
         
         try:
-            driver.get("https://example.com/")
-            title = driver.find_element(By.TAG_NAME, "h1").text
+            driver.get('https://example.com/')
+            
+            WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located((By.TAG_NAME, 'body'))
+            )
+            
+            title = driver.find_element(By.TAG_NAME, 'h1').text.strip()
             
             ctx.assert_that(
-                'title_visible',
+                'example_title',
                 'equals',
                 title,
                 'Example Domain',
                 True,
-                message="Title should match"
+                message='Example.com title should be visible'
             )
         finally:
             driver.quit()`}</Code>
@@ -600,36 +603,65 @@ ctx.http.get("/secure-data", headers={"Authorization": f"Bearer {ctx.get_var('au
               The most powerful use of QTP is gating your deployments. Your CI tool shouldn't execute the tests itself; it should trigger QTP, wait for the result, and fail the pipeline if QTP reports a failure.
             </Paragraph>
             <Paragraph>
-              Here is a robust example for a bash-based CI step:
+              Here is how you can embed QTP into modern CI pipelines to act as a quality gate:
             </Paragraph>
-            <Code language="bash">{`#!/usr/bin/env bash
-set -euo pipefail
+            
+            <H3>GitHub Actions</H3>
+            <Code language="yaml">{`name: QTP E2E Tests
+on: [deployment_status]
 
-# 1. Trigger the Scenario Run
-echo "Triggering QTP Scenario..."
-RUN_RESP=$(curl -sf -X POST "$QTP_URL/api/tests/$SCENARIO_ID/run" \\
-  -H "Authorization: Bearer $QTP_TOKEN" \\
-  -H "Content-Type: application/json" \\
-  -d '{"tags": ["ci-triggered"]}')
+jobs:
+  run_qtp_tests:
+    if: github.event.deployment_status.state == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger and Poll QTP Scenario
+        env:
+          QTP_URL: \${{ secrets.QTP_URL }}
+          QTP_TOKEN: \${{ secrets.QTP_TOKEN }}
+          SCENARIO_ID: "checkout.e2e"
+        run: |
+          RUN_RESP=$(curl -sf -X POST "$QTP_URL/api/tests/$SCENARIO_ID/run" \\
+            -H "Authorization: Bearer $QTP_TOKEN" -H "Content-Type: application/json" -d '{"tags": ["github-actions"]}')
+          RUN_ID=$(echo "$RUN_RESP" | jq -r '.id')
+          echo "Run initiated: $RUN_ID"
+          
+          STATUS="running"
+          while [ "$STATUS" = "running" ] || [ "$STATUS" = "queued" ]; do
+            sleep 5
+            STATUS=$(curl -sf -X GET "$QTP_URL/api/runs/$RUN_ID" -H "Authorization: Bearer $QTP_TOKEN" | jq -r '.status')
+          done
+          
+          if [ "$STATUS" != "passed" ]; then
+            echo "Test failed with status: $STATUS"
+            exit 1
+          fi`}</Code>
 
-RUN_ID=$(echo "$RUN_RESP" | jq -r '.id')
-echo "Run initiated: $QTP_WEB_URL/runs/$RUN_ID"
-
-# 2. Poll for Completion
-STATUS="running"
-while [ "$STATUS" = "running" ] || [ "$STATUS" = "queued" ]; do
-  sleep 5
-  POLL_RESP=$(curl -sf -X GET "$QTP_URL/api/runs/$RUN_ID" \\
-    -H "Authorization: Bearer $QTP_TOKEN")
-  STATUS=$(echo "$POLL_RESP" | jq -r '.status')
-done
-
-# 3. Handle Result
-if [ "$STATUS" != "passed" ]; then
-  echo "Test failed with status: $STATUS"
-  exit 1
-fi
-echo "Test passed successfully!"`}</Code>
+            <H3>GitLab CI</H3>
+            <Code language="yaml">{`qtp_e2e_tests:
+  stage: test
+  image: alpine:latest
+  before_script:
+    - apk add --no-cache curl jq
+  variables:
+    SCENARIO_ID: "checkout.e2e"
+  script:
+    - |
+      RUN_RESP=$(curl -sf -X POST "$QTP_URL/api/tests/$SCENARIO_ID/run" \\
+        -H "Authorization: Bearer $QTP_TOKEN" -H "Content-Type: application/json" -d '{"tags": ["gitlab-ci"]}')
+      RUN_ID=$(echo "$RUN_RESP" | jq -r '.id')
+      echo "Run initiated: $RUN_ID"
+      
+      STATUS="running"
+      while [ "$STATUS" = "running" ] || [ "$STATUS" = "queued" ]; do
+        sleep 5
+        STATUS=$(curl -sf -X GET "$QTP_URL/api/runs/$RUN_ID" -H "Authorization: Bearer $QTP_TOKEN" | jq -r '.status')
+      done
+      
+      if [ "$STATUS" != "passed" ]; then
+        echo "Test failed with status: $STATUS"
+        exit 1
+      fi`}</Code>
 
             <H2 id="api" icon={<ApiOutlined />}>API Reference</H2>
             <Paragraph>
