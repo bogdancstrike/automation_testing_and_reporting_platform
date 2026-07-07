@@ -11,8 +11,20 @@ _Last updated: 2026-07-07._
 - [~] partial / simplified for the first runnable slice
 - [ ] not started
 
+## Horizontal scaling — Kafka worker transport (modulith, gevent+gunicorn)
+- [x] Modulith: one image, shared `backend/src`, two entrypoints — `backend/` (API + scheduler) and top-level `worker/` (Kafka consumer), started/scaled independently
+- [x] Both apps run under `gunicorn -k gevent` (greenlets, no OS threads); `backend/wsgi.py` + `worker/wsgi.py` + per-dir `gunicorn.conf.py`
+- [x] Scheduler merged into the backend as a greenlet, single-active across replicas via `pg_try_advisory_lock` (separate `scheduler` service removed)
+- [x] Run dispatch over Kafka topic `qtp-workers` (10 partitions): backend publishes `{run_id}` from the `session_scope` commit boundary (transactional outbox in `core/kafka_bus.py`); workers consume by partition, load the run from Postgres, execute, persist
+- [x] Shared consumer group `WORKER_NAME=qtp-workers` splits partitions across replicas; per-container `WORKER_INSTANCE_ID` identity for the `workers` table
+- [x] compose adds Kafka (KRaft, apache/kafka), kafka-ui (:8081), redis (QF ETL requirement), jaeger (:16686, OTLP :4317); worker scaled to `replicas: 3`
+- [x] Domain tracing spans → Jaeger: `execution.publish_run`, `worker.consume_run`, `execution.run`, `http.execute`/`http.step`, `scheduling.tick`
+- [x] Verified via `docker compose up`: topic created w/ 10 partitions, 3 workers split 4/3/3, batch of 30 runs distributed 11/10/9 all passed, full span tree in Jaeger, scheduler enqueues, queue_backlog drains to 0
+- [ ] `execution/queue.py::claim_next` is now dead code (workers no longer poll the DB); the `test_db_execution.py` integration test still exercises it — retire/rewrite for the Kafka path
+- [ ] Capability-aware routing not enforced over Kafka (single homogeneous group); revisit if heterogeneous workers are added
+
 ## Infrastructure & deploy
-- [x] `docker-compose.yml`: postgres 17, keycloak 26.1 (realm import), httpbin demo target, init, api, worker, scheduler, frontend
+- [x] `docker-compose.yml`: postgres 17, kafka + kafka-ui, redis, jaeger, keycloak 26.1 (realm import), httpbin demo target, init, api (backend: API+scheduler), worker ×3, frontend
 - [x] Backend `Dockerfile` (installs QF wheel + requirements)
 - [x] Top-level `config.py` shim (QF requires importable `config.Config`)
 - [x] Keycloak realm seed (`keycloak/realm-export.json`) — single `admin`/`admin` user with `qtp_admin`

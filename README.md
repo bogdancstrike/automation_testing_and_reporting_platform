@@ -83,20 +83,52 @@ codes, headers, JSON body assertions, regex, redirects, basic auth, timing).
 
 ## Architecture (services)
 
+QTP is a **modulith with two entrypoints** (one image, one shared `backend/src`):
+a **backend** (API + scheduler) and a **worker**, scaled independently. Both run
+under `gunicorn -k gevent` (async greenlets, no OS threads). Runs are dispatched
+to workers over **Kafka**, not a DB poll: the backend publishes one message per
+enqueued run (just the run id) to topic `qtp-workers` (10 partitions), and the
+worker consumer group splits the partitions across replicas.
+
 ```
 Browser (React + Ant Design, Keycloak login)
    │  JSON API, JWT bearer
    ▼
-API (Flask + QF FrameworkApp, dynamic endpoints under /qtp)
-   ├─ PostgreSQL  (definitions, targets, schedules, queue, runs, logs, metrics)
-   ├─ Worker      (claims queued runs FOR UPDATE SKIP LOCKED, runs adapters)
-   └─ Scheduler   (enqueues due schedules; never executes tests)
+Backend  (gunicorn+gevent; Flask + QF FrameworkApp under /qtp)
+   ├─ API            (definitions, targets, schedules, runs, logs, metrics)
+   ├─ Scheduler      (greenlet, pg advisory-lock; enqueues due schedules)
+   └─ Kafka producer (publishes run_id → topic "qtp-workers", keyed by run_id)
+        │
+        ▼  Kafka (10 partitions, consumer group "qtp-workers")
+Worker × N (gunicorn+gevent; QF ETL @kafka_handler)
+   └─ consumes run_id → loads the run from Postgres → runs the adapter →
+      persists results   (partitions split across replicas = horizontal scale)
+
+PostgreSQL = run-state source of truth · Redis = QF ETL runtime · Jaeger = traces
 Target apps under test (addressed by URL; demo = httpbin)
 ```
+
+The backend **produces** run ids to Kafka; each run id lands on one partition, so
+exactly one worker in the group executes it (that delivery is the "claim"). The
+worker fetches the full test/revision/target from Postgres by id and writes the
+outcome back — only the id travels through Kafka.
 
 Auth is Keycloak (OIDC). The API verifies JWTs against Keycloak's JWKS; in
 Docker it fetches keys internally (`http://keycloak:8080`) while validating the
 issuer the browser used (`http://localhost:8080`).
+
+### Scaling
+
+```bash
+docker compose up -d --build          # backend×1, worker×3 (default replicas)
+docker compose up -d --scale worker=6 # more consumers → Kafka rebalances the 10 partitions
+```
+
+Backend scales via `GUNICORN_WORKERS` / replicas; the scheduler stays single-active
+across all of them via a Postgres advisory lock. Workers scale via `replicas`
+(or `GUNICORN_WORKERS`); the shared `qtp-workers` consumer group spreads the 10
+partitions across them. Inspect topics/partitions/consumer-group lag in **Kafka UI**
+(http://localhost:8081) and traces in **Jaeger** (http://localhost:16686).
 
 ## Local development (without Docker)
 
@@ -105,15 +137,18 @@ Backend:
 ```bash
 cd backend
 python3 -m venv .venv && ./.venv/bin/pip install dist/qf-1.0.2-py3-none-any.whl -r requirements.txt
-# point DATABASE_URL / KEYCLOAK_* at your services (see .env.example)
-./.venv/bin/python scripts/init_db.py      # create tables + seed
-./.venv/bin/python main.py                 # API
-./.venv/bin/python worker.py               # worker (separate shell)
-./.venv/bin/python scheduler.py            # scheduler (separate shell)
+# point DATABASE_URL / KAFKA_BOOTSTRAP_SERVERS / REDIS_* / KEYCLOAK_* at your services (see .env.example)
+./.venv/bin/python scripts/init_db.py                             # tables + seed + create runs topic
+./.venv/bin/gunicorn -c gunicorn.conf.py wsgi:app                 # backend: API + scheduler (greenlet)
+
+# worker: a separate entrypoint of the same modulith (imports backend/src)
+cd ../worker
+PYTHONPATH=../backend ../backend/.venv/bin/gunicorn -c gunicorn.conf.py wsgi:app
 ```
 
-Set `AUTH_DISABLED=true` to bypass Keycloak with a synthetic admin for quick
-API smoke tests.
+Needs a Kafka broker and Redis reachable (the worker is a QF ETL Kafka consumer
+and the QF ETL runtime uses Redis). Set `AUTH_DISABLED=true` to bypass Keycloak
+with a synthetic admin for quick API smoke tests.
 
 Frontend:
 
@@ -138,7 +173,12 @@ Full walkthrough with snippets is in the app under **Developer Docs**.
 | Port | Service |
 | --- | --- |
 | 5173 | Frontend (nginx) |
-| 5100 | API |
+| 5100 | Backend API |
 | 8080 | Keycloak |
+| 8081 | Kafka UI |
 | 8088 | Demo target (httpbin) |
+| 9094 | Kafka (host/external listener) |
+| 6379 | Redis |
+| 16686 | Jaeger UI |
+| 4317 | OTLP gRPC (traces) |
 | 5432 | PostgreSQL |

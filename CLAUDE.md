@@ -26,23 +26,27 @@ updated as work lands. `README.md` has the docker-compose quickstart and port ta
 ### Run the full stack
 ```bash
 docker compose up -d --build
+docker compose up -d --scale worker=6   # more Kafka consumers → partitions rebalance
 ```
-Brings up postgres 17, Keycloak 26.1 (realm auto-imported), httpbin demo target, `init`
-(schema + seed, runs once), `api`, `worker`, `scheduler`, `frontend`. UI: `:5173`
-(admin/admin), API: `:5100/qtp`, Keycloak admin: `:8080`.
+Brings up postgres 17, Kafka (KRaft) + kafka-ui, Redis, Jaeger, Keycloak 26.1, httpbin,
+`init` (schema + seed + creates the 10-partition `qtp-workers` topic, runs once), `api`
+(backend: API + scheduler), 3 `worker` replicas, `frontend`. UI: `:5173` (admin/admin),
+API: `:5100/qtp`, Keycloak: `:8080`, Kafka UI: `:8081`, Jaeger: `:16686`.
 
 ### Backend, without Docker
 ```bash
 cd backend
 python3 -m venv .venv && ./.venv/bin/pip install dist/qf-1.0.2-py3-none-any.whl -r requirements.txt
-./.venv/bin/python scripts/init_db.py      # create tables + seed (create_all, not Alembic yet)
-./.venv/bin/python main.py                 # API on :5100
-./.venv/bin/python worker.py               # separate shell — claims + executes runs
-./.venv/bin/python scheduler.py            # separate shell — enqueues due schedules only
+# needs Postgres + Kafka + Redis reachable (see backend/.env.example)
+./.venv/bin/python scripts/init_db.py                   # tables + seed + create runs topic
+./.venv/bin/gunicorn -c gunicorn.conf.py wsgi:app       # backend: API + scheduler greenlet
+# worker is a separate entrypoint of the same modulith (imports backend/src):
+cd ../worker && PYTHONPATH=../backend ../backend/.venv/bin/gunicorn -c gunicorn.conf.py wsgi:app
 ```
-Set `AUTH_DISABLED=true` in `.env` to bypass Keycloak with a synthetic admin principal for
-local API smoke tests. For CI/curl, the hardcoded bearer `system-bearer-token` also
-resolves to the synthetic admin (see `src/iam/decorators.py::_build_principal`).
+Both apps run under `gunicorn -k gevent` (config in each dir's `gunicorn.conf.py`).
+`python main.py` in either dir is a dev fallback (no gunicorn). Set `AUTH_DISABLED=true`
+in `.env` to bypass Keycloak with a synthetic admin; for CI/curl, the hardcoded bearer
+`system-bearer-token` also resolves to the synthetic admin (`src/iam/decorators.py`).
 
 ### Backend tests
 ```bash
@@ -129,19 +133,42 @@ Dependency direction is one-way: `core` → `iam`/`testkit` → domain modules
 - `api/` — one thin module per resource, each function decorated with
   `@require_authenticated` or `@require_role(ROLE_...)`, opening a `session_scope()` and
   delegating to a service function. Look at `src/api/tests.py` for the canonical shape.
-- `workers/` — `execution_worker.py` and `scheduler_worker.py`, the process bodies behind
-  `worker.py`/`scheduler.py`. The worker claims `run_queue` rows with
-  `FOR UPDATE SKIP LOCKED`, filtered by capability (`http`, `playwright`, `selenium`,
-  `cli`, `python`) so e.g. a browser test is never claimed by an HTTP-only worker. The
-  scheduler only enqueues due schedules — it never executes tests itself.
+- `core/kafka_bus.py` — the Kafka producer bus: `ensure_runs_topic()` (creates
+  `qtp-workers` with `KAFKA_RUNS_PARTITIONS`=10) and `publish_run(run_id, capability)`.
+  Publishing happens from the `session_scope` **commit boundary** (`db.py`): `enqueue_run`
+  stashes `run.id` on `session.info["pending_runs"]` and it is published only after the
+  transaction commits — a transactional outbox, so a worker never races an uncommitted run.
+- `workers/` — `scheduler_worker.py` (`run_scheduler`, spawned as a greenlet by the backend
+  `wsgi.py`; a `pg_try_advisory_lock` keeps it single-active across all gunicorn workers/
+  replicas) and `execution_worker.py` (`run_liveness_loop`: registers the worker instance +
+  heartbeats the `workers` table). The actual run executor is `worker/kafka_runner.py` (a
+  top-level module, not under `src/`).
+
+### Topology: modulith, two entrypoints, Kafka transport
+
+One image, one shared `src/`, two entrypoints scaled independently — both run under
+`gunicorn -k gevent` (async greenlets, **no OS threads**; scale via `-w`/replicas):
+- **`backend/`** (`wsgi.py`) — API + scheduler(greenlet) + Kafka **producer**.
+- **`worker/`** (`wsgi.py` + `kafka_runner.py`) — Kafka **consumer**; imports shared
+  `backend/src` via `PYTHONPATH=/app/backend`. Every worker process joins consumer group
+  `WORKER_NAME` (=`qtp-workers`), so the broker splits the 10 partitions across replicas.
+  `WORKER_INSTANCE_ID` (hostname) is the per-container identity in the `workers` table.
+
+Dispatch is Kafka, not a DB poll: `enqueue_run` writes the `TestRun` (queued) and publishes
+just its id; the worker consumes the id, loads the run from Postgres, executes it via
+`execute_run`, and writes results back. Redis is required — the QF ETL worker runtime
+(`framework.etl`) uses it. See the `qtp-kafka-modulith-architecture` memory for the full
+rationale and the QF-ETL/gevent gotchas (e.g. the `OffsetAndMetadata` monkeypatch in
+`worker/wsgi.py`).
 
 ### Execution lifecycle
 
 `queued → claimed → preparing → running → {passed | failed | error | timeout | canceled |
 skipped}`. `failed` means the system worked but an assertion failed; `error` means
-infra/setup/unexpected exception. Cancellation is cooperative: a flag is set, the worker's
-supervisor signals the subprocess and force-terminates after a grace period, and
-`TestContext.should_cancel()` lets long-running code tests check between steps.
+infra/setup/unexpected exception. A run is delivered to exactly one worker via its Kafka
+partition (keyed by run id); the handler guards on terminal status for idempotency against
+redelivery. Cancellation is cooperative via `TestContext.should_cancel()`; `reap_stale`
+(run from the scheduler tick) marks runs of dead workers `error`/`worker_lost`.
 
 ### Frontend (`frontend/src/`)
 
