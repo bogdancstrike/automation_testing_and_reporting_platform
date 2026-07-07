@@ -144,7 +144,7 @@ export default function DocsPage() {
   }, [hash]);
 
   return (
-    <div className="qtp-docs-page" style={{ padding: '24px', maxWidth: '1400px', margin: '0 auto' }}>
+    <div className="qtp-docs-page" style={{ padding: '24px' }}>
       <Row gutter={48} align="top" wrap={false}>
         <Col xs={0} lg={5} className="qtp-docs-nav-col" style={{ position: 'sticky', top: '24px', height: 'calc(100vh - 48px)', overflowY: 'auto' }}>
           <aside className="qtp-docs-side-nav" aria-label="Documentation navigation">
@@ -184,7 +184,7 @@ export default function DocsPage() {
             </Cards>
 
             <Callout title="Who this guide is for" type="info">
-              This guide is written specifically for <strong>Developers</strong> and <strong>SDETs</strong> who use QTP to write, schedule, and maintain test scenarios. 
+              This guide is written specifically for <strong>Developers</strong> and <strong>Testers</strong> who use QTP to write, schedule, and maintain test scenarios.
               It covers how to interact with the system, author code-backed tests, and integrate with CI. It intentionally avoids infrastructure setup and administration details (like deploying QTP itself).
             </Callout>
 
