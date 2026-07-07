@@ -23,7 +23,8 @@ class HttpbinBasicAuth(HttpTest):
                 auth={"type": "basic", "username": "qtp", "password": "secret"},
             )
             response.should.have_status(200)
-            response.json.should.have_field("authenticated").equal_to(True)
+            response.json.should.have_field("authorized").equal_to(True)
+            response.json.should.have_field("user").equal_to("qtp")
 
         with ctx.step("wrong credentials are rejected"):
             response = ctx.http.get(
