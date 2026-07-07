@@ -306,36 +306,61 @@ class DemoApiTest(HttpTest):
             </Paragraph>
             <Code language="python">{`from src.testkit import TYPE_HTTP, HttpTest, TestMetadata
 
-class CreateOrderTest(HttpTest):
+class SelfMultiStepHealthLivenessReadiness(HttpTest):
     metadata = TestMetadata(
-        key="orders.create",
-        name="Create a new order",
+        key="self.multi_health",
+        name="QTP · Multi-step Health/Liveness/Readiness",
         type=TYPE_HTTP,
-        target="orders_api",
+        target="qtp_self"
     )
 
     def test(self, ctx):
-        payload = {"item_id": 42, "quantity": 1}
+        with ctx.step("Check Health"):
+            response = ctx.http.get("/health")
+            response.should.have_status(200)
+            response.json.should.have_field("status").equal_to("ok")
+
+        with ctx.step("Check Liveness"):
+            response = ctx.http.get("/liveness")
+            response.should.have_status(200)
+            response.json.should.have_field("status").equal_to("alive")`}</Code>
+
+            <H3>Stateful Multi-Step Workflows</H3>
+            <Paragraph>
+              For End-to-End API scenarios, you can group actions into steps and pass state dynamically. For instance, extracting an ID from a POST response and verifying it in a GET request. You can also implement a <code>cleanup</code> block.
+            </Paragraph>
+
+            <Code language="python">{`from src.testkit import TYPE_HTTP, HttpTest, TestMetadata
+
+class SelfTargetsCrud(HttpTest):
+    metadata = TestMetadata(key="self.auth.targets_crud", name="QTP · Targets CRUD", type=TYPE_HTTP, target="qtp_self")
+
+    def test(self, ctx):
+        token = {"type": "bearer", "token": "system-bearer-token"}
         
-        # ctx.http automatically prefixes the Target's base_url
-        response = ctx.http.post("/api/v1/orders", json=payload)
-        
-        # Fluent assertions automatically log to the Run evidence
-        response.should.have_status(201)
-        response.should.have_header("Content-Type").containing("application/json")
-        response.should.respond_within_ms(500)
-        
-        # JSON body assertions
-        response.json.should.have_field("order_id").exists()
-        response.json.should.have_field("status").equal_to("PENDING")
-        
-        # Capture variables for later steps
-        order_id = response.json.extract("order_id")
-        ctx.set_var("created_order_id", order_id)
-        
-        # Subsequent step using captured variable
-        get_resp = ctx.http.get(f"/api/v1/orders/{order_id}")
-        get_resp.should.have_status(200)`}</Code>
+        with ctx.step("Create Target"):
+            response = ctx.http.post("/api/targets", auth=token, json={
+                "key": "scn_tgt", "name": "Scenario Target", "base_url": "http://example.com"
+            })
+            response.should.have_status(201)
+            
+            # Extract variable for next steps
+            target_id = response.json.get("$.id")
+            ctx.set_var("target_id", target_id)
+
+        with ctx.step("Get Target"):
+            target_id = ctx.get_var("target_id")
+            response = ctx.http.get(f"/api/targets/{target_id}", auth=token)
+            response.should.have_status(200)
+            response.json.should.have_field("target.key").equal_to("scn_tgt")
+
+    def cleanup(self, ctx):
+        # Always runs even if test() throws an exception
+        target_id = ctx.get_var("target_id")
+        if target_id:
+            ctx.log("info", f"cleanup: deleting target {target_id}")`}</Code>
+
+
 
             <H2 id="authoring-python" icon={<CodeOutlined />}>Authoring: Python Logic</H2>
             <Paragraph>
@@ -419,7 +444,6 @@ class QtpSelfPlaywrightTest1(PlaywrightTest):
               For legacy or specialized grids, QTP also supports Selenium WebDriver via <code>SeleniumTest</code>.
             </Paragraph>
             <Code language="python">{`from src.testkit import TYPE_SELENIUM, SeleniumTest, TestMetadata
-from selenium.webdriver.common.by import By
 
 class LegacyUiTest(SeleniumTest):
     metadata = TestMetadata(
@@ -430,20 +454,28 @@ class LegacyUiTest(SeleniumTest):
     )
 
     def test(self, ctx):
-        # ctx.driver is a managed Selenium WebDriver instance
-        driver = ctx.driver
-        driver.get("https://example.com/")
+        from selenium import webdriver
+        from selenium.webdriver.chrome.options import Options
+        from selenium.webdriver.common.by import By
         
-        title = driver.find_element(By.TAG_NAME, "h1").text
+        options = Options()
+        options.add_argument('--headless=new')
+        driver = webdriver.Chrome(options=options)
         
-        ctx.assert_that(
-            'title_visible',
-            'equals',
-            title,
-            'Example Domain',
-            True,
-            message="Title should match"
-        )`}</Code>
+        try:
+            driver.get("https://example.com/")
+            title = driver.find_element(By.TAG_NAME, "h1").text
+            
+            ctx.assert_that(
+                'title_visible',
+                'equals',
+                title,
+                'Example Domain',
+                True,
+                message="Title should match"
+            )
+        finally:
+            driver.quit()`}</Code>
 
             <H2 id="authoring-cli" icon={<CodeOutlined />}>Authoring: CLI Tools</H2>
             <Paragraph>

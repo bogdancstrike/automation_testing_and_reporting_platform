@@ -138,24 +138,52 @@ The `HttpTest` base class is optimized for REST and GraphQL APIs. It provides a 
 ```python
 from src.testkit import TYPE_HTTP, HttpTest, TestMetadata
 
-class CreateOrderTest(HttpTest):
-    metadata = TestMetadata(
-        key="orders.create",
-        name="Create a new order",
-        type=TYPE_HTTP,
-        target="orders_api",
-    )
+class SelfMultiStepHealthLivenessReadiness(HttpTest):
+    metadata = TestMetadata(key="self.multi_health", name="QTP · Health/Liveness", type=TYPE_HTTP, target="qtp_self")
 
     def test(self, ctx):
-        # ctx.http automatically prefixes the Target's base_url
-        response = ctx.http.post("/api/v1/orders", json={"item_id": 42})
+        with ctx.step("Check Health"):
+            response = ctx.http.get("/health")
+            response.should.have_status(200)
+            response.json.should.have_field("status").equal_to("ok")
+
+        with ctx.step("Check Liveness"):
+            response = ctx.http.get("/liveness")
+            response.should.have_status(200)
+            response.json.should.have_field("status").equal_to("alive")
+```
+
+**Stateful Multi-Step Workflows:** For End-to-End API scenarios, you can group actions into steps and pass state dynamically.
+
+```python
+from src.testkit import TYPE_HTTP, HttpTest, TestMetadata
+
+class SelfTargetsCrud(HttpTest):
+    metadata = TestMetadata(key="self.auth.targets_crud", name="QTP · Targets CRUD", type=TYPE_HTTP, target="qtp_self")
+
+    def test(self, ctx):
+        token = {"type": "bearer", "token": "system-bearer-token"}
         
-        # Fluent assertions log directly to the Run evidence
-        response.should.have_status(201)
-        response.should.respond_within_ms(500)
-        
-        # JSON body assertions
-        response.json.should.have_field("order_id").exists()
+        with ctx.step("Create Target"):
+            response = ctx.http.post("/api/targets", auth=token, json={
+                "key": "scn_tgt", "name": "Scenario Target", "base_url": "http://example.com"
+            })
+            response.should.have_status(201)
+            
+            # Extract variable for next steps
+            target_id = response.json.get("$.id")
+            ctx.set_var("target_id", target_id)
+
+        with ctx.step("Get Target"):
+            target_id = ctx.get_var("target_id")
+            response = ctx.http.get(f"/api/targets/{target_id}", auth=token)
+            response.should.have_status(200)
+            response.json.should.have_field("target.key").equal_to("scn_tgt")
+
+    def cleanup(self, ctx):
+        target_id = ctx.get_var("target_id")
+        if target_id:
+            ctx.log("info", f"cleanup: deleting target {target_id}")
 ```
 
 ### 2. Python Custom Logic
@@ -221,6 +249,32 @@ class QtpSelfPlaywrightTest1(PlaywrightTest):
             True,
             message='Example.com title should be visible'
         )
+```
+
+For legacy or specialized grids, QTP also supports Selenium WebDriver via `SeleniumTest`.
+
+```python
+from src.testkit import TYPE_SELENIUM, SeleniumTest, TestMetadata
+
+class LegacyUiTest(SeleniumTest):
+    metadata = TestMetadata(key="ui.legacy_flow", name="Legacy UI Flow", type=TYPE_SELENIUM, target="webapp")
+
+    def test(self, ctx):
+        from selenium import webdriver
+        from selenium.webdriver.chrome.options import Options
+        from selenium.webdriver.common.by import By
+        
+        options = Options()
+        options.add_argument('--headless=new')
+        driver = webdriver.Chrome(options=options)
+        
+        try:
+            driver.get("https://example.com/")
+            title = driver.find_element(By.TAG_NAME, "h1").text
+            
+            ctx.assert_that('title_visible', 'equals', title, 'Example Domain', True, message="Title matches")
+        finally:
+            driver.quit()
 ```
 
 ### 4. CLI Tools
