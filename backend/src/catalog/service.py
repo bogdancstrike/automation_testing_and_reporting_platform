@@ -16,8 +16,11 @@ from src.config import Config
 from src.core.clock import utcnow
 from src.core.errors import ConflictError, NotFoundError, ValidationError
 from src.core.pagination import apply_sort, envelope, parse_page
+from framework.tracing import get_tracer
 from src.testkit.base import SUPPORTED_TYPES, TYPE_HTTP
 from src.testkit.registry import discover_classes, discover_from_path
+
+tracer = get_tracer()
 
 _CAPTURE_NAME = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_.-]*$")
 
@@ -167,6 +170,12 @@ def _config_target_key(config: dict[str, Any]) -> str:
 
 # ── Test definitions ───────────────────────────────────────────────────────
 def list_tests(db: Session, filters: dict[str, Any]) -> dict:
+    with tracer.start_as_current_span("catalog.list_tests") as span:
+        span.set_attribute("query.filters", json.dumps(filters, sort_keys=True, default=str))
+        return _list_tests(db, filters)
+
+
+def _list_tests(db: Session, filters: dict[str, Any]) -> dict:
     params = parse_page(filters, default_sort="name", default_order="asc")
     stmt = select(TestDefinition)
     if filters.get("type"):
@@ -247,6 +256,15 @@ def _make_revision(db: Session, definition: TestDefinition, *, code_ref=None, co
 
 
 def discover_tests(db: Session, modules: tuple[str, ...] | None = None) -> dict:
+    with tracer.start_as_current_span("catalog.discover_tests") as span:
+        result = _discover_tests(db, modules)
+        span.set_attribute("discovery.total_found", result.get("total_found", 0))
+        span.set_attribute("discovery.created", result.get("created", 0))
+        span.set_attribute("discovery.updated", result.get("updated", 0))
+        return result
+
+
+def _discover_tests(db: Session, modules: tuple[str, ...] | None = None) -> dict:
     project = default_project(db)
     if modules:
         classes = discover_classes(modules)
@@ -360,6 +378,12 @@ def delete_request_test(db: Session, test_id: str) -> dict:
 
 # ── Target detail / stats ──────────────────────────────────────────────────
 def get_target_detail(db: Session, target_id: str) -> dict:
+    with tracer.start_as_current_span("target.detail") as span:
+        span.set_attribute("target.id", target_id)
+        return _get_target_detail(db, target_id)
+
+
+def _get_target_detail(db: Session, target_id: str) -> dict:
     from src.execution.models import TestRun
     from src.scheduling.models import Schedule
 
@@ -406,7 +430,17 @@ def target_runs(db: Session, target_id: str, filters: dict[str, Any]) -> dict:
 
 
 def target_stats(db: Session, target_id: str, *, hours: int = 168) -> dict:
-    from src.execution.models import FailureSignature, TestRun
+    with tracer.start_as_current_span("target.stats") as span:
+        span.set_attribute("target.id", target_id)
+        span.set_attribute("window.hours", hours)
+        result = _target_stats(db, target_id, hours=hours)
+        span.set_attribute("stats.trend_points", len(result.get("trend", [])))
+        span.set_attribute("stats.recent_failed", len(result.get("recent_failed", [])))
+        return result
+
+
+def _target_stats(db: Session, target_id: str, *, hours: int = 168) -> dict:
+    from src.execution.models import TestRun
 
     target = _target_or_404(db, target_id)
     since = utcnow() - timedelta(hours=hours)

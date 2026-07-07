@@ -11,10 +11,13 @@ from src.catalog.service import resolve_target
 from src.core.correlation import get_correlation_id
 from src.core.errors import NotFoundError, ValidationError
 from src.core.pagination import apply_sort, envelope, parse_page
+from framework.tracing import get_tracer
 from src.execution import serializers
 from src.execution.failure_classifier import apply_defect
 from src.execution.models import RunQueue, TestRun
 from src.testkit.base import TYPE_CLI, TYPE_HTTP, TYPE_PLAYWRIGHT, TYPE_PYTHON, TYPE_SELENIUM
+
+tracer = get_tracer()
 
 _CAPABILITY = {
     TYPE_HTTP: "http", TYPE_PYTHON: "python", TYPE_PLAYWRIGHT: "playwright",
@@ -66,6 +69,15 @@ def _names(db: Session, runs: list[TestRun]) -> tuple[dict, dict]:
 
 
 def list_runs(db: Session, filters: dict[str, Any]) -> dict:
+    with tracer.start_as_current_span("execution.list_runs") as span:
+        span.set_attribute("query.filters", str(filters))
+        result = _list_runs(db, filters)
+        span.set_attribute("page.total", result.get("total", 0))
+        span.set_attribute("page.size", result.get("page_size", 0))
+        return result
+
+
+def _list_runs(db: Session, filters: dict[str, Any]) -> dict:
     params = parse_page(filters, default_sort="queued_at", default_order="desc", max_page_size=100)
     stmt = select(TestRun)
     if filters.get("status"):

@@ -17,9 +17,12 @@ import requests
 from src.config import Config
 from src.core.errors import ValidationError
 from src.core.net_guard import resolve_and_check
+from framework.tracing import get_tracer
 from src.testkit import assertions as asserts
 from src.testkit.context import TestContext
 from src.testkit.result import ERROR, FAILED, PASSED, TIMEOUT, AssertionResult, StepResult, TestResult
+
+tracer = get_tracer()
 
 
 def _enabled_pairs(items: list[dict[str, Any]] | None, ctx: TestContext) -> list[tuple[str, str]]:
@@ -238,84 +241,122 @@ def _apply_captures(step: dict[str, Any], response: dict[str, Any], ctx: TestCon
 
 
 def execute_http(config: dict[str, Any], ctx: TestContext) -> TestResult:
-    if not isinstance(config.get("steps"), list):
-        result = _execute_http_step(config, ctx)
-        if result.status == PASSED and config.get("captures"):
-            ok, message, captured = _apply_captures({"captures": config.get("captures")}, result.response, ctx)
-            result.response["captures"] = captured
-            if not ok:
-                result.status = FAILED
-                result.error_category = "capture_failed"
-                result.error_message = message
-        return result
-
-    started = time.monotonic()
     steps = normalize_steps(config)
-    all_steps: list[StepResult] = []
-    all_assertions: list[AssertionResult] = []
-    response_steps: list[dict[str, Any]] = []
-    final_status = PASSED
-    error_category = None
-    error_message = None
-    steps_passed = 0
+    with tracer.start_as_current_span("flow_executor") as span:
+        span.set_attribute("flow.steps", len(steps))
+        span.set_attribute("flow.mode", "multi_step" if isinstance(config.get("steps"), list) else "single_request")
 
-    session = requests.Session()
-    try:
-        for step in steps:
-            if ctx.should_cancel():
-                final_status = ERROR
-                error_category = "canceled"
-                error_message = "canceled during HTTP flow"
-                all_steps.append(StepResult(name=step["name"], status=ERROR, step_id=step["id"], error=error_message))
+        if not isinstance(config.get("steps"), list):
+            step = steps[0]
+            with tracer.start_as_current_span("http.step") as step_span:
+                step_span.set_attribute("step.id", step.get("id", "request"))
+                step_span.set_attribute("step.name", step.get("name", "Request"))
+                step_span.set_attribute("http.method", step.get("method", "GET"))
+                result = _execute_http_step(config, ctx)
+                step_span.set_attribute("step.status", result.status)
+                if result.response.get("status_code") is not None:
+                    step_span.set_attribute("http.status_code", result.response.get("status_code"))
+                if result.error_message:
+                    step_span.set_attribute("step.error", result.error_message)
+            if result.status == PASSED and config.get("captures"):
+                with tracer.start_as_current_span("http.captures") as cap_span:
+                    ok, message, captured = _apply_captures({"captures": config.get("captures")}, result.response, ctx)
+                    result.response["captures"] = captured
+                    cap_span.set_attribute("captures.count", len(captured))
+                    if not ok:
+                        result.status = FAILED
+                        result.error_category = "capture_failed"
+                        result.error_message = message
+                        cap_span.set_attribute("captures.error", message or "capture failed")
+            span.set_attribute("flow.status", result.status)
+            span.set_attribute("flow.elapsed_ms", result.metrics.get("elapsed_ms", 0))
+            return result
+
+        started = time.monotonic()
+        all_steps: list[StepResult] = []
+        all_assertions: list[AssertionResult] = []
+        response_steps: list[dict[str, Any]] = []
+        final_status = PASSED
+        error_category = None
+        error_message = None
+        steps_passed = 0
+
+        session = requests.Session()
+        try:
+            for step in steps:
+                if ctx.should_cancel():
+                    final_status = ERROR
+                    error_category = "canceled"
+                    error_message = "canceled during HTTP flow"
+                    all_steps.append(StepResult(name=step["name"], status=ERROR, step_id=step["id"], error=error_message))
+                    break
+                with tracer.start_as_current_span("http.step") as step_span:
+                    step_span.set_attribute("step.id", step["id"])
+                    step_span.set_attribute("step.name", step["name"])
+                    step_span.set_attribute("http.method", step.get("method", "GET"))
+                    single = _execute_http_step(step, ctx, session=session)
+                    step_span.set_attribute("step.status", single.status)
+                    if single.response.get("status_code") is not None:
+                        step_span.set_attribute("http.status_code", single.response.get("status_code"))
+                    if single.metrics.get("elapsed_ms") is not None:
+                        step_span.set_attribute("step.duration_ms", single.metrics.get("elapsed_ms"))
+                    if single.error_message:
+                        step_span.set_attribute("step.error", single.error_message)
+                for s in single.steps:
+                    s.step_id = s.step_id or step["id"]
+                    s.name = step.get("name") or s.name
+                    all_steps.append(s)
+                for assertion in single.assertions:
+                    assertion.message = f"{step['name']}: {assertion.message}" if assertion.message else step["name"]
+                    if assertion.target:
+                        assertion.target = f"{step['id']}:{assertion.target}"
+                    all_assertions.append(assertion)
+
+                captured: list[str] = []
+                if single.status == PASSED:
+                    with tracer.start_as_current_span("http.captures") as cap_span:
+                        cap_span.set_attribute("step.id", step["id"])
+                        ok, capture_error, captured = _apply_captures(step, single.response, ctx)
+                        cap_span.set_attribute("captures.count", len(captured))
+                        if not ok:
+                            cap_span.set_attribute("captures.error", capture_error or "capture failed")
+                            single.status = FAILED
+                            single.error_category = "capture_failed"
+                            single.error_message = capture_error
+                            if all_steps:
+                                all_steps[-1].status = FAILED
+                                all_steps[-1].error = capture_error
+                response_steps.append({
+                    "id": step["id"], "name": step["name"], "method": step.get("method"),
+                    "url": ctx.render(str(step.get("url", ""))), "status": single.status,
+                    "captures": captured, "response": single.response,
+                    "error_category": single.error_category, "error_message": single.error_message,
+                })
+                if single.status == PASSED:
+                    steps_passed += 1
+                    continue
+                final_status = single.status
+                error_category = single.error_category
+                error_message = single.error_message
                 break
-            single = _execute_http_step(step, ctx, session=session)
-            for s in single.steps:
-                s.step_id = s.step_id or step["id"]
-                s.name = step.get("name") or s.name
-                all_steps.append(s)
-            for assertion in single.assertions:
-                assertion.message = f"{step['name']}: {assertion.message}" if assertion.message else step["name"]
-                if assertion.target:
-                    assertion.target = f"{step['id']}:{assertion.target}"
-                all_assertions.append(assertion)
+        finally:
+            session.close()
 
-            captured: list[str] = []
-            if single.status == PASSED:
-                ok, capture_error, captured = _apply_captures(step, single.response, ctx)
-                if not ok:
-                    single.status = FAILED
-                    single.error_category = "capture_failed"
-                    single.error_message = capture_error
-                    if all_steps:
-                        all_steps[-1].status = FAILED
-                        all_steps[-1].error = capture_error
-            response_steps.append({
-                "id": step["id"], "name": step["name"], "method": step.get("method"),
-                "url": ctx.render(str(step.get("url", ""))), "status": single.status,
-                "captures": captured, "response": single.response,
-                "error_category": single.error_category, "error_message": single.error_message,
-            })
-            if single.status == PASSED:
-                steps_passed += 1
-                continue
-            final_status = single.status
-            error_category = single.error_category
-            error_message = single.error_message
-            break
-    finally:
-        session.close()
-
-    elapsed_ms = int((time.monotonic() - started) * 1000)
-    return TestResult(
-        status=final_status,
-        steps=all_steps,
-        assertions=all_assertions,
-        error_category=error_category,
-        error_message=error_message,
-        response={"steps": response_steps, "last_response": response_steps[-1]["response"] if response_steps else {}},
-        metrics={"elapsed_ms": elapsed_ms, "steps_total": len(steps), "steps_passed": steps_passed},
-    )
-
+        elapsed_ms = int((time.monotonic() - started) * 1000)
+        span.set_attribute("flow.status", final_status)
+        span.set_attribute("flow.elapsed_ms", elapsed_ms)
+        span.set_attribute("flow.steps_passed", steps_passed)
+        if error_message:
+            span.set_attribute("flow.error", error_message)
+        return TestResult(
+            status=final_status,
+            steps=all_steps,
+            assertions=all_assertions,
+            error_category=error_category,
+            error_message=error_message,
+            response={"steps": response_steps, "last_response": response_steps[-1]["response"] if response_steps else {}},
+            metrics={"elapsed_ms": elapsed_ms, "steps_total": len(steps), "steps_passed": steps_passed},
+        )
 
 def _classify_failure(results) -> str:
     for a in results:

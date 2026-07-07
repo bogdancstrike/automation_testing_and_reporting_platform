@@ -10,7 +10,10 @@ from src.catalog.models import TestDefinition
 from src.comments import serializers
 from src.comments.models import EntityComment
 from src.core.errors import NotFoundError, ValidationError
+from framework.tracing import get_tracer
 from src.execution.models import TestRun
+
+tracer = get_tracer()
 
 _ENTITY_TYPES = {"test", "run"}
 
@@ -42,6 +45,13 @@ def _entity_project(db: Session, entity_type: str, entity_id: str) -> str:
 
 
 def list_comments(db: Session, entity_type: str, entity_id: str) -> list[dict[str, Any]]:
+    with tracer.start_as_current_span("comments.list") as span:
+        span.set_attribute("entity.type", entity_type)
+        span.set_attribute("entity.id", entity_id)
+        return _list_comments(db, entity_type, entity_id)
+
+
+def _list_comments(db: Session, entity_type: str, entity_id: str) -> list[dict[str, Any]]:
     _entity_project(db, entity_type, entity_id)
     rows = db.scalars(
         select(EntityComment)
@@ -52,6 +62,16 @@ def list_comments(db: Session, entity_type: str, entity_id: str) -> list[dict[st
 
 
 def create_comment(db: Session, entity_type: str, entity_id: str, payload: dict[str, Any], *, author: str) -> dict[str, Any]:
+    with tracer.start_as_current_span("comments.create") as span:
+        span.set_attribute("entity.type", entity_type)
+        span.set_attribute("entity.id", entity_id)
+        result = _create_comment(db, entity_type, entity_id, payload, author=author)
+        span.set_attribute("comment.id", result.get("id"))
+        span.set_attribute("comment.tags", len(result.get("tags", [])))
+        return result
+
+
+def _create_comment(db: Session, entity_type: str, entity_id: str, payload: dict[str, Any], *, author: str) -> dict[str, Any]:
     body = str(payload.get("body", "")).strip()
     if not body:
         raise ValidationError("comment body is required")
@@ -70,6 +90,14 @@ def create_comment(db: Session, entity_type: str, entity_id: str, payload: dict[
 
 
 def update_test_tags(db: Session, test_id: str, tags: list[Any]) -> dict[str, Any]:
+    with tracer.start_as_current_span("tags.update_test") as span:
+        span.set_attribute("test.id", test_id)
+        result = _update_test_tags(db, test_id, tags)
+        span.set_attribute("tags.count", len(result.get("tags", [])))
+        return result
+
+
+def _update_test_tags(db: Session, test_id: str, tags: list[Any]) -> dict[str, Any]:
     test = db.get(TestDefinition, test_id)
     if not test:
         raise NotFoundError("test not found")
@@ -79,6 +107,14 @@ def update_test_tags(db: Session, test_id: str, tags: list[Any]) -> dict[str, An
 
 
 def list_tags(db: Session, q: str = "") -> list[str]:
+    with tracer.start_as_current_span("tags.list") as span:
+        span.set_attribute("query.q", q)
+        result = _list_tags(db, q)
+        span.set_attribute("tags.count", len(result))
+        return result
+
+
+def _list_tags(db: Session, q: str = "") -> list[str]:
     needle = q.strip().lower()
     values: dict[str, str] = {}
     for tags in db.scalars(select(TestDefinition.tags)).all():

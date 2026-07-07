@@ -107,6 +107,11 @@ The Developer Docs should teach this as the default workflow: create one Python 
 
 
 
+
+## Backend Tracing
+
+Critical backend paths should emit QF/OpenTelemetry spans using `framework.tracing.get_tracer()` and `tracer.start_as_current_span(...)`, following the qflow and Tickora backend style. Required spans include run execution, flow execution, HTTP steps, captures, discovery, target stats, backend table queries, comments, and tag updates. Spans should include useful attributes such as run id, test id, target id, step id, method, status, duration, page size, and result counts. Tracing must rely on QF Framework tracing.py, which provides the NoOp behavior when disabled, and must not change business behavior when disabled.
+
 ## QF Framework Usage
 
 Use QF Framework capabilities where they simplify the platform boundary: app/bootstrap conventions, dynamic endpoint registration, logging, configuration integration, and existing Flask/QF wiring. Keep domain logic, test execution, pagination, comments, tags, and target analytics as plain Python services so the architecture remains easy to understand and test. Do not add Kafka, ETL, or heavier QF subsystems unless a feature genuinely needs them.

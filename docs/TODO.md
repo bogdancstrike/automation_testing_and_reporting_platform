@@ -102,4 +102,5 @@ _Last updated: 2026-07-07._
 - [ ] Reusable user tags for tests, created on demand and suggested for reuse
 - [ ] Test detail comments with optional tags
 - [ ] Run detail comments with optional tags
+- [ ] Backend tracing spans for run execution, flow execution, HTTP steps, discovery, target stats, comments, and tags
 - [ ] Keep this TODO updated as items move to done, partial, or deferred during the implementation

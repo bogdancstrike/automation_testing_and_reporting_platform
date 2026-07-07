@@ -381,6 +381,30 @@ Mark reusable tags/comments as `[~]` until both backend and frontend verificatio
 
 ---
 
+
+### Task 5B: Backend Tracing Spans
+
+**Files:**
+- Modify: `backend/src/testkit/adapters/http.py`
+- Modify: `backend/src/execution/runner.py`
+- Modify: `backend/src/execution/service.py`
+- Modify: `backend/src/catalog/service.py`
+- Modify: `backend/src/comments/service.py`
+
+- [ ] **Step 1: Use QF tracing directly**
+
+Import `get_tracer` from `framework.tracing` in instrumented modules. Do not add a QTP-local tracing abstraction; QF tracing.py already supplies the NoOp behavior when tracing is disabled.
+
+- [ ] **Step 2: Add flow executor span**
+
+Wrap multi-step HTTP execution with `with tracer.start_as_current_span("flow_executor") as span:` and set attributes for step count, final status, elapsed time, and errors.
+
+- [ ] **Step 3: Add critical child spans**
+
+Add spans for HTTP steps, captures, run execution, discovery, target stats, paginated run queries, comments, and tag updates.
+
+---
+
 ### Task 6: Frontend API And React Flow Dependency
 
 **Files:**

@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from src.catalog.models import Target, TestDefinition, TestRevision
 from src.core.clock import utcnow
+from framework.tracing import get_tracer
 from src.execution.failure_classifier import record_failure
 from src.execution.models import (RunLog, TestRun, TestRunAssertion,
                                   TestRunStep)
@@ -17,6 +18,8 @@ from src.testkit.base import TYPE_HTTP
 from src.testkit.context import ResolvedTarget, TestContext
 from src.testkit.result import (CANCELED, ERROR, FAILED, TERMINAL_STATUSES,
                                 TIMEOUT, TestResult)
+
+tracer = get_tracer()
 
 
 def _build_context(db: Session, run: TestRun, definition: TestDefinition,
@@ -65,35 +68,47 @@ def _run_code_test(code_ref: str, ctx: TestContext) -> TestResult:
 
 def execute_run(db: Session, run: TestRun, worker_name: str) -> None:
     """Execute a claimed run and persist its outcome. Commits are the caller's."""
-    definition = db.get(TestDefinition, run.test_definition_id)
-    revision = db.get(TestRevision, run.revision_id) if run.revision_id else None
-    target = db.get(Target, run.target_id) if run.target_id else None
+    with tracer.start_as_current_span("execution.run") as span:
+        span.set_attribute("run.id", run.id)
+        span.set_attribute("run.test_definition_id", run.test_definition_id)
+        span.set_attribute("worker.name", worker_name)
+        definition = db.get(TestDefinition, run.test_definition_id)
+        revision = db.get(TestRevision, run.revision_id) if run.revision_id else None
+        target = db.get(Target, run.target_id) if run.target_id else None
+        if definition:
+            span.set_attribute("test.key", definition.key)
+            span.set_attribute("test.type", definition.type)
+        if target:
+            span.set_attribute("target.key", target.key)
 
-    run.status = "running"
-    run.worker_name = worker_name
-    run.started_at = utcnow()
-    db.flush()
+        run.status = "running"
+        run.worker_name = worker_name
+        run.started_at = utcnow()
+        db.flush()
 
-    ctx = _build_context(db, run, definition, target)
+        ctx = _build_context(db, run, definition, target)
 
-    if ctx.should_cancel():
-        result = TestResult(status=CANCELED, error_category="canceled",
-                            error_message="canceled before execution")
-    else:
-        started = time.monotonic()
-        try:
-            if revision and revision.code_ref:
-                result = _run_code_test(revision.code_ref, ctx)
-            elif definition.type == TYPE_HTTP:
-                result = execute_http(dict(revision.config if revision else {}), ctx)
-            else:
-                result = unsupported(definition.type)(dict(revision.config if revision else {}), ctx)
-        except Exception as e:  # pragma: no cover
-            result = TestResult(status=ERROR, error_category="script_error", error_message=str(e))
-        result.metrics.setdefault("elapsed_ms", int((time.monotonic() - started) * 1000))
+        if ctx.should_cancel():
+            result = TestResult(status=CANCELED, error_category="canceled", error_message="canceled before execution")
+        else:
+            started = time.monotonic()
+            try:
+                if revision and revision.code_ref:
+                    result = _run_code_test(revision.code_ref, ctx)
+                elif definition.type == TYPE_HTTP:
+                    result = execute_http(dict(revision.config if revision else {}), ctx)
+                else:
+                    result = unsupported(definition.type)(dict(revision.config if revision else {}), ctx)
+            except Exception as e:  # pragma: no cover
+                span.record_exception(e)
+                result = TestResult(status=ERROR, error_category="script_error", error_message=str(e))
+            result.metrics.setdefault("elapsed_ms", int((time.monotonic() - started) * 1000))
 
-    _persist(db, run, definition, ctx, result)
-
+        span.set_attribute("run.status", result.status)
+        span.set_attribute("run.elapsed_ms", result.metrics.get("elapsed_ms", 0))
+        if result.error_message:
+            span.set_attribute("run.error", result.error_message)
+        _persist(db, run, definition, ctx, result)
 
 def _persist(db: Session, run: TestRun, definition: TestDefinition,
              ctx: TestContext, result: TestResult) -> None:

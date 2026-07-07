@@ -1,3 +1,14 @@
+export interface Page<T> {
+  items: T[];
+  page: number;
+  page_size: number;
+  total: number;
+  sort?: string;
+  order?: "asc" | "desc";
+}
+
+export type QueryParams = Record<string, string | number | boolean | undefined | null>;
+
 export interface Me {
   subject: string;
   username: string;
@@ -45,7 +56,8 @@ export interface TestDetail extends TestDef {
   url_template?: string;
   code_ref?: string;
   assertions?: any[];
-  target?: { key: string; name: string; base_url: string; health_url?: string } | null;
+  steps?: RequestStep[];
+  target?: { id?: string; key: string; name: string; base_url: string; health_url?: string } | null;
   source_code?: string | null;
   source_language?: string;
 }
@@ -64,6 +76,7 @@ export interface RunSummary {
   id: string;
   test_definition_id: string;
   test_name?: string;
+  target_id?: string;
   target_key?: string;
   status: string;
   trigger: string;
@@ -81,7 +94,7 @@ export interface RunSummary {
 }
 
 export interface RunDetail extends RunSummary {
-  steps: { name: string; status: string; duration_ms: number; error?: string }[];
+  steps: { id?: string; name: string; status: string; duration_ms: number; error?: string }[];
   assertions: AssertionResult[];
   response: Record<string, any>;
 }
@@ -133,6 +146,7 @@ export interface Failures {
   defect_distribution: Record<string, number>;
   recent_failed: {
     id: string;
+    test_definition_id?: string;
     test_name?: string;
     status: string;
     error_category?: string;
@@ -147,4 +161,57 @@ export interface SendResult {
   logs: { level: string; message: string }[];
   error_category?: string;
   error_message?: string;
+}
+
+
+export interface RequestStep {
+  id: string;
+  name: string;
+  method: string;
+  url: string;
+  target?: string;
+  headers?: any[];
+  query?: any[];
+  auth?: any;
+  body?: any;
+  assertions?: any[];
+  captures?: any[];
+}
+
+export interface CommentItem {
+  id: string;
+  entity_type: "test" | "run";
+  entity_id: string;
+  author: string;
+  body: string;
+  tags: string[];
+  created_at?: string;
+}
+
+export interface TargetDetail {
+  target: Target;
+  test_count: number;
+  scheduled_test_count: number;
+  totals: Record<string, number>;
+  pass_rate?: number;
+  duration_ms: { p50?: number; p95?: number; avg?: number };
+  status_distribution: Record<string, number>;
+}
+
+export interface TargetStats {
+  target_id: string;
+  window_hours: number;
+  trend: Record<string, any>[];
+  duration_trend: { bucket: string; avg_ms?: number }[];
+  defect_distribution: Record<string, number>;
+  recent_failed: {
+    id: string;
+    test_definition_id?: string;
+    test_name?: string;
+    status: string;
+    error_category?: string;
+    defect_type?: string;
+    finished_at?: string;
+  }[];
+  latest_per_test: { id: string; key: string; name: string; last_run_status?: string; last_run_at?: string }[];
 }
