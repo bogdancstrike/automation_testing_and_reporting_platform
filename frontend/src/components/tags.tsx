@@ -38,8 +38,24 @@ export function TypeTag({ type }: { type: string }) {
   return <Tag color={colors[type] || "default"}>{type}</Tag>;
 }
 
+export function formatDurationMs(ms: number): string {
+  if (ms < 1000) return `${Math.round(ms)} ms`;
+  const totalSeconds = ms / 1000;
+  if (totalSeconds < 60) return `${totalSeconds.toFixed(2)} s`;
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = Math.floor(totalSeconds % 60);
+  if (minutes < 60) {
+    return seconds > 0 ? `${minutes}m ${seconds}s` : `${minutes}m`;
+  }
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+  let res = `${hours}h`;
+  if (remainingMinutes > 0) res += ` ${remainingMinutes}m`;
+  if (seconds > 0) res += ` ${seconds}s`;
+  return res;
+}
+
 export function Duration({ ms }: { ms?: number | null }) {
   if (ms === null || ms === undefined) return <span>—</span>;
-  if (ms < 1000) return <span>{ms} ms</span>;
-  return <span>{(ms / 1000).toFixed(2)} s</span>;
+  return <span>{formatDurationMs(ms)}</span>;
 }

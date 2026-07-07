@@ -366,10 +366,10 @@ export default function RequestBuilderPage() {
 
   const filtered = saved.filter((t) => !search || t.name.toLowerCase().includes(search.toLowerCase()));
   const currentStep = steps[currentStepIndex] || steps[0];
-  const panelBg = token.colorBgContainer;
-  const sidebarBg = token.colorBgElevated;
-  const subtleBg = token.colorFillQuaternary;
-  const selectedBg = token.colorPrimaryBg;
+  const panelBg = "var(--qtp-surface-bg)";
+  const sidebarBg = "var(--qtp-surface-bg)";
+  const subtleBg = "var(--qtp-content-bg)";
+  const selectedBg = "rgba(37, 99, 235, 0.15)";
 
   const updateCurrentStep = (patch: Partial<RequestStep>) => {
     setSteps(steps.map((s, idx) => idx === currentStepIndex ? { ...s, ...patch } as RequestStep : s));
@@ -379,8 +379,8 @@ export default function RequestBuilderPage() {
     <Layout style={{ height: "calc(100vh - 64px)", background: "transparent" }}>
       <Splitter style={{ flex: 1, width: "100%", height: "100%" }}>
         <Splitter.Panel defaultSize={280} min={220} max={500}>
-          <div style={{ width: "100%", height: "100%", borderRight: `1px solid ${token.colorBorderSecondary}`, background: sidebarBg, display: "flex", flexDirection: "column" }}>
-        <div style={{ padding: "16px 12px", borderBottom: `1px solid ${token.colorBorderSecondary}`, background: panelBg }}>
+          <div style={{ width: "100%", height: "100%", borderRight: `1px solid var(--qtp-surface-border)`, background: sidebarBg, display: "flex", flexDirection: "column" }}>
+        <div style={{ padding: "16px 12px", borderBottom: `1px solid var(--qtp-surface-border)`, background: panelBg }}>
           <Space style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
             <Typography.Text strong>Collections</Typography.Text>
             <Button size="small" type="primary" ghost icon={<PlusOutlined />} onClick={reset}>New</Button>
@@ -430,7 +430,7 @@ export default function RequestBuilderPage() {
         <Splitter.Panel>
           <Content style={{ display: "flex", flexDirection: "column", height: "100%" }}>
         {/* Header Bar */}
-        <div style={{ padding: "12px 24px", background: panelBg, borderBottom: `1px solid ${token.colorBorderSecondary}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div style={{ padding: "12px 24px", background: panelBg, borderBottom: `1px solid var(--qtp-surface-border)`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <Space>
             <Typography.Title level={4} style={{ margin: 0 }}>
               {editingId ? editingName : "New request"}
@@ -462,7 +462,7 @@ export default function RequestBuilderPage() {
         <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
           {/* Flow sidebar if enabled */}
           {mode === "flow" && (
-            <div style={{ width: 220, borderRight: `1px solid ${token.colorBorderSecondary}`, background: sidebarBg, padding: 12, overflowY: "auto" }}>
+            <div style={{ width: 220, borderRight: `1px solid var(--qtp-surface-border)`, background: sidebarBg, padding: 12, overflowY: "auto" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
                 <Typography.Text strong>Steps</Typography.Text>
                 <Button size="small" type="primary" ghost icon={<PlusOutlined />} onClick={addStep} />
@@ -527,7 +527,7 @@ export default function RequestBuilderPage() {
                   children: (
                     <div>
                       <Segmented options={["none", "json", "text", "form", "graphql"]} value={currentStep.bodyMode || "none"} onChange={(v) => updateCurrentStep({ bodyMode: v as any })} />
-                      {(currentStep.bodyMode || "none") !== "none" && <Input.TextArea rows={8} style={{ marginTop: 12, fontFamily: "monospace", background: token.colorBgElevated }} value={currentStep.bodyRaw || ""} onChange={(e) => updateCurrentStep({ bodyRaw: e.target.value })} placeholder='{"key": "value"}' />}
+                      {(currentStep.bodyMode || "none") !== "none" && <Input.TextArea rows={8} style={{ marginTop: 12, fontFamily: "monospace", background: "var(--qtp-code-bg)" }} value={currentStep.bodyRaw || ""} onChange={(e) => updateCurrentStep({ bodyRaw: e.target.value })} placeholder='{"key": "value"}' />}
                     </div>
                   ),
                 },
@@ -537,7 +537,7 @@ export default function RequestBuilderPage() {
             </Splitter.Panel>
 
             {/* Response Area Container (Splitter) */}
-            <Splitter.Panel defaultSize="40%" min="20%" style={{ background: subtleBg, overflowY: "auto", position: "relative", borderTop: `1px solid ${token.colorBorderSecondary}` }}>
+            <Splitter.Panel defaultSize="40%" min="20%" style={{ background: subtleBg, overflowY: "auto", position: "relative", borderTop: `1px solid var(--qtp-surface-border)` }}>
               {!result ? (
                 <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: token.colorTextQuaternary }}>
                   <Space direction="vertical" align="center">
@@ -728,7 +728,7 @@ function ResponseView({ result }: { result: SendResult }) {
 
     return (
       <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
-        <div style={{ padding: "8px 16px", background: panelBg, borderBottom: `1px solid ${token.colorBorderSecondary}`, display: "flex", justifyContent: "space-between" }}>
+        <div style={{ padding: "8px 16px", background: panelBg, borderBottom: `1px solid var(--qtp-surface-border)`, display: "flex", justifyContent: "space-between" }}>
           <Space>
             <Typography.Text strong>Flow Result</Typography.Text>
             <Tag color={result.status === "passed" ? "success" : "error"}>{result.status}</Tag>
@@ -736,7 +736,7 @@ function ResponseView({ result }: { result: SendResult }) {
           <Typography.Text type="secondary">{r.elapsed_ms != null ? `${r.elapsed_ms} ms total` : ""}</Typography.Text>
         </div>
         <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
-          <div style={{ width: 220, borderRight: `1px solid ${token.colorBorderSecondary}`, overflowY: "auto", background: panelBg }}>
+          <div style={{ width: 220, borderRight: `1px solid var(--qtp-surface-border)`, overflowY: "auto", background: panelBg }}>
             <List
               size="small"
               dataSource={r.steps}
@@ -761,7 +761,7 @@ function ResponseView({ result }: { result: SendResult }) {
              <Row gutter={24}>
                <Col span={14}>
                  <Tabs items={[
-                    { key: "body", label: "Body", children: <pre style={{ background: panelBg, padding: 12, borderRadius: 6, border: `1px solid ${token.colorBorderSecondary}`, marginTop: 0, overflowX: "auto" }}>{(stepRespData.body_text || "").slice(0, 5000) || "(empty)"}</pre> },
+                    { key: "body", label: "Body", children: <pre style={{ background: panelBg, padding: 12, borderRadius: 6, border: `1px solid var(--qtp-surface-border)`, marginTop: 0, overflowX: "auto" }}>{(stepRespData.body_text || "").slice(0, 5000) || "(empty)"}</pre> },
                     { key: "headers", label: "Headers", children: <Empty description="Headers not implemented in preview" image={Empty.PRESENTED_IMAGE_SIMPLE} /> },
                     { key: "captures", label: "Captures", children: renderCaptures(stepRespData.captures) }
                   ]} />
@@ -787,7 +787,7 @@ function ResponseView({ result }: { result: SendResult }) {
   const allPass = result.assertions.every((a) => a.passed);
   return (
     <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
-      <div style={{ padding: "8px 16px", background: panelBg, borderBottom: `1px solid ${token.colorBorderSecondary}`, display: "flex", justifyContent: "space-between" }}>
+      <div style={{ padding: "8px 16px", background: panelBg, borderBottom: `1px solid var(--qtp-surface-border)`, display: "flex", justifyContent: "space-between" }}>
         <Space>
           <Typography.Text strong>Response</Typography.Text>
           {r.status_code != null && <Typography.Text type={r.status_code >= 400 ? "danger" : "success"}>{r.status_code} {r.status_code >= 400 ? "Error" : "OK"}</Typography.Text>}
@@ -802,7 +802,7 @@ function ResponseView({ result }: { result: SendResult }) {
         <Row gutter={24}>
           <Col span={14}>
             <Tabs items={[
-              { key: "body", label: "Body", children: <pre style={{ background: panelBg, padding: 12, borderRadius: 6, border: `1px solid ${token.colorBorderSecondary}`, marginTop: 0, overflowX: "auto" }}>{(r.body_text || "").slice(0, 5000) || "(empty)"}</pre> },
+              { key: "body", label: "Body", children: <pre style={{ background: panelBg, padding: 12, borderRadius: 6, border: `1px solid var(--qtp-surface-border)`, marginTop: 0, overflowX: "auto" }}>{(r.body_text || "").slice(0, 5000) || "(empty)"}</pre> },
               { key: "headers", label: "Headers", children: <Empty description="Headers not implemented in preview" image={Empty.PRESENTED_IMAGE_SIMPLE} /> },
               { key: "captures", label: "Captures", children: renderCaptures(r.captures) }
             ]} />

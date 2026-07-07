@@ -114,7 +114,7 @@ export default function RunDetailPage() {
               const sResp = step.response || {};
               return (
                 <Row gutter={16}>
-                  <Col span={6} style={{ borderRight: "1px solid #f0f0f0" }}>
+                  <Col span={6} style={{ borderRight: "1px solid var(--qtp-surface-border)" }}>
                     <List
                       size="small"
                       dataSource={resp.steps}
@@ -123,7 +123,7 @@ export default function RunDetailPage() {
                           onClick={() => setSelectedResponseStepIdx(idx)}
                           style={{
                             cursor: "pointer",
-                            background: selectedResponseStepIdx === idx ? "#e6f4ff" : undefined,
+                            background: selectedResponseStepIdx === idx ? "rgba(37, 99, 235, 0.15)" : undefined,
                             paddingInline: 8,
                             borderRadius: 4,
                             marginBottom: 4,
@@ -213,7 +213,7 @@ export default function RunDetailPage() {
                 dataSource={comments}
                 locale={{ emptyText: "No comments yet" }}
                 renderItem={(item: any) => (
-                  <List.Item style={{ padding: "12px 0", borderBottom: "1px solid #f0f0f0" }}>
+                  <List.Item style={{ padding: "12px 0", borderBottom: "1px solid var(--qtp-surface-border)" }}>
                     <List.Item.Meta
                       title={
                         <Space>
