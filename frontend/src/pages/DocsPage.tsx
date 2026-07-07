@@ -210,7 +210,7 @@ export default function DocsPage() {
             </Paragraph>
             <ul>
               <li><strong>The Control Plane (Backend & UI):</strong> Manages test definitions, schedules, and execution history. It exposes a REST API that the UI and your CI/CD pipelines talk to.</li>
-              <li><strong>Workers (Execution Agents):</strong> The actual runners that execute your scenarios. Workers poll the backend for jobs. They are isolated, scalable, and run the Python test runner.</li>
+              <li><strong>Workers (Execution Agents):</strong> The actual runners that execute your scenarios. Workers poll the backend for jobs via Kafka. They are scalable and isolated, with specialized images supporting Python, HTTP, CLI, Playwright, and Selenium execution capabilities.</li>
               <li><strong>Your Code Repository:</strong> Code-backed scenarios live in your repository (typically under <code>backend/scenarios/automation</code>). QTP discovers these via API triggers.</li>
             </ul>
             <Paragraph>
@@ -399,6 +399,35 @@ class LoginUiTest(PlaywrightTest):
         
         # Capture screenshots on specific steps
         ctx.browser.screenshot(name="dashboard_loaded")`}</Code>
+
+            <Paragraph style={{ marginTop: '16px' }}>
+              For legacy or specialized grids, QTP also supports Selenium WebDriver via <code>SeleniumTest</code>.
+            </Paragraph>
+            <Code language="python">{`from src.testkit import TYPE_SELENIUM, SeleniumTest, TestMetadata
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+
+class LegacyUiTest(SeleniumTest):
+    metadata = TestMetadata(
+        key="ui.legacy_flow",
+        name="Legacy UI Flow",
+        type=TYPE_SELENIUM,
+        target="webapp",
+    )
+
+    def test(self, ctx):
+        from selenium.webdriver.chrome.options import Options
+        options = Options()
+        options.add_argument('--headless')
+        driver = webdriver.Chrome(options=options)
+        
+        try:
+            driver.get(ctx.target.base_url + "/login")
+            driver.find_element(By.NAME, "username").send_keys("admin")
+            driver.find_element(By.CSS_SELECTOR, "button[type='submit']").click()
+            ctx.assert_true("Dashboard" in driver.title, "Dashboard did not load")
+        finally:
+            driver.quit()`}</Code>
 
             <H2 id="authoring-cli" icon={<CodeOutlined />}>Authoring: CLI Tools</H2>
             <Paragraph>
