@@ -76,7 +76,7 @@ services:
 
   # ── One-shot: create tables + seed admin/project/target/sample tests ─────
   init:
-    build: .
+    build: ./backend
     image: qtp-backend
     container_name: qtp-init
     networks: [qtpnet]
@@ -89,7 +89,7 @@ services:
 
   # ── API ──────────────────────────────────────────────────────────────────
   api:
-    build: .
+    build: ./backend
     image: qtp-backend
     container_name: qtp-api
     networks: [qtpnet]
@@ -107,7 +107,7 @@ services:
 
   # ── Execution worker ─────────────────────────────────────────────────────
   worker:
-    build: .
+    build: ./backend
     image: qtp-backend
     container_name: qtp-worker
     networks: [qtpnet]
@@ -124,7 +124,7 @@ services:
 
   # ── Scheduler ────────────────────────────────────────────────────────────
   scheduler:
-    build: .
+    build: ./backend
     image: qtp-backend
     container_name: qtp-scheduler
     networks: [qtpnet]

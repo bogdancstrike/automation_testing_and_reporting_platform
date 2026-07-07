@@ -1,0 +1,39 @@
+"""Scheduling domain: recurrence policies that create runs at due times."""
+from __future__ import annotations
+
+import uuid
+from datetime import datetime
+
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text, func
+from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import Mapped, mapped_column
+
+from src.core.db import Base
+
+
+def _uuid() -> str:
+    return str(uuid.uuid4())
+
+
+class Schedule(Base):
+    __tablename__ = "schedules"
+    id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True, default=_uuid)
+    project_id: Mapped[str] = mapped_column(UUID(as_uuid=False), index=True)
+    test_definition_id: Mapped[str] = mapped_column(
+        UUID(as_uuid=False), ForeignKey("test_definitions.id"), index=True)
+    name: Mapped[str] = mapped_column(String(200))
+
+    recurrence_type: Mapped[str] = mapped_column(String(20), default="interval")  # once|interval|cron
+    interval_seconds: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    cron_expression: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    timezone: Mapped[str] = mapped_column(String(64), default="UTC")
+
+    environment: Mapped[str] = mapped_column(String(64), default="default")
+    is_enabled: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
+
+    start_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    end_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    next_run_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, index=True)
+    last_enqueued_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
