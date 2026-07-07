@@ -18,6 +18,7 @@ The UI direction is a dense operations console: compact, scannable, chart-rich, 
 - Add `/targets/{id}` so a target application has its own operational page with all tests, runs, ratios, charts, and failure information for that app.
 - Enrich Overview, Developer Docs, and Request Builder without losing the existing runnable Docker experience.
 - Make all table-backed UI data backend-driven for pagination, search, filtering, and sorting.
+- Add reusable user-created tags and comments for tests and runs so users can annotate investigation state and find items later.
 
 ## Non-Goals
 
@@ -140,6 +141,15 @@ Common query parameters:
 
 Frontend components must not fetch all rows and then filter/sort/page locally. Small static option lists, such as target keys for a select, may still be fetched as option data.
 
+
+### Tags And Comments
+
+Users can add free-form tags to tests, such as `to investigate`, `cannot reproduce`, `flaky`, or `blocked`. Tags are created on demand when a user applies them, and the UI should offer existing tags for reuse. Test tags participate in backend search/filtering so users can find annotated tests later. Code-discovered metadata tags remain supported; user-applied tags use the same visible tag list for simplicity.
+
+Users can leave comments on test detail pages and run detail pages. Comments include author, body, optional tags, and timestamps. A generic comment model keyed by entity type (`test` or `run`) is sufficient for this increment. Comments are append-only in the first version; editing/deleting can be added later if needed.
+
+Run and test table APIs should support backend search/filter/sort for fields users naturally search by: name/key/status/target/tags for tests, and test name/status/target/trigger/defect/failure category for runs.
+
 ### New And Changed Endpoints
 
 - `GET /api/targets/{target_id}` returns target metadata plus aggregate statistics.
@@ -149,6 +159,10 @@ Frontend components must not fetch all rows and then filter/sort/page locally. S
 - `GET /api/tests/{test_id}` includes normalized `steps` for the current revision. Code tests may expose a reflected Python-file node plus discovered historical run steps; UI tests expose configured steps.
 - `GET /api/dashboards/failures` includes `test_definition_id` for each recent failure so Overview can route to `/tests/{id}?runId={run_id}`.
 - Existing list endpoints are upgraded to the paginated envelope without dropping compatibility abruptly in service internals.
+- `GET /api/tags` returns reusable tag suggestions collected from tests and comments.
+- `PUT /api/tests/{test_id}/tags` updates a test's visible tags.
+- `GET /api/tests/{test_id}/comments` and `POST /api/tests/{test_id}/comments` list/add test comments.
+- `GET /api/runs/{run_id}/comments` and `POST /api/runs/{run_id}/comments` list/add run comments.
 
 ## Frontend Design
 
@@ -162,6 +176,11 @@ The UI uses a restrained operations-console style:
 - Charts used for operational insight, not decoration.
 - Responsive layouts that remain usable on laptop screens.
 - Sidebar navigation stays sticky/fixed at viewport height; page scrolling happens in the main content area only.
+
+### Runs
+
+- Runs page uses backend search/filter/sort, including status, trigger, target, defect type, failure category, and text search by test name/key.
+- Run detail page includes a comments panel where users can add investigation notes and optional tags.
 
 ### Overview
 
@@ -192,6 +211,7 @@ Overview becomes a stronger control-plane landing page:
 - Code tests render a Python-file node and can show latest run steps when a run is selected.
 - When opened with `?runId=...`, the page loads that run and colors nodes by step status where names/ids match.
 - Existing source/config, assertions, revisions, and recent runs tabs remain available.
+- Test detail page includes comments and editable/reusable tags so users can annotate investigation state.
 
 ### Request Builder
 

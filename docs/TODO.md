@@ -98,4 +98,8 @@ _Last updated: 2026-07-07._
 - [ ] Request Builder Flow mode for add/duplicate/reorder/delete steps, captures, send-flow results, save/update/schedule
 - [ ] Developer Docs enrichment for multi-step tests, code-test auto-discovery, target pages, and backend-driven table APIs
 - [ ] Sticky sidebar/app shell: sidebar remains fixed/sticky while the page content scrolls
+- [ ] Runs page backend-driven filtering/search/sorting for status, trigger, target, defect type, failure category, and test name/key
+- [ ] Reusable user tags for tests, created on demand and suggested for reuse
+- [ ] Test detail comments with optional tags
+- [ ] Run detail comments with optional tags
 - [ ] Keep this TODO updated as items move to done, partial, or deferred during the implementation

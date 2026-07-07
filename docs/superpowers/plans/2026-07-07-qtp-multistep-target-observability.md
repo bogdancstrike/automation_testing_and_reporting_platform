@@ -14,6 +14,8 @@
 
 Modify backend files:
 
+- `backend/src/comments/models.py`, `service.py`, `serializers.py`: new generic comments and reusable tag support for tests/runs.
+- `backend/src/api/comments.py`, `tags.py`: new comment/tag endpoints.
 - `backend/src/core/pagination.py`: new common parser/envelope/query helpers for page/page_size/q/sort/order.
 - `backend/src/testkit/context.py`: add simple context variable helpers for captures.
 - `backend/src/testkit/result.py`: optionally add `step_id`, `request`, and `response` fields to `StepResult` while preserving existing serializer output.
@@ -32,6 +34,8 @@ Modify backend files:
 
 Modify frontend files:
 
+- `frontend/src/components/CommentsPanel.tsx`: shared comments UI for tests and runs.
+- `frontend/src/components/TagEditor.tsx`: reusable tag editor with existing tag suggestions.
 - `frontend/package.json` and `frontend/package-lock.json`: add `reactflow@11.11.4`.
 - `frontend/src/api/types.ts`: add `Page<T>`, query types, step/capture/target-detail/stat types.
 - `frontend/src/api/qtp.ts`: add paginated APIs, target detail APIs, and backward-compatible option-list helpers.
@@ -320,6 +324,60 @@ cd backend && python3 -m compileall src
 ```
 
 Expected: success.
+
+---
+
+
+### Task 5A: Reusable Tags And Test/Run Comments
+
+**Files:**
+- Create: `backend/src/comments/models.py`
+- Create: `backend/src/comments/service.py`
+- Create: `backend/src/comments/serializers.py`
+- Create: `backend/src/api/comments.py`
+- Create: `backend/src/api/tags.py`
+- Modify: `backend/src/models_all.py`
+- Modify: `backend/src/catalog/service.py`
+- Modify: `backend/maps/endpoint.json`
+- Modify: `frontend/src/api/types.ts`
+- Modify: `frontend/src/api/qtp.ts`
+- Create: `frontend/src/components/CommentsPanel.tsx`
+- Create: `frontend/src/components/TagEditor.tsx`
+- Modify: `frontend/src/pages/TestDetailPage.tsx`
+- Modify: `frontend/src/pages/RunDetailPage.tsx`
+- Modify: `docs/TODO.md`
+
+- [ ] **Step 1: Add comment model**
+
+Create a generic `EntityComment` model with `id`, `project_id`, `entity_type`, `entity_id`, `author`, `body`, `tags`, and `created_at`. Entity type is `test` or `run`.
+
+- [ ] **Step 2: Add comment service**
+
+Implement `list_comments(db, entity_type, entity_id)` and `create_comment(db, entity_type, entity_id, payload, author)`. Validate non-empty body and entity type.
+
+- [ ] **Step 3: Add reusable tag suggestions**
+
+Implement `list_tags(db, q="")` by collecting distinct values from `TestDefinition.tags` and `EntityComment.tags`. Keep tags as user-facing strings; create-on-demand happens when a tag is saved on a test/comment.
+
+- [ ] **Step 4: Add test tag update endpoint**
+
+Implement `update_test_tags(db, test_id, tags)` that replaces the visible tag list after trimming duplicates. This reuses the existing `TestDefinition.tags` JSONB field.
+
+- [ ] **Step 5: Add API routes**
+
+Add endpoint map entries for `GET /api/tags`, `PUT /api/tests/<test_id>/tags`, `GET/POST /api/tests/<test_id>/comments`, and `GET/POST /api/runs/<run_id>/comments`.
+
+- [ ] **Step 6: Frontend components**
+
+Add `TagEditor` using AntD `Select mode=tags` with suggestions from `GET /api/tags`. Add `CommentsPanel` with a comment list and form; reuse it on test and run detail pages.
+
+- [ ] **Step 7: Backend table filters**
+
+Ensure tests can filter by `tag` and runs can search by test name/key plus filter by status, trigger, target, defect type, and failure category.
+
+- [ ] **Step 8: TODO update**
+
+Mark reusable tags/comments as `[~]` until both backend and frontend verification pass.
 
 ---
 
