@@ -63,13 +63,14 @@ _Last updated: 2026-07-07._
 - [ ] Full HTTP-layer test through the running API with a real Keycloak token (pending compose bring-up)
 
 ## Frontend (AntD SPA)
-- [ ] Vite React TS scaffold + `Dockerfile`/nginx
-- [ ] Keycloak login (keycloak-js, PKCE) + session store + route guards
-- [ ] API client (bearer token, base `/qtp`, normalized errors)
-- [ ] Layout shell (sidebar nav, header, theme)
-- [ ] Pages: Overview, Test Catalog, Test Detail, Request Builder, Runs, Run Detail, Schedules, Targets, Workers
-- [ ] **Developer Docs tab** (architecture 17.1): author code tests, register, run on-demand/scheduled, assertion catalogue, API reference, snippets
-- [ ] Defect-type triage control + failure analytics widgets
+- [x] Vite React TS scaffold + `Dockerfile`/nginx (builds clean)
+- [x] Keycloak login (keycloak-js, PKCE) + token-attaching API client
+- [x] API client (bearer token, base `/qtp`, normalized errors)
+- [x] Layout shell (sidebar nav, header, user menu/logout)
+- [x] Pages: Overview, Test Catalog, Test Detail, Request Builder, Runs, Run Detail, Schedules, Targets, Workers
+- [x] **Developer Docs tab** (architecture 17.1): author code tests, register, run on-demand/scheduled, assertion catalogue, API reference, snippets
+- [x] Defect-type triage control (run detail) + overview failure/defect widgets
+- [ ] Customizable dashboards (react-grid-layout) — Overview is fixed for now
 
 ## Tests (automated)
 - [~] One example automation test (`tests/automations/api/test_healthcheck.py`)

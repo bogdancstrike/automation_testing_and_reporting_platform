@@ -14,6 +14,7 @@ from urllib.parse import urljoin, urlparse
 import requests
 
 from src.config import Config
+from src.core.errors import ValidationError
 from src.core.net_guard import resolve_and_check
 from src.testkit import assertions as asserts
 from src.testkit.context import TestContext
@@ -161,6 +162,12 @@ def execute_http(config: dict[str, Any], ctx: TestContext) -> TestResult:
             response=response,
             metrics={"elapsed_ms": elapsed_ms, "status_code": resp.status_code},
         )
+    except ValidationError as e:
+        # SSRF guard (or invalid URL) rejected the request — a clean error result,
+        # not an exception that escapes to the handler.
+        ctx.log("error", f"blocked: {e.message}")
+        return TestResult(status=ERROR, error_category="network_error",
+                          error_message=e.message)
     except requests.Timeout:
         return TestResult(status=TIMEOUT, error_category="timeout",
                           error_message=f"request exceeded {timeout_ms}ms")
