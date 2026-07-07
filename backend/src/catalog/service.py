@@ -288,7 +288,7 @@ def _discover_tests(db: Session, modules: tuple[str, ...] | None = None) -> dict
     if modules:
         classes = discover_classes(modules)
     else:
-        root = Path(__file__).resolve().parents[2] / "tests" / "automations"
+        root = Path(__file__).resolve().parents[2] / "scenarios" / "automation"
         classes = discover_from_path(root)
         # Explicit module list remains a fallback for older deployments.
         if not classes and Config.AUTOMATION_MODULES:

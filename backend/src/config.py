@@ -127,14 +127,11 @@ class Config:
     SECRET_ENCRYPTION_KEY = os.getenv("SECRET_ENCRYPTION_KEY", "qtp-fallback-key-32bytes-long-123")
 
     # ── Test discovery ─────────────────────────────────────────────────────
+    # Scenarios are discovered by recursively scanning backend/scenarios/automation
+    # (one dir per target). This explicit module list is only a fallback for when
+    # the path scan finds nothing; leave empty in normal operation.
     AUTOMATION_MODULES = tuple(
-        m.strip() for m in os.getenv(
-            "AUTOMATION_MODULES",
-            "tests.automations.api.test_healthcheck,"
-            "tests.automations.api.test_qtp_self,"
-            "tests.automations.api.test_httpbin_methods,"
-            "tests.automations.api.test_httpbin_responses",
-        ).split(",") if m.strip()
+        m.strip() for m in os.getenv("AUTOMATION_MODULES", "").split(",") if m.strip()
     )
 
     # QTP's own API base URL, used by the self-tests' 'qtp_self' target.

@@ -22,5 +22,6 @@ class HttpbinGetEchoesArgs(HttpTest):
 
         response.should.have_status(200)
         response.should.respond_within_ms(5000)
-        response.json.should.have_field("args.team").equal_to("qtp")
-        response.json.should.have_field("args.n").equal_to("2")
+        # go-httpbin returns each query arg as an array of values.
+        response.json.should.have_field("args.team[0]").equal_to("qtp")
+        response.json.should.have_field("args.n[0]").equal_to("2")

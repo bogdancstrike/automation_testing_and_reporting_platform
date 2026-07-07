@@ -23,7 +23,8 @@ class HttpbinStatusAndHeaders(HttpTest):
         with ctx.step("request headers are reflected"):
             response = ctx.http.get("/headers", headers={"X-QTP-Probe": "scenario-42"})
             response.should.have_status(200)
-            response.json.should.have_field("headers.X-Qtp-Probe").equal_to("scenario-42")
+            # go-httpbin canonicalizes the name and returns values as an array.
+            response.json.should.have_field("headers.X-Qtp-Probe[0]").equal_to("scenario-42")
 
         with ctx.step("response content-type is JSON"):
             response = ctx.http.get("/json")
