@@ -178,7 +178,7 @@ export default function RequestBuilderPage() {
     }));
 
     if (mode === "single") {
-      const step = stepsConfig[0] || {};
+      const step: any = stepsConfig[0] || {};
       return {
         target: step.target,
         method: step.method || "GET",
@@ -371,9 +371,10 @@ export default function RequestBuilderPage() {
     setSteps(steps.map((s, idx) => idx === currentStepIndex ? { ...s, ...patch } as RequestStep : s));
   };
 
+  // @ts-ignore
   return (
     <Layout style={{ height: "calc(100vh - 64px)", background: "transparent" }}>
-      <Sider width={280} theme="light" style={{ borderRight: `1px solid ${token.colorBorderSecondary}` }}>
+      <div style={{ width: 280, minWidth: 200, maxWidth: 500, resize: "horizontal", overflow: "hidden", borderRight: `1px solid ${token.colorBorderSecondary}`, background: "#fff", display: "flex", flexDirection: "column" }}>
         <div style={{ padding: "16px 12px", borderBottom: `1px solid ${token.colorBorderSecondary}` }}>
           <Space style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
             <Typography.Text strong>Collections</Typography.Text>
@@ -407,9 +408,7 @@ export default function RequestBuilderPage() {
                         <Typography.Text type="secondary" style={{ fontSize: 11, minWidth: 42, display: "inline-block" }}>
                           {cfgMethod || "FLOW"}
                         </Typography.Text>
-                        <Tooltip title={t.name} placement="right">
-                          <Typography.Text ellipsis style={{ maxWidth: 160 }}>{t.name}</Typography.Text>
-                        </Tooltip>
+                        <Typography.Text ellipsis={{ tooltip: t.name }} style={{ flex: 1, maxWidth: "100%" }}>{t.name}</Typography.Text>
                       </Space>
                     </Space>
                   </List.Item>
@@ -418,7 +417,7 @@ export default function RequestBuilderPage() {
             }}
           />
         </div>
-      </Sider>
+      </div>
 
       <Content style={{ display: "flex", flexDirection: "column", height: "100%" }}>
         {/* Header Bar */}
@@ -443,7 +442,7 @@ export default function RequestBuilderPage() {
             )}
             <Button icon={<ClockCircleOutlined />} disabled={!editingId} onClick={() => setSchedOpen(true)}>Schedule</Button>
             {editingId && (
-              <Popconfirm title="Delete this saved request?" onConfirm={() => remove.mutate()}>
+              <Popconfirm title="Delete this saved request?" onConfirm={() => remove.mutate(editingId!)}>
                 <Button danger icon={<DeleteOutlined />} loading={remove.isPending}></Button>
               </Popconfirm>
             )}
@@ -737,10 +736,11 @@ function ResponseView({ result }: { result: SendResult }) {
              </Space>
              <Row gutter={24}>
                <Col span={14}>
-                 <Typography.Text strong>Response Body</Typography.Text>
-                 <pre style={{ background: token.colorBgContainer, padding: 12, borderRadius: 6, border: `1px solid ${token.colorBorderSecondary}`, marginTop: 8, overflowX: "auto" }}>
-                   {(stepRespData.body_text || "").slice(0, 5000) || "(empty)"}
-                 </pre>
+                 <Tabs items={[
+                    { key: "body", label: "Body", children: <pre style={{ background: token.colorBgContainer, padding: 12, borderRadius: 6, border: `1px solid ${token.colorBorderSecondary}`, marginTop: 0, overflowX: "auto" }}>{(stepRespData.body_text || "").slice(0, 5000) || "(empty)"}</pre> },
+                    { key: "headers", label: "Headers", children: <Empty description="Headers not implemented in preview" image={Empty.PRESENTED_IMAGE_SIMPLE} /> },
+                    { key: "captures", label: "Captures", children: (stepRespData.captures && stepRespData.captures.length > 0) ? (<Space>{stepRespData.captures.map((c: string) => <Tag key={c} color="blue">{c}</Tag>)}</Space>) : <Typography.Text type="secondary">No variables captured</Typography.Text> }
+                  ]} />
                </Col>
                <Col span={10}>
                  <Typography.Text strong>Assertions</Typography.Text>
@@ -771,13 +771,16 @@ function ResponseView({ result }: { result: SendResult }) {
         </Space>
         <Tag color={result.status === "passed" ? "success" : "error"} style={{ margin: 0 }}>{result.status.toUpperCase()}</Tag>
       </div>
+
+
       <div style={{ flex: 1, padding: 16, overflowY: "auto" }}>
         {result.error_message && <Alert type="error" message={result.error_message} style={{ marginBottom: 16 }} />}
         <Row gutter={24}>
           <Col span={14}>
             <Tabs items={[
               { key: "body", label: "Body", children: <pre style={{ background: token.colorBgContainer, padding: 12, borderRadius: 6, border: `1px solid ${token.colorBorderSecondary}`, marginTop: 0, overflowX: "auto" }}>{(r.body_text || "").slice(0, 5000) || "(empty)"}</pre> },
-              { key: "headers", label: "Headers", children: <Empty description="Headers not implemented in preview" image={Empty.PRESENTED_IMAGE_SIMPLE} /> }
+              { key: "headers", label: "Headers", children: <Empty description="Headers not implemented in preview" image={Empty.PRESENTED_IMAGE_SIMPLE} /> },
+              { key: "captures", label: "Captures", children: (r.captures && r.captures.length > 0) ? (<Space>{r.captures.map((c: string) => <Tag key={c} color="blue">{c}</Tag>)}</Space>) : <Typography.Text type="secondary">No variables captured</Typography.Text> }
             ]} />
           </Col>
           <Col span={10}>
