@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta
 
-from sqlalchemy import Float, cast, func, select
+from sqlalchemy import Float, String, cast, func, or_, select
 from sqlalchemy.orm import Session
 
 from src.catalog.models import Target, TestDefinition
@@ -18,7 +18,9 @@ def _iso(dt):
     return dt.isoformat() if dt else None
 
 
-def overview(db: Session, *, hours: int = 24, start: datetime | None = None, end: datetime | None = None) -> dict:
+def overview(db: Session, *, hours: int = 24, start: datetime | None = None,
+             end: datetime | None = None, filters: dict | None = None) -> dict:
+    filters = filters or {}
     end = end or utcnow()
     since = start or (end - timedelta(hours=hours))
 
@@ -81,6 +83,33 @@ def overview(db: Session, *, hours: int = 24, start: datetime | None = None, end
     tgt_names = {t.id: t.key for t in db.scalars(select(Target)).all()}
     for tid, row in per_target.items():
         row["target_key"] = tgt_names.get(tid)
+        row["health_rate"] = round(row["passed"] / row["total"], 4) if row["total"] else None
+
+    per_target_rows = list(per_target.values())
+    if filters.get("per_target_q"):
+        needle = str(filters["per_target_q"]).lower()
+        per_target_rows = [r for r in per_target_rows if needle in str(r.get("target_key") or "").lower()]
+    if filters.get("per_target_health"):
+        health = filters["per_target_health"]
+        if health == "healthy":
+            per_target_rows = [r for r in per_target_rows if r.get("failed", 0) == 0 and r.get("total", 0) > 0]
+        elif health == "degraded":
+            per_target_rows = [r for r in per_target_rows if r.get("failed", 0) > 0]
+
+    per_target_sort = filters.get("per_target_sort") or "total"
+    per_target_order = str(filters.get("per_target_order") or "desc").lower()
+    per_target_sorters = {
+        "target_key": lambda r: r.get("target_key") or "",
+        "total": lambda r: r.get("total") or 0,
+        "passed": lambda r: r.get("passed") or 0,
+        "failed": lambda r: r.get("failed") or 0,
+        "health_rate": lambda r: r.get("health_rate") or 0,
+    }
+    per_target_rows = sorted(
+        per_target_rows,
+        key=per_target_sorters.get(per_target_sort, per_target_sorters["total"]),
+        reverse=per_target_order == "desc",
+    )
 
     return {
         "window_hours": hours,
@@ -96,11 +125,13 @@ def overview(db: Session, *, hours: int = 24, start: datetime | None = None, end
         "queue_backlog": queue_backlog or 0,
         "active_workers": active_workers or 0,
         "trend": sorted(trend.values(), key=lambda x: x["bucket"]),
-        "per_target": list(per_target.values()),
+        "per_target": per_target_rows,
     }
 
 
-def failures(db: Session, *, hours: int = 168, start: datetime | None = None, end: datetime | None = None) -> dict:
+def failures(db: Session, *, hours: int = 168, start: datetime | None = None,
+             end: datetime | None = None, filters: dict | None = None) -> dict:
+    filters = filters or {}
     end = end or utcnow()
     since = start or (end - timedelta(hours=hours))
 
@@ -121,13 +152,43 @@ def failures(db: Session, *, hours: int = 168, start: datetime | None = None, en
     ).all()
     defect_distribution = {(dt or "untriaged"): c for dt, c in defect_rows}
 
-    recent = db.scalars(
-        select(TestRun).where(TestRun.stats_reset_at.is_(None), TestRun.status.in_(["failed", "error", "timeout"]))
-        .order_by(TestRun.queued_at.desc()).limit(15)
-    ).all()
+    recent_stmt = (
+        select(TestRun)
+        .outerjoin(TestDefinition, TestRun.test_definition_id == TestDefinition.id)
+        .where(
+            TestRun.stats_reset_at.is_(None),
+            TestRun.status.in_(["failed", "error", "timeout"]),
+            TestRun.queued_at >= since,
+            TestRun.queued_at <= end,
+        )
+    )
+    if filters.get("recent_failed_q"):
+        like = f"%{filters['recent_failed_q']}%"
+        recent_stmt = recent_stmt.where(or_(TestDefinition.name.ilike(like), TestDefinition.key.ilike(like)))
+    if filters.get("recent_failed_status"):
+        recent_stmt = recent_stmt.where(TestRun.status == filters["recent_failed_status"])
+    if filters.get("recent_failed_error_category"):
+        recent_stmt = recent_stmt.where(TestRun.error_category.ilike(f"%{filters['recent_failed_error_category']}%"))
+    if filters.get("recent_failed_defect_type"):
+        recent_stmt = recent_stmt.where(TestRun.defect_type == filters["recent_failed_defect_type"])
+    if filters.get("recent_failed_finished_at"):
+        recent_stmt = recent_stmt.where(cast(TestRun.finished_at, String).ilike(f"%{filters['recent_failed_finished_at']}%"))
+
+    recent_sort = filters.get("recent_failed_sort") or "finished_at"
+    recent_order = str(filters.get("recent_failed_order") or "desc").lower()
+    recent_sorters = {
+        "test_name": TestDefinition.name,
+        "status": TestRun.status,
+        "error_category": TestRun.error_category,
+        "defect_type": TestRun.defect_type,
+        "finished_at": TestRun.finished_at,
+    }
+    recent_column = recent_sorters.get(recent_sort, TestRun.finished_at)
+    recent_stmt = recent_stmt.order_by(recent_column.desc() if recent_order == "desc" else recent_column.asc()).limit(50)
+    recent = db.scalars(recent_stmt).all()
     defs = {d.id: d.name for d in db.scalars(select(TestDefinition)).all()}
     recent_failed = [{
-        "id": r.id, "test_name": defs.get(r.test_definition_id),
+        "id": r.id, "test_definition_id": r.test_definition_id, "test_name": defs.get(r.test_definition_id),
         "status": r.status, "error_category": r.error_category,
         "defect_type": r.defect_type, "finished_at": _iso(r.finished_at),
     } for r in recent]

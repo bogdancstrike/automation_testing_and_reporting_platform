@@ -1,13 +1,13 @@
-import { Table, Button, Typography, Space, Input, Select, App, Row, Col, Card, Statistic, Tag } from "antd";
+import { Table, Button, Typography, Space, App, Row, Col, Card, Statistic, Tag } from "antd";
 import { ReloadOutlined, PlayCircleOutlined } from "@ant-design/icons";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { qtp } from "../api/qtp";
 import { StatusTag, TypeTag } from "../components/tags";
+import { antSortOrder, menuFilter, nextTableParams, textFilter } from "../components/remoteTable";
 import type { QueryParams } from "../api/types";
 
-function sortOrder(order?: string) { return order === "ascend" ? "asc" : order === "descend" ? "desc" : undefined; }
 function displayDate(value?: string) { return value ? value.replace("T", " ").slice(0, 19) : "—"; }
 
 export default function CatalogPage() {
@@ -37,7 +37,7 @@ export default function CatalogPage() {
           <Typography.Title level={3} style={{ margin: 0 }}>Scenarios</Typography.Title>
           <Typography.Text type="secondary">Backend-driven search, filters, sorting, and pagination.</Typography.Text>
         </div>
-        <Button icon={<ReloadOutlined />} loading={discover.isPending} onClick={() => discover.mutate()}>Discover code tests</Button>
+        <Button icon={<ReloadOutlined />} loading={discover.isPending} onClick={() => discover.mutate()}>Discover code scenarios</Button>
       </Space>
 
       <Row gutter={12} style={{ marginBottom: 16 }}>
@@ -46,36 +46,39 @@ export default function CatalogPage() {
         <Col xs={24} md={12}><Card size="small"><Space wrap>{["http_request", "python_script", "playwright", "selenium", "cli"].map((k) => <Tag key={k}>{k}</Tag>)}</Space></Card></Col>
       </Row>
 
-      <Space style={{ marginBottom: 12 }} wrap>
-        <Input.Search placeholder="search name / key / owner" allowClear onSearch={(q) => setParams((p) => ({ ...p, q, page: 1 }))} style={{ width: 280 }} />
-        <Select allowClear placeholder="type" style={{ width: 160 }} onChange={(type) => setParams((p) => ({ ...p, type, page: 1 }))}
-          options={["http_request", "python_script", "playwright", "selenium", "cli"].map((value) => ({ value }))} />
-        <Select allowClear placeholder="source" style={{ width: 130 }} onChange={(source) => setParams((p) => ({ ...p, source, page: 1 }))}
-          options={[{ value: "code", label: "code" }, { value: "ui", label: "ui" }]} />
-        <Select allowClear placeholder="target app" style={{ width: 180 }} onChange={(target) => setParams((p) => ({ ...p, target, page: 1 }))}
-          options={targets.map((t) => ({ value: t.key, label: t.key }))} />
-        <Input.Search placeholder="tag" allowClear onSearch={(tag) => setParams((p) => ({ ...p, tag, page: 1 }))} style={{ width: 180 }} />
-      </Space>
-
       <Table
         rowKey="id"
         loading={isLoading}
         dataSource={tests}
         onRow={(r) => ({ onClick: () => nav(`/scenarios/${r.id}`), style: { cursor: "pointer" } })}
         pagination={{ current: page?.page || 1, pageSize: page?.page_size || 20, total: page?.total || 0, showSizeChanger: true }}
-        onChange={(pagination, _filters, sorter: any) => setParams((p) => ({
-          ...p, page: pagination.current || 1, page_size: pagination.pageSize || 20,
-          sort: sorter?.field || p.sort, order: sortOrder(sorter?.order) || p.order,
-        }))}
+        onChange={(pagination, filters, sorter: any, extra) => setParams((p) => nextTableParams(
+          p,
+          pagination,
+          filters,
+          sorter,
+          extra,
+          {
+            name: "name",
+            key: "key",
+            type: "type",
+            source: "source",
+            target: "target",
+            tag: "tag",
+            created_at: "created_at",
+            last_run_status: "last_run_status",
+          },
+          { sort: "name", order: "asc", pageSize: 20 },
+        ))}
         columns={[
-          { title: "Name", dataIndex: "name", sorter: true, render: (v) => <a>{v}</a> },
-          { title: "Key", dataIndex: "key", sorter: true, render: (v) => <Typography.Text code>{v}</Typography.Text> },
-          { title: "Type", dataIndex: "type", sorter: true, render: (t) => <TypeTag type={t} /> },
-          { title: "Source", dataIndex: "source", sorter: true, render: (s) => <Tag color={s === "code" ? "purple" : "cyan"}>{s}</Tag> },
-          { title: "App", dataIndex: "target_key", sorter: true, render: (v) => <Tag color="geekblue">{v}</Tag> },
-          { title: "Tags", dataIndex: "tags", render: (tags) => (tags || []).map((x: string) => <Tag key={x}>{x}</Tag>) },
-          { title: "Added at", dataIndex: "created_at", sorter: true, render: displayDate },
-          { title: "Last result", dataIndex: "last_run_status", sorter: true, render: (s) => <StatusTag status={s} /> },
+          { title: "Name", dataIndex: "name", sorter: true, sortOrder: antSortOrder(params, "name"), ...textFilter("name", params, "Search scenario name"), render: (v) => <a>{v}</a> },
+          { title: "Key", dataIndex: "key", sorter: true, sortOrder: antSortOrder(params, "key"), ...textFilter("key", params, "Search scenario key"), render: (v) => <Typography.Text code>{v}</Typography.Text> },
+          { title: "Type", dataIndex: "type", sorter: true, sortOrder: antSortOrder(params, "type"), ...menuFilter("type", params, ["http_request", "python_script", "playwright", "selenium", "cli"].map((value) => ({ text: value, value }))), render: (t) => <TypeTag type={t} /> },
+          { title: "Source", dataIndex: "source", sorter: true, sortOrder: antSortOrder(params, "source"), ...menuFilter("source", params, [{ text: "code", value: "code" }, { text: "ui", value: "ui" }]), render: (s) => <Tag color={s === "code" ? "purple" : "cyan"}>{s}</Tag> },
+          { title: "App", dataIndex: "target_key", sorter: true, sortOrder: antSortOrder(params, "target_key"), ...menuFilter("target", params, targets.map((t) => ({ text: t.key, value: t.key }))), render: (v) => <Tag color="geekblue">{v}</Tag> },
+          { title: "Tags", dataIndex: "tags", sorter: true, sortOrder: antSortOrder(params, "tags"), ...textFilter("tag", params, "Search tag"), render: (tags) => (tags || []).map((x: string) => <Tag key={x}>{x}</Tag>) },
+          { title: "Added at", dataIndex: "created_at", sorter: true, sortOrder: antSortOrder(params, "created_at"), ...textFilter("created_at", params, "YYYY-MM-DD"), render: displayDate },
+          { title: "Last result", dataIndex: "last_run_status", sorter: true, sortOrder: antSortOrder(params, "last_run_status"), ...menuFilter("last_run_status", params, ["queued", "running", "passed", "failed", "error", "timeout", "canceled"].map((value) => ({ text: value, value }))), render: (s) => <StatusTag status={s} /> },
           { title: "Run", key: "run", width: 64, render: (_, r) => <Button size="small" type="text" icon={<PlayCircleOutlined />} onClick={(e) => { e.stopPropagation(); run.mutate(r.id); }} /> },
         ]}
       />

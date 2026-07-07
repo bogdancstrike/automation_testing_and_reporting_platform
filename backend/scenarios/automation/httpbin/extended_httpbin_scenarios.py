@@ -99,7 +99,7 @@ class HttpbinCookiesSetAndRead(HttpTest):
         with ctx.step("Read cookie through same session"):
             response = ctx.http.get("/cookies")
             response.should.have_status(200)
-            response.json.should.have_field("cookies.session").equal_to("qtp-cookie")
+            response.json.should.have_field("session").equal_to("qtp-cookie")
 
 
 class HttpbinDeleteEchoes(HttpTest):

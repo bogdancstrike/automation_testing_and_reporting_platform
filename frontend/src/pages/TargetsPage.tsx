@@ -1,12 +1,11 @@
-import { Table, Typography, Button, Space, Modal, Form, Input, App, Tag, Dropdown } from "antd";
+import { Table, Typography, Button, Space, Modal, Form, Input, App, Tag } from "antd";
 import { PlusOutlined, PlayCircleOutlined } from "@ant-design/icons";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { qtp } from "../api/qtp";
+import { antSortOrder, nextTableParams, textFilter } from "../components/remoteTable";
 import type { QueryParams } from "../api/types";
-
-function sortOrder(order?: string) { return order === "ascend" ? "asc" : order === "descend" ? "desc" : undefined; }
 
 export default function TargetsPage() {
   const { message } = App.useApp();
@@ -33,24 +32,28 @@ export default function TargetsPage() {
         </div>
         <Button type="primary" icon={<PlusOutlined />} onClick={() => setOpen(true)}>New target</Button>
       </Space>
-      <Input.Search placeholder="search target key / name / URL" allowClear onSearch={(q) => setParams((p) => ({ ...p, q, page: 1 }))} style={{ width: 320, marginBottom: 12 }} />
       <Table
         rowKey="id"
         loading={isLoading}
         dataSource={page?.items || []}
         onRow={(r) => ({ onClick: () => nav(`/targets/${r.id}`), style: { cursor: "pointer" } })}
         pagination={{ current: page?.page || 1, pageSize: page?.page_size || 20, total: page?.total || 0, showSizeChanger: true }}
-        onChange={(pagination, _filters, sorter: any) => setParams((p) => ({
-          ...p, page: pagination.current || 1, page_size: pagination.pageSize || 20,
-          sort: sorter?.field || p.sort, order: sortOrder(sorter?.order) || p.order,
-        }))}
+        onChange={(pagination, filters, sorter: any, extra) => setParams((p) => nextTableParams(
+          p,
+          pagination,
+          filters,
+          sorter,
+          extra,
+          { key: "key", name: "name", base_url: "base_url", environment: "environment", tag: "tag" },
+          { sort: "name", order: "asc", pageSize: 20 },
+        ))}
         columns={[
-          { title: "Key", dataIndex: "key", sorter: true, render: (v) => <Typography.Text code>{v}</Typography.Text> },
-          { title: "Name", dataIndex: "name", sorter: true, render: (v) => <a>{v}</a> },
-          { title: "Tests Configured", dataIndex: "test_count", render: (v) => <Typography.Text strong>{v || 0}</Typography.Text> },
-          { title: "Base URL", dataIndex: "base_url", sorter: true, ellipsis: true },
-          { title: "Environment", dataIndex: "environment", sorter: true },
-          { title: "Tags", dataIndex: "tags", render: (t) => (t || []).map((x: string) => <Tag key={x}>{x}</Tag>) },
+          { title: "Key", dataIndex: "key", sorter: true, sortOrder: antSortOrder(params, "key"), ...textFilter("key", params, "Search key"), render: (v) => <Typography.Text code>{v}</Typography.Text> },
+          { title: "Name", dataIndex: "name", sorter: true, sortOrder: antSortOrder(params, "name"), ...textFilter("name", params, "Search name"), render: (v) => <a>{v}</a> },
+          { title: "Scenarios", dataIndex: "test_count", sorter: true, sortOrder: antSortOrder(params, "test_count"), render: (v) => <Typography.Text strong>{v || 0}</Typography.Text> },
+          { title: "Base URL", dataIndex: "base_url", sorter: true, sortOrder: antSortOrder(params, "base_url"), ...textFilter("base_url", params, "Search URL"), ellipsis: true },
+          { title: "Environment", dataIndex: "environment", sorter: true, sortOrder: antSortOrder(params, "environment"), ...textFilter("environment", params, "Search environment") },
+          { title: "Tags", dataIndex: "tags", sorter: true, sortOrder: antSortOrder(params, "tags"), ...textFilter("tag", params, "Search tag"), render: (t) => (t || []).map((x: string) => <Tag key={x}>{x}</Tag>) },
           {
             title: "Actions", key: "actions", width: 120, render: (_, r: any) => (
               <Button type="primary" size="small" icon={<PlayCircleOutlined />} onClick={(e) => {

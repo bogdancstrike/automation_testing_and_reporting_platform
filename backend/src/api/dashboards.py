@@ -20,7 +20,7 @@ def overview(app, operation, request, principal=None, **kwargs):
     except ValueError:
         raise ValidationError("invalid date or hours format")
     with session_scope() as db:
-        return service.overview(db, hours=hours, start=start, end=end), 200
+        return service.overview(db, hours=hours, start=start, end=end, filters=args), 200
 
 
 @require_authenticated
@@ -34,4 +34,4 @@ def failures(app, operation, request, principal=None, **kwargs):
     except ValueError:
         raise ValidationError("invalid date or hours format")
     with session_scope() as db:
-        return service.failures(db, hours=hours, start=start, end=end), 200
+        return service.failures(db, hours=hours, start=start, end=end, filters=args), 200

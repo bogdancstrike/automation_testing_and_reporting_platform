@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from sqlalchemy import func, or_, select
+from sqlalchemy import String, cast, func, or_, select
 from sqlalchemy.orm import Session
 
 from src.catalog.models import Target, TestDefinition
@@ -86,7 +86,12 @@ def list_runs(db: Session, filters: dict[str, Any]) -> dict:
 
 def _list_runs(db: Session, filters: dict[str, Any]) -> dict:
     params = parse_page(filters, default_sort="queued_at", default_order="desc", max_page_size=100)
-    stmt = select(TestRun).where(TestRun.stats_reset_at.is_(None))
+    stmt = (
+        select(TestRun)
+        .outerjoin(TestDefinition, TestRun.test_definition_id == TestDefinition.id)
+        .outerjoin(Target, TestRun.target_id == Target.id)
+        .where(TestRun.stats_reset_at.is_(None))
+    )
     if filters.get("status"):
         stmt = stmt.where(TestRun.status == filters["status"])
     if filters.get("test_definition_id"):
@@ -102,28 +107,40 @@ def _list_runs(db: Session, filters: dict[str, Any]) -> dict:
     if filters.get("defect_type"):
         stmt = stmt.where(TestRun.defect_type == filters["defect_type"])
     if filters.get("error_category"):
-        stmt = stmt.where(TestRun.error_category == filters["error_category"])
+        stmt = stmt.where(TestRun.error_category.ilike(f"%{filters['error_category']}%"))
     if filters.get("target"):
-        target = db.scalars(select(Target).where(Target.key == filters["target"])).first()
-        stmt = stmt.where(TestRun.target_id == (target.id if target else "00000000-0000-0000-0000-000000000000"))
+        stmt = stmt.where(Target.key == filters["target"])
+    if filters.get("test"):
+        like = f"%{filters['test']}%"
+        stmt = stmt.where(or_(TestDefinition.name.ilike(like), TestDefinition.key.ilike(like)))
+    if filters.get("worker_name"):
+        stmt = stmt.where(TestRun.worker_name.ilike(f"%{filters['worker_name']}%"))
+    if filters.get("duration_ms"):
+        stmt = stmt.where(cast(TestRun.duration_ms, String).ilike(f"%{filters['duration_ms']}%"))
+    if filters.get("queued_at"):
+        stmt = stmt.where(cast(TestRun.queued_at, String).ilike(f"%{filters['queued_at']}%"))
     if filters.get("tags"):
         tags = [t.strip() for t in filters["tags"].split(",") if t.strip()]
         if tags:
-            stmt = stmt.where(TestRun.test_definition_id.in_(
-                select(TestDefinition.id).where(TestDefinition.tags.contains(tags))
-            ))
+            stmt = stmt.where(TestDefinition.tags.contains(tags))
     if params.q:
         like = f"%{params.q}%"
-        matching_defs = select(TestDefinition.id).where(or_(TestDefinition.name.ilike(like), TestDefinition.key.ilike(like)))
-        matching_targets = select(Target.id).where(or_(Target.name.ilike(like), Target.key.ilike(like), Target.base_url.ilike(like)))
-        stmt = stmt.where(or_(TestRun.test_definition_id.in_(matching_defs), TestRun.target_id.in_(matching_targets), TestRun.worker_name.ilike(like)))
+        stmt = stmt.where(or_(
+            TestDefinition.name.ilike(like),
+            TestDefinition.key.ilike(like),
+            Target.name.ilike(like),
+            Target.key.ilike(like),
+            Target.base_url.ilike(like),
+            TestRun.worker_name.ilike(like),
+        ))
 
     stmt = apply_sort(stmt, params, {
         "queued_at": TestRun.queued_at, "started_at": TestRun.started_at,
         "finished_at": TestRun.finished_at, "duration_ms": TestRun.duration_ms,
         "status": TestRun.status, "trigger": TestRun.trigger,
         "worker_name": TestRun.worker_name, "defect_type": TestRun.defect_type,
-        "error_category": TestRun.error_category,
+        "error_category": TestRun.error_category, "test_name": TestDefinition.name,
+        "target_key": Target.key, "tags": cast(TestDefinition.tags, String),
     })
     total = int(db.scalar(select(func.count()).select_from(stmt.order_by(None).subquery())) or 0)
     runs = list(db.scalars(stmt.offset((params.page - 1) * params.page_size).limit(params.page_size)).all())

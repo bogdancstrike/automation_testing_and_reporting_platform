@@ -7,7 +7,7 @@ from datetime import timedelta
 from pathlib import Path
 from typing import Any
 
-from sqlalchemy import Float, cast, func, or_, select
+from sqlalchemy import Float, String, cast, func, or_, select
 from sqlalchemy.orm import Session
 
 from src.catalog import serializers
@@ -57,15 +57,29 @@ def list_targets(db: Session, project_id: str | None = None) -> list[dict]:
 
 def list_targets_page(db: Session, filters: dict[str, Any]) -> dict:
     params = parse_page(filters, default_sort="name", default_order="asc")
-    stmt = select(Target)
+    count_subq = (
+        select(TestDefinition.target_key.label("target_key"), func.count().label("test_count"))
+        .group_by(TestDefinition.target_key)
+        .subquery()
+    )
+    stmt = select(Target).outerjoin(count_subq, Target.key == count_subq.c.target_key)
     if params.q:
         like = f"%{params.q}%"
         stmt = stmt.where(or_(Target.name.ilike(like), Target.key.ilike(like), Target.base_url.ilike(like)))
+    if filters.get("key"):
+        stmt = stmt.where(Target.key.ilike(f"%{filters['key']}%"))
+    if filters.get("name"):
+        stmt = stmt.where(Target.name.ilike(f"%{filters['name']}%"))
+    if filters.get("base_url"):
+        stmt = stmt.where(Target.base_url.ilike(f"%{filters['base_url']}%"))
     if filters.get("environment"):
-        stmt = stmt.where(Target.environment == filters["environment"])
+        stmt = stmt.where(Target.environment.ilike(f"%{filters['environment']}%"))
+    if filters.get("tag"):
+        stmt = stmt.where(Target.tags.contains([filters["tag"]]))
     stmt = apply_sort(stmt, params, {
         "name": Target.name, "key": Target.key, "base_url": Target.base_url,
         "environment": Target.environment, "created_at": Target.created_at,
+        "tags": cast(Target.tags, String), "test_count": func.coalesce(count_subq.c.test_count, 0),
     })
     total = int(db.scalar(select(func.count()).select_from(stmt.order_by(None).subquery())) or 0)
     rows = db.scalars(stmt.offset((params.page - 1) * params.page_size).limit(params.page_size)).all()
@@ -205,8 +219,22 @@ def _list_tests(db: Session, filters: dict[str, Any]) -> dict:
         stmt = stmt.where(TestDefinition.source == filters["source"])
     if filters.get("target"):
         stmt = stmt.where(TestDefinition.target_key == filters["target"])
+    if filters.get("name"):
+        stmt = stmt.where(TestDefinition.name.ilike(f"%{filters['name']}%"))
+    if filters.get("key"):
+        stmt = stmt.where(TestDefinition.key.ilike(f"%{filters['key']}%"))
+    if filters.get("owner"):
+        stmt = stmt.where(TestDefinition.owner.ilike(f"%{filters['owner']}%"))
+    if filters.get("last_run_status"):
+        stmt = stmt.where(TestDefinition.last_run_status == filters["last_run_status"])
+    if filters.get("created_at"):
+        stmt = stmt.where(cast(TestDefinition.created_at, String).ilike(f"%{filters['created_at']}%"))
     if filters.get("tag"):
         stmt = stmt.where(TestDefinition.tags.contains([filters["tag"]]))
+    if filters.get("tags"):
+        tags = [t.strip() for t in str(filters["tags"]).split(",") if t.strip()]
+        if tags:
+            stmt = stmt.where(TestDefinition.tags.contains(tags))
     if params.q:
         like = f"%{params.q}%"
         stmt = stmt.where(or_(
@@ -218,6 +246,8 @@ def _list_tests(db: Session, filters: dict[str, Any]) -> dict:
         "source": TestDefinition.source, "target_key": TestDefinition.target_key,
         "last_run_at": TestDefinition.last_run_at, "last_run_status": TestDefinition.last_run_status,
         "created_at": TestDefinition.created_at, "updated_at": TestDefinition.updated_at,
+        "owner": TestDefinition.owner, "status": TestDefinition.status,
+        "tags": cast(TestDefinition.tags, String),
     })
     total = int(db.scalar(select(func.count()).select_from(stmt.order_by(None).subquery())) or 0)
     rows = db.scalars(stmt.offset((params.page - 1) * params.page_size).limit(params.page_size)).all()

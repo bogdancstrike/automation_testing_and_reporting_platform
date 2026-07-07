@@ -136,7 +136,7 @@ export interface Overview {
   queue_backlog: number;
   active_workers: number;
   trend: Record<string, any>[];
-  per_target: { target_key?: string; total: number; passed: number; failed: number }[];
+  per_target: { target_key?: string; total: number; passed: number; failed: number; health_rate?: number }[];
 }
 
 export interface Failures {
@@ -156,6 +156,7 @@ export interface Failures {
     status: string;
     error_category?: string;
     defect_type?: string;
+    finished_at?: string;
   }[];
 }
 
