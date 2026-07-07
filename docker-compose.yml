@@ -15,7 +15,7 @@ x-backend-env: &backend-env
   ALLOWED_ORIGINS: "http://localhost:5173"
   # The demo app-under-test lives inside the compose network on a private IP;
   # allow it past the SSRF private-range block.
-  SSRF_ALLOWLIST: "httpbin,localhost,127.0.0.1"
+  SSRF_ALLOWLIST: "httpbin,api,localhost,127.0.0.1"
   LOG_LEVEL: "INFO"
 
 services:

@@ -68,6 +68,14 @@ def main() -> int:
             })
             log.info(f"seeded target 'demo' -> {DEMO_TARGET_URL}")
 
+        if not db.scalars(select(Target).where(Target.key == "qtp_self")).first():
+            catalog.create_target(db, {
+                "key": "qtp_self", "name": "QTP itself (self-tests)",
+                "base_url": Config.SELF_TARGET_URL,
+                "health_url": f"{Config.SELF_TARGET_URL}/health", "tags": ["self"],
+            })
+            log.info(f"seeded target 'qtp_self' -> {Config.SELF_TARGET_URL}")
+
     # Discover code-based tests (the healthcheck example).
     with session_scope() as db:
         result = catalog.discover_tests(db)

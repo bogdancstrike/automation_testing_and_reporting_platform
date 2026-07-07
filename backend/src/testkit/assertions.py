@@ -13,7 +13,9 @@ from src.testkit.result import AssertionResult
 
 _MISSING = object()
 
-_SIMPLE_PATH = re.compile(r"\.([a-zA-Z_][a-zA-Z0-9_]*)|\[(\d+)\]|\['([^']*)'\]")
+# Dotted keys may contain hyphens (common in header names like X-Trace);
+# bracket notation ['any key'] / [0] is also supported.
+_SIMPLE_PATH = re.compile(r"\.([a-zA-Z_][a-zA-Z0-9_-]*)|\[(\d+)\]|\['([^']*)'\]")
 
 
 def json_path_get(data: Any, path: str) -> Any:

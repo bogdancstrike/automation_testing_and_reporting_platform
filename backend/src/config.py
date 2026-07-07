@@ -99,6 +99,12 @@ class Config:
     AUTOMATION_MODULES = tuple(
         m.strip() for m in os.getenv(
             "AUTOMATION_MODULES",
-            "tests.automations.api.test_healthcheck",
+            "tests.automations.api.test_healthcheck,"
+            "tests.automations.api.test_qtp_self,"
+            "tests.automations.api.test_httpbin_methods,"
+            "tests.automations.api.test_httpbin_responses",
         ).split(",") if m.strip()
     )
+
+    # QTP's own API base URL, used by the self-tests' 'qtp_self' target.
+    SELF_TARGET_URL = os.getenv("SELF_TARGET_URL", "http://api:5100/qtp")

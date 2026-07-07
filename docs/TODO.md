@@ -60,7 +60,10 @@ _Last updated: 2026-07-07._
 - [x] worker claims + executes the code healthcheck (passed) and UI request test
 - [x] body `json_path` assertions evaluated; failure → signature + `to_investigate` defect
 - [x] dashboard overview aggregates correct
-- [ ] Full HTTP-layer test through the running API with a real Keycloak token (pending compose bring-up)
+- [x] Full stack via `docker compose up`: Keycloak token (admin/admin) → `/api/me`, 401 without token
+- [x] Worker executes all 22 example tests through the running API; on-demand run flow verified
+- [x] SSRF guard blocks metadata IP (169.254.169.254) with a clean error result
+- [x] Frontend served by nginx (index.html + config.js)
 
 ## Frontend (AntD SPA)
 - [x] Vite React TS scaffold + `Dockerfile`/nginx (builds clean)
@@ -73,7 +76,7 @@ _Last updated: 2026-07-07._
 - [ ] Customizable dashboards (react-grid-layout) — Overview is fixed for now
 
 ## Tests (automated)
-- [~] One example automation test (`tests/automations/api/test_healthcheck.py`)
+- [x] 22 example code automation tests in `tests/automations/api/` (self-tests + httpbin: methods, status codes, headers, JSON body, regex, redirect, basic auth, timing) — all discovered and passing
 - [ ] Backend unit/integration test suite (pytest) for services, recurrence, assertions, queue
 - [ ] Frontend component/E2E tests
 
