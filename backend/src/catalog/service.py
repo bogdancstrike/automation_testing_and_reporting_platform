@@ -86,11 +86,46 @@ def list_tests(db: Session, filters: dict[str, Any]) -> list[dict]:
     return [serializers.test_definition(d) for d in db.scalars(stmt).all()]
 
 
+def _source_code(revision) -> str | None:
+    """Reflect the Python source of a code-based test's class."""
+    if not revision or not revision.code_ref:
+        return None
+    import importlib
+    import inspect
+    try:
+        module_name, _, class_name = revision.code_ref.partition(":")
+        module = importlib.import_module(module_name)
+        cls = getattr(module, class_name)
+        return inspect.getsource(cls)
+    except Exception:
+        return None
+
+
 def get_test_detail(db: Session, test_id: str) -> dict:
     d = db.get(TestDefinition, test_id)
     if not d:
         raise NotFoundError("test not found")
-    return serializers.test_detail(d)
+    detail = serializers.test_detail(d)
+
+    latest = d.revisions[-1] if d.revisions else None
+    config = (latest.config if latest else {}) or {}
+    detail["config"] = config
+    detail["method"] = config.get("method")
+    detail["url_template"] = config.get("url")
+    detail["assertions"] = config.get("assertions", [])
+    detail["code_ref"] = latest.code_ref if latest else None
+
+    # Which app does this test call?
+    tgt = resolve_target(db, d.project_id, d.target_key)
+    detail["target"] = (
+        {"key": tgt.key, "name": tgt.name, "base_url": tgt.base_url, "health_url": tgt.health_url}
+        if tgt else None
+    )
+
+    # The code snippet for the test (reflection), or the request config for UI tests.
+    detail["source_code"] = _source_code(latest)
+    detail["source_language"] = "python" if (latest and latest.code_ref) else "json"
+    return detail
 
 
 def _make_revision(db: Session, definition: TestDefinition, *, code_ref=None, config=None) -> TestRevision:

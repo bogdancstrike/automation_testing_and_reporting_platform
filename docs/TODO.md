@@ -73,6 +73,9 @@ _Last updated: 2026-07-07._
 - [x] Pages: Overview, Test Catalog, Test Detail, Request Builder, Runs, Run Detail, Schedules, Targets, Workers
 - [x] **Developer Docs tab** (architecture 17.1): author code tests, register, run on-demand/scheduled, assertion catalogue, API reference, snippets
 - [x] Defect-type triage control (run detail) + overview failure/defect widgets
+- [x] Request Builder is Insomnia/Postman-like: saved-requests sidebar, load/edit, Save/Update, Delete, and Schedule-from-builder
+- [x] Test Catalog enhanced: summary stats, filters (type/source/target), app column; Test Detail shows target app it calls + **reflected Python source code** + assertions
+- [x] Backend: DELETE /api/request-tests/{id} (cascades runs/schedules/revisions); enriched test detail via reflection (inspect.getsource)
 - [ ] Customizable dashboards (react-grid-layout) — Overview is fixed for now
 
 ## Tests (automated)

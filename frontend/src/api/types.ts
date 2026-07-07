@@ -40,6 +40,14 @@ export interface Revision {
 
 export interface TestDetail extends TestDef {
   revisions: Revision[];
+  config?: Record<string, any>;
+  method?: string;
+  url_template?: string;
+  code_ref?: string;
+  assertions?: any[];
+  target?: { key: string; name: string; base_url: string; health_url?: string } | null;
+  source_code?: string | null;
+  source_language?: string;
 }
 
 export interface AssertionResult {
