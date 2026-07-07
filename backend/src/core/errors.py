@@ -58,5 +58,8 @@ def install_flask_error_handlers(app) -> None:
 
     @app.errorhandler(Exception)
     def _handle_unexpected(err: Exception):  # pragma: no cover
+        from werkzeug.exceptions import HTTPException
+        if isinstance(err, HTTPException):
+            return {"error": err.name, "message": err.description}, err.code
         log.exception(f"unhandled error: {err}")
         return {"error": "internal_error", "message": "internal server error"}, 500

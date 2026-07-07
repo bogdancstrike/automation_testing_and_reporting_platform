@@ -259,11 +259,30 @@ class AuthHttpTest(SimpleHttpTest):
             "password": Config.KEYCLOAK_ADMIN_PASSWORD,
         }
         try:
-            resp = requests.post(token_url, data=data)
+            # We explicitly send Host: localhost:8080 so that Keycloak mints the token
+            # with `iss: http://localhost:8080/...` to match what the backend expects.
+            headers = {"Host": "localhost:8080"}
+            resp = requests.post(token_url, data=data, headers=headers)
+            if not resp.ok:
+                context.log("error", f"failed to get token: {resp.status_code} {resp.text}")
             resp.raise_for_status()
             context.variables["auth_token"] = resp.json()["access_token"]
         except Exception as e:
-            context.log("error", f"failed to get token: {e}")
+            context.log("error", f"exception while getting token: {e}")
+
+    def execute(self, context: TestContext) -> TestResult:
+        from src.testkit.adapters.http import execute_http
+        import copy
+        config = copy.deepcopy(dict(self.metadata.default_config))
+        auth_dict = {"type": "bearer", "token": "{{auth_token}}"}
+        if "steps" in config and isinstance(config["steps"], list):
+            for step in config["steps"]:
+                if "auth" not in step:
+                    step["auth"] = auth_dict
+        else:
+            if "auth" not in config:
+                config["auth"] = auth_dict
+        return execute_http(config, context)
 
 class SelfAuthenticatedTargetsCRUD(AuthHttpTest):
     """CRUD targets"""

@@ -86,10 +86,10 @@ def run_all_target_tests(app, operation, request, target_id=None, principal=None
             runs = db.scalars(select(TestRun).where(TestRun.id.in_(run_ids))).all()
             all_done = all(r.status not in ("queued", "running") for r in runs)
             if all_done:
-                return {"items": [serializers.run_summary(r, test_name=test_map[r.test_definition_id].name, target_key=target.key, tags=test_map[r.test_definition_id].tags) for r in runs]}, 200
+                return {"items": [serializers.run_detail(r, test_name=test_map[r.test_definition_id].name, target_key=target.key, tags=test_map[r.test_definition_id].tags) for r in runs]}, 200
         time.sleep(1)
 
     # Timeout reached, return current statuses
     with session_scope() as db:
         runs = db.scalars(select(TestRun).where(TestRun.id.in_(run_ids))).all()
-        return {"items": [serializers.run_summary(r, test_name=test_map[r.test_definition_id].name, target_key=target.key, tags=test_map[r.test_definition_id].tags) for r in runs]}, 207
+        return {"items": [serializers.run_detail(r, test_name=test_map[r.test_definition_id].name, target_key=target.key, tags=test_map[r.test_definition_id].tags) for r in runs]}, 207

@@ -104,6 +104,34 @@ export default function TargetsPage() {
           <li><strong>Async:</strong> Queues the tests and redirects you to the Runs dashboard.</li>
           <li><strong>Sync:</strong> Blocks the UI and waits for all tests to complete, returning the final results directly.</li>
         </ul>
+        <div style={{ marginTop: 24 }}>
+          <Typography.Title level={5}>CI/CD Integration</Typography.Title>
+          <Typography.Text type="secondary">To run this target from your CI pipeline, use the following cURL commands. Replace <code>$QTP_HOST</code> with your platform URL and <code>$QTP_TOKEN</code> with a valid API token.</Typography.Text>
+          
+          <div style={{ marginTop: 12 }}>
+            <Typography.Text strong>Async execution:</Typography.Text>
+            <Typography.Paragraph copyable={{ text: `curl -X POST "$QTP_HOST/api/targets/${runTarget?.id}/run-all" -H "Authorization: Bearer $QTP_TOKEN" -H "Content-Type: application/json" -d '{"environment": "default"}'` }} style={{ padding: '12px', background: '#f5f5f5', borderRadius: '6px', marginTop: 4 }}>
+              <pre style={{ margin: 0, whiteSpace: 'pre-wrap', fontFamily: 'monospace', fontSize: '12px' }}>
+{`curl -X POST "$QTP_HOST/api/targets/${runTarget?.id}/run-all" \\
+  -H "Authorization: Bearer $QTP_TOKEN" \\
+  -H "Content-Type: application/json" \\
+  -d '{"environment": "default"}'`}
+              </pre>
+            </Typography.Paragraph>
+          </div>
+
+          <div style={{ marginTop: 12 }}>
+            <Typography.Text strong>Sync execution (waits for results):</Typography.Text>
+            <Typography.Paragraph copyable={{ text: `curl -X POST "$QTP_HOST/api/targets/${runTarget?.id}/run-all?sync=true" -H "Authorization: Bearer $QTP_TOKEN" -H "Content-Type: application/json" -d '{"environment": "default"}'` }} style={{ padding: '12px', background: '#f5f5f5', borderRadius: '6px', marginTop: 4 }}>
+              <pre style={{ margin: 0, whiteSpace: 'pre-wrap', fontFamily: 'monospace', fontSize: '12px' }}>
+{`curl -X POST "$QTP_HOST/api/targets/${runTarget?.id}/run-all?sync=true" \\
+  -H "Authorization: Bearer $QTP_TOKEN" \\
+  -H "Content-Type: application/json" \\
+  -d '{"environment": "default"}'`}
+              </pre>
+            </Typography.Paragraph>
+          </div>
+        </div>
       </Modal>
     </div>
   );
