@@ -23,6 +23,7 @@ FROM python:3.12-slim
 COPY --from=builder /install /usr/local
 
 RUN apt-get update && \
+    apt-get install -y curl && \
     playwright install-deps chromium && \
     rm -rf /var/lib/apt/lists/*
 
