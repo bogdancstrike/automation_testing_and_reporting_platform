@@ -6,6 +6,7 @@ the compose network). This is the platform validating its own liveness.
 from tests.automations._base import SimpleHttpTest, jpath, status, within_ms
 from src.testkit.base import TYPE_HTTP, TestMetadata
 from src.testkit.context import TestContext
+from src.testkit.result import TestResult
 from src.config import Config
 import requests
 import json
@@ -155,7 +156,7 @@ class SelfRunTestUnauthorized(SimpleHttpTest):
     metadata = TestMetadata(
         key="self.run_test_unauthorized", name="QTP · POST /api/tests/xyz/run rejects anonymous (401)", type=TYPE_HTTP,
         tags=["self", "security"], owner="admin", target=TARGET,
-        default_config={"method": "POST", "url": "{{base_url}}/api/tests/xyz/run", "assertions": [status(401)]},
+        default_config={"method": "POST", "url": "{{base_url}}/api/tests/00000000-0000-0000-0000-000000000000/run", "assertions": [status(401)]},
     )
 
 
@@ -164,7 +165,7 @@ class SelfCancelRunUnauthorized(SimpleHttpTest):
     metadata = TestMetadata(
         key="self.cancel_run_unauthorized", name="QTP · POST /api/runs/xyz/cancel rejects anonymous (401)", type=TYPE_HTTP,
         tags=["self", "security"], owner="admin", target=TARGET,
-        default_config={"method": "POST", "url": "{{base_url}}/api/runs/xyz/cancel", "assertions": [status(401)]},
+        default_config={"method": "POST", "url": "{{base_url}}/api/runs/00000000-0000-0000-0000-000000000000/cancel", "assertions": [status(401)]},
     )
 
 
@@ -422,7 +423,11 @@ class SelfAuthenticatedRunsCRUD(AuthHttpTest):
                     "assertions": [status(200)]
                 },
                 {
-                    "id": "spawn_run", "name": "Spawn Run", "method": "POST", "url": "{{base_url}}/api/tests/ui.httpbin_get/run",
+                    "id": "get_test", "name": "Get Test ID", "method": "GET", "url": "{{base_url}}/api/tests",
+                    "assertions": [status(200)], "captures": [{"name": "test_id", "source": "json_path", "path": "$.items[0].id"}]
+                },
+                {
+                    "id": "spawn_run", "name": "Spawn Run", "method": "POST", "url": "{{base_url}}/api/tests/{{test_id}}/run",
                     "auth": {"type": "bearer", "token": "{{auth_token}}"},
                     "assertions": [status(202)], "captures": [{"name": "run_id", "source": "json_path", "path": "$.id"}]
                 },
@@ -480,9 +485,13 @@ class SelfAuthenticatedSchedulesCRUD(AuthHttpTest):
         default_config={
             "steps": [
                 {
+                    "id": "get_test", "name": "Get Test ID", "method": "GET", "url": "{{base_url}}/api/tests",
+                    "assertions": [status(200)], "captures": [{"name": "test_id", "source": "json_path", "path": "$.items[0].id"}]
+                },
+                {
                     "id": "create", "name": "Create Schedule", "method": "POST", "url": "{{base_url}}/api/schedules",
                     "auth": {"type": "bearer", "token": "{{auth_token}}"},
-                    "body": {"mode": "json", "raw": json.dumps({"test_definition_id": "ui.httpbin_get", "recurrence_type": "interval", "interval_seconds": 3600})},
+                    "body": {"mode": "json", "raw": "{\"test_definition_id\": \"{{test_id}}\", \"recurrence_type\": \"interval\", \"interval_seconds\": 3600}"},
                     "assertions": [status(201)], "captures": [{"name": "sched_id", "source": "json_path", "path": "$.id"}]
                 },
                 {
@@ -680,7 +689,7 @@ class TestNotFound(AuthHttpTest):
     metadata = TestMetadata(
         key="self.auth.test_404", name="QTP · Test 404", type=TYPE_HTTP,
         tags=["self", "api", "automated"], owner="admin", target=TARGET,
-        default_config={"method": "GET", "url": "{{base_url}}/api/tests/missing-test-123", "auth": {"type": "bearer", "token": "{{auth_token}}"}, "assertions": [status(404)]}
+        default_config={"method": "GET", "url": "{{base_url}}/api/tests/00000000-0000-0000-0000-000000000000", "auth": {"type": "bearer", "token": "{{auth_token}}"}, "assertions": [status(404)]}
     )
 
 class TestCommentsNotFound(AuthHttpTest):
@@ -688,7 +697,7 @@ class TestCommentsNotFound(AuthHttpTest):
     metadata = TestMetadata(
         key="self.auth.test_comments_404", name="QTP · Test Comments 404", type=TYPE_HTTP,
         tags=["self", "api", "automated"], owner="admin", target=TARGET,
-        default_config={"method": "GET", "url": "{{base_url}}/api/tests/missing-test-123/comments", "auth": {"type": "bearer", "token": "{{auth_token}}"}, "assertions": [status(404)]}
+        default_config={"method": "GET", "url": "{{base_url}}/api/tests/00000000-0000-0000-0000-000000000000/comments", "auth": {"type": "bearer", "token": "{{auth_token}}"}, "assertions": [status(404)]}
     )
 
 class RunNotFound(AuthHttpTest):
@@ -800,7 +809,7 @@ class CreateScheduleMissingRecurrence(AuthHttpTest):
     metadata = TestMetadata(
         key="self.auth.create_schedule_400_recurrence", name="QTP · Create Schedule missing recurrence", type=TYPE_HTTP,
         tags=["self", "api", "automated"], owner="admin", target=TARGET,
-        default_config={"method": "POST", "url": "{{base_url}}/api/schedules", "auth": {"type": "bearer", "token": "{{auth_token}}"}, "body": {"mode":"json","raw":"{\"test_definition_id\":\"ui.httpbin_get\"}"}, "assertions": [status(400)]}
+        default_config={"method": "POST", "url": "{{base_url}}/api/schedules", "auth": {"type": "bearer", "token": "{{auth_token}}"}, "body": {"mode":"json","raw":"{\"test_definition_id\":\"00000000-0000-0000-0000-000000000000\"}"}, "assertions": [status(400)]}
     )
 
 class DashboardOverviewBadHours(AuthHttpTest):
@@ -832,7 +841,7 @@ class UpdateTestBadPayload(AuthHttpTest):
     metadata = TestMetadata(
         key="self.auth.update_test_400", name="QTP · Update Test bad payload", type=TYPE_HTTP,
         tags=["self", "api", "automated"], owner="admin", target=TARGET,
-        default_config={"method": "PATCH", "url": "{{base_url}}/api/request-tests/ui.httpbin_get", "auth": {"type": "bearer", "token": "{{auth_token}}"}, "body": {"mode":"json","raw":"[]"}, "assertions": [status(400)]}
+        default_config={"method": "PATCH", "url": "{{base_url}}/api/request-tests/00000000-0000-0000-0000-000000000000", "auth": {"type": "bearer", "token": "{{auth_token}}"}, "body": {"mode":"json","raw":"[]"}, "assertions": [status(404)]}
     )
 
 class UpdateScheduleBadPayload(AuthHttpTest):
@@ -952,7 +961,7 @@ class AuthWithoutBearerPrefix(AuthHttpTest):
     metadata = TestMetadata(
         key="self.auth.auth_no_bearer", name="QTP · Auth w/o Bearer", type=TYPE_HTTP,
         tags=["self", "api", "automated"], owner="admin", target=TARGET,
-        default_config={"method": "GET", "url": "{{base_url}}/api/me", "headers": [{"name": "Authorization", "value": "Token {{auth_token}}"}], "assertions": [status(401)]}
+        default_config={"method": "GET", "url": "{{base_url}}/api/me", "auth": None, "headers": [{"name": "Authorization", "value": "Token {{auth_token}}"}], "assertions": [status(401)]}
     )
 
 class AuthInvalidBearer(AuthHttpTest):
@@ -960,5 +969,5 @@ class AuthInvalidBearer(AuthHttpTest):
     metadata = TestMetadata(
         key="self.auth.auth_invalid_bearer", name="QTP · Auth Invalid Bearer", type=TYPE_HTTP,
         tags=["self", "api", "automated"], owner="admin", target=TARGET,
-        default_config={"method": "GET", "url": "{{base_url}}/api/me", "headers": [{"name": "Authorization", "value": "Bearer invalidtoken123"}], "assertions": [status(401)]}
+        default_config={"method": "GET", "url": "{{base_url}}/api/me", "auth": None, "headers": [{"name": "Authorization", "value": "Bearer invalidtoken123"}], "assertions": [status(401)]}
     )

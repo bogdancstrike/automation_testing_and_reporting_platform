@@ -37,9 +37,14 @@ def target_runs(app, operation, request, target_id=None, principal=None, **kwarg
 
 @require_authenticated
 def target_stats(app, operation, request, target_id=None, principal=None, **kwargs):
+    from src.core.errors import ValidationError
     args = query_args(request)
+    try:
+        hours = int(args.get("hours", 168))
+    except ValueError:
+        raise ValidationError("invalid hours format")
     with session_scope() as db:
-        return service.target_stats(db, target_id, hours=int(args.get("hours", 168))), 200
+        return service.target_stats(db, target_id, hours=hours), 200
 
 
 @require_role(ROLE_PROJECT_ADMIN)
