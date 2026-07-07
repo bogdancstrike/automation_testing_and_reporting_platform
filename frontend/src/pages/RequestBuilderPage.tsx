@@ -366,6 +366,10 @@ export default function RequestBuilderPage() {
 
   const filtered = saved.filter((t) => !search || t.name.toLowerCase().includes(search.toLowerCase()));
   const currentStep = steps[currentStepIndex] || steps[0];
+  const panelBg = token.colorBgContainer;
+  const sidebarBg = token.colorBgElevated;
+  const subtleBg = token.colorFillQuaternary;
+  const selectedBg = token.colorPrimaryBg;
 
   const updateCurrentStep = (patch: Partial<RequestStep>) => {
     setSteps(steps.map((s, idx) => idx === currentStepIndex ? { ...s, ...patch } as RequestStep : s));
@@ -375,15 +379,15 @@ export default function RequestBuilderPage() {
     <Layout style={{ height: "calc(100vh - 64px)", background: "transparent" }}>
       <Splitter style={{ flex: 1, width: "100%", height: "100%" }}>
         <Splitter.Panel defaultSize={280} min={220} max={500}>
-          <Sider width="100%" theme="light" style={{ height: "100%", borderRight: `1px solid ${token.colorBorderSecondary}` }}>
-        <div style={{ padding: "16px 12px", borderBottom: `1px solid ${token.colorBorderSecondary}` }}>
+          <Sider width="100%" theme="light" style={{ height: "100%", borderRight: `1px solid ${token.colorBorderSecondary}`, background: sidebarBg }}>
+        <div style={{ padding: "16px 12px", borderBottom: `1px solid ${token.colorBorderSecondary}`, background: panelBg }}>
           <Space style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
             <Typography.Text strong>Collections</Typography.Text>
             <Button size="small" type="primary" ghost icon={<PlusOutlined />} onClick={reset}>New</Button>
           </Space>
           <Input.Search placeholder="Search requests..." allowClear size="small" onChange={(e) => setSearch(e.target.value)} />
         </div>
-        <div style={{ padding: 12, height: "calc(100% - 100px)", overflowY: "auto" }}>
+        <div style={{ padding: 12, height: "calc(100% - 100px)", overflowY: "auto", background: sidebarBg }}>
           <List
             size="small"
             dataSource={filtered}
@@ -402,7 +406,7 @@ export default function RequestBuilderPage() {
                 <Dropdown menu={menu} trigger={["contextMenu"]}>
                   <List.Item
                     onClick={() => load(t.id, t.name)}
-                    style={{ cursor: "pointer", background: editingId === t.id ? token.colorPrimaryBg : "transparent", padding: "6px 8px", borderRadius: 6, borderBottom: "none" }}
+                    style={{ cursor: "pointer", background: editingId === t.id ? selectedBg : "transparent", padding: "6px 8px", borderRadius: 6, borderBottom: "none" }}
                   >
                     <Space style={{ width: "100%", justifyContent: "space-between" }}>
                       <Space>
@@ -426,7 +430,7 @@ export default function RequestBuilderPage() {
         <Splitter.Panel>
           <Content style={{ display: "flex", flexDirection: "column", height: "100%" }}>
         {/* Header Bar */}
-        <div style={{ padding: "12px 24px", background: token.colorBgContainer, borderBottom: `1px solid ${token.colorBorderSecondary}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div style={{ padding: "12px 24px", background: panelBg, borderBottom: `1px solid ${token.colorBorderSecondary}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <Space>
             <Typography.Title level={4} style={{ margin: 0 }}>
               {editingId ? editingName : "New request"}
@@ -458,13 +462,13 @@ export default function RequestBuilderPage() {
         <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
           {/* Flow sidebar if enabled */}
           {mode === "flow" && (
-            <div style={{ width: 220, borderRight: `1px solid ${token.colorBorderSecondary}`, background: token.colorBgLayout, padding: 12, overflowY: "auto" }}>
+            <div style={{ width: 220, borderRight: `1px solid ${token.colorBorderSecondary}`, background: sidebarBg, padding: 12, overflowY: "auto" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
                 <Typography.Text strong>Steps</Typography.Text>
                 <Button size="small" type="primary" ghost icon={<PlusOutlined />} onClick={addStep} />
               </div>
               {steps.map((item, idx) => (
-                <div key={item.id} onClick={() => setCurrentStepIndex(idx)} style={{ cursor: "pointer", background: currentStepIndex === idx ? token.colorBgContainer : "transparent", border: `1px solid ${currentStepIndex === idx ? token.colorPrimary : "transparent"}`, padding: "8px", borderRadius: 6, marginBottom: 8, boxShadow: currentStepIndex === idx ? "0 2px 4px rgba(0,0,0,0.05)" : "none" }}>
+                <div key={item.id} onClick={() => setCurrentStepIndex(idx)} style={{ cursor: "pointer", background: currentStepIndex === idx ? selectedBg : "transparent", border: `1px solid ${currentStepIndex === idx ? token.colorPrimary : "transparent"}`, padding: "8px", borderRadius: 6, marginBottom: 8 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
                     <Typography.Text strong style={{ fontSize: 13 }} ellipsis>{item.name}</Typography.Text>
                   </div>
@@ -486,7 +490,7 @@ export default function RequestBuilderPage() {
 
           {/* Main Request Pane */}
           <Splitter layout="vertical" style={{ flex: 1 }}>
-            <Splitter.Panel style={{ overflowY: "auto", padding: 24, background: token.colorBgContainer }}>
+            <Splitter.Panel style={{ overflowY: "auto", padding: 24, background: panelBg }}>
               {mode === "flow" && (
                 <Space style={{ marginBottom: 16, width: "100%", justifyContent: "space-between" }}>
                   <Space>
@@ -523,7 +527,7 @@ export default function RequestBuilderPage() {
                   children: (
                     <div>
                       <Segmented options={["none", "json", "text", "form", "graphql"]} value={currentStep.bodyMode || "none"} onChange={(v) => updateCurrentStep({ bodyMode: v as any })} />
-                      {(currentStep.bodyMode || "none") !== "none" && <Input.TextArea rows={8} style={{ marginTop: 12, fontFamily: "monospace", background: "#fafafa" }} value={currentStep.bodyRaw || ""} onChange={(e) => updateCurrentStep({ bodyRaw: e.target.value })} placeholder='{"key": "value"}' />}
+                      {(currentStep.bodyMode || "none") !== "none" && <Input.TextArea rows={8} style={{ marginTop: 12, fontFamily: "monospace", background: token.colorBgElevated }} value={currentStep.bodyRaw || ""} onChange={(e) => updateCurrentStep({ bodyRaw: e.target.value })} placeholder='{"key": "value"}' />}
                     </div>
                   ),
                 },
@@ -533,7 +537,7 @@ export default function RequestBuilderPage() {
             </Splitter.Panel>
 
             {/* Response Area Container (Splitter) */}
-            <Splitter.Panel defaultSize="40%" min="20%" style={{ background: "#fafafa", overflowY: "auto", position: "relative", borderTop: `1px solid ${token.colorBorderSecondary}` }}>
+            <Splitter.Panel defaultSize="40%" min="20%" style={{ background: subtleBg, overflowY: "auto", position: "relative", borderTop: `1px solid ${token.colorBorderSecondary}` }}>
               {!result ? (
                 <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: token.colorTextQuaternary }}>
                   <Space direction="vertical" align="center">
@@ -701,6 +705,8 @@ function ResponseView({ result }: { result: SendResult }) {
   const { token } = theme.useToken();
   const r = result.response || {};
   const isFlow = Array.isArray(r.steps) && r.steps.length > 0;
+  const selectedBg = token.colorPrimaryBg;
+  const panelBg = token.colorBgContainer;
 
   if (isFlow) {
     const stepResponse = r.steps[selectedResultStepIdx] || r.steps[0] || {};
@@ -711,7 +717,7 @@ function ResponseView({ result }: { result: SendResult }) {
 
     return (
       <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
-        <div style={{ padding: "8px 16px", background: token.colorBgContainer, borderBottom: `1px solid ${token.colorBorderSecondary}`, display: "flex", justifyContent: "space-between" }}>
+        <div style={{ padding: "8px 16px", background: panelBg, borderBottom: `1px solid ${token.colorBorderSecondary}`, display: "flex", justifyContent: "space-between" }}>
           <Space>
             <Typography.Text strong>Flow Result</Typography.Text>
             <Tag color={result.status === "passed" ? "success" : "error"}>{result.status}</Tag>
@@ -719,12 +725,12 @@ function ResponseView({ result }: { result: SendResult }) {
           <Typography.Text type="secondary">{r.elapsed_ms != null ? `${r.elapsed_ms} ms total` : ""}</Typography.Text>
         </div>
         <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
-          <div style={{ width: 220, borderRight: `1px solid ${token.colorBorderSecondary}`, overflowY: "auto", background: token.colorBgContainer }}>
+          <div style={{ width: 220, borderRight: `1px solid ${token.colorBorderSecondary}`, overflowY: "auto", background: panelBg }}>
             <List
               size="small"
               dataSource={r.steps}
               renderItem={(s: any, idx) => (
-                <List.Item onClick={() => setSelectedResultStepIdx(idx)} style={{ cursor: "pointer", background: selectedResultStepIdx === idx ? "#e6f4ff" : undefined, padding: "8px 16px" }}>
+                <List.Item onClick={() => setSelectedResultStepIdx(idx)} style={{ cursor: "pointer", background: selectedResultStepIdx === idx ? selectedBg : undefined, padding: "8px 16px" }}>
                   <Space style={{ width: "100%", justifyContent: "space-between" }}>
                     <Typography.Text ellipsis style={{ maxWidth: 120 }}>{s.name}</Typography.Text>
                     <Tag color={s.status === "passed" ? "success" : "error"} style={{ margin: 0 }}>{s.status === "passed" ? "✓" : "✗"}</Tag>
@@ -744,7 +750,7 @@ function ResponseView({ result }: { result: SendResult }) {
              <Row gutter={24}>
                <Col span={14}>
                  <Tabs items={[
-                    { key: "body", label: "Body", children: <pre style={{ background: token.colorBgContainer, padding: 12, borderRadius: 6, border: `1px solid ${token.colorBorderSecondary}`, marginTop: 0, overflowX: "auto" }}>{(stepRespData.body_text || "").slice(0, 5000) || "(empty)"}</pre> },
+                    { key: "body", label: "Body", children: <pre style={{ background: panelBg, padding: 12, borderRadius: 6, border: `1px solid ${token.colorBorderSecondary}`, marginTop: 0, overflowX: "auto" }}>{(stepRespData.body_text || "").slice(0, 5000) || "(empty)"}</pre> },
                     { key: "headers", label: "Headers", children: <Empty description="Headers not implemented in preview" image={Empty.PRESENTED_IMAGE_SIMPLE} /> },
                     { key: "captures", label: "Captures", children: (stepRespData.captures && stepRespData.captures.length > 0) ? (<Space>{stepRespData.captures.map((c: string) => <Tag key={c} color="blue">{c}</Tag>)}</Space>) : <Typography.Text type="secondary">No variables captured</Typography.Text> }
                   ]} />
@@ -770,7 +776,7 @@ function ResponseView({ result }: { result: SendResult }) {
   const allPass = result.assertions.every((a) => a.passed);
   return (
     <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
-      <div style={{ padding: "8px 16px", background: token.colorBgContainer, borderBottom: `1px solid ${token.colorBorderSecondary}`, display: "flex", justifyContent: "space-between" }}>
+      <div style={{ padding: "8px 16px", background: panelBg, borderBottom: `1px solid ${token.colorBorderSecondary}`, display: "flex", justifyContent: "space-between" }}>
         <Space>
           <Typography.Text strong>Response</Typography.Text>
           {r.status_code != null && <Typography.Text type={r.status_code >= 400 ? "danger" : "success"}>{r.status_code} {r.status_code >= 400 ? "Error" : "OK"}</Typography.Text>}
@@ -785,7 +791,7 @@ function ResponseView({ result }: { result: SendResult }) {
         <Row gutter={24}>
           <Col span={14}>
             <Tabs items={[
-              { key: "body", label: "Body", children: <pre style={{ background: token.colorBgContainer, padding: 12, borderRadius: 6, border: `1px solid ${token.colorBorderSecondary}`, marginTop: 0, overflowX: "auto" }}>{(r.body_text || "").slice(0, 5000) || "(empty)"}</pre> },
+              { key: "body", label: "Body", children: <pre style={{ background: panelBg, padding: 12, borderRadius: 6, border: `1px solid ${token.colorBorderSecondary}`, marginTop: 0, overflowX: "auto" }}>{(r.body_text || "").slice(0, 5000) || "(empty)"}</pre> },
               { key: "headers", label: "Headers", children: <Empty description="Headers not implemented in preview" image={Empty.PRESENTED_IMAGE_SIMPLE} /> },
               { key: "captures", label: "Captures", children: (r.captures && r.captures.length > 0) ? (<Space>{r.captures.map((c: string) => <Tag key={c} color="blue">{c}</Tag>)}</Space>) : <Typography.Text type="secondary">No variables captured</Typography.Text> }
             ]} />
