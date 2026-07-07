@@ -109,6 +109,7 @@ export default function ScheduleDetailPage() {
           dataSource={runsPage || []}
           onRow={(r: any) => ({ onClick: () => nav(`/runs/${r.id}`), style: { cursor: "pointer" } })}
           columns={[
+            { title: "Scenario", dataIndex: "test_name", render: (n, r: any) => n || r.test_definition_id },
             { title: "Status", dataIndex: "status", render: (st) => <StatusTag status={st} /> },
             { title: "Duration", dataIndex: "duration_ms", render: (ms) => ms != null ? `${ms} ms` : "—" },
             { title: "Defect", dataIndex: "defect_type", render: (d) => d || "—" },

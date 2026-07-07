@@ -121,5 +121,3 @@ _Last updated: 2026-07-07._
 - [x] `/schedules` can create schedules with multiple scenarios; `/schedules/{id}` lists all included scenarios and recent runs for the shared schedule
 - [ ] Add the requested qtp_self scenario suites in `backend/scenarios/automation/qtp_self/`: 10 each for `CliTest`, `PlaywrightTest`, `SeleniumTest`, and `PythonTest`
 - [ ] Update the worker image/runtime dependencies for Playwright and Selenium workloads
-- [ ] Finish any remaining requested qtp_self scenario expansion beyond the already discovered 66 scenarios, if the new class-specific suites expose gaps
-- [ ] Keep this TODO updated as items move to done, partial, or deferred during the implementation

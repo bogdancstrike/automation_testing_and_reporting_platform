@@ -20,13 +20,21 @@ RUN pip install --no-cache-dir --prefix=/install \
 
 FROM python:3.12-slim
 
+COPY --from=builder /install /usr/local
+
+RUN apt-get update && \
+    playwright install-deps chromium && \
+    rm -rf /var/lib/apt/lists/*
+
 RUN useradd --create-home --shell /bin/bash appuser
 WORKDIR /app
 
-COPY --from=builder /install /usr/local
+USER appuser
+RUN playwright install chromium
+
+USER root
 COPY backend/ /app/backend/
 COPY worker/ /app/worker/
-
 RUN chown -R appuser:appuser /app
 USER appuser
 

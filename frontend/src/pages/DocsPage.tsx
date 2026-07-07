@@ -159,7 +159,7 @@ export default function DocsPage() {
           </aside>
         </Col>
 
-        <Col xs={24} lg={15}>
+        <Col xs={24} lg={19}>
           <article className="qtp-docs-article" style={{ fontSize: '1.05rem', lineHeight: 1.7, color: '#333' }}>
             <div className="qtp-docs-hero" style={{ marginBottom: '3rem' }}>
               <Tag color="blue" style={{ marginBottom: '16px' }}>Developer documentation</Tag>

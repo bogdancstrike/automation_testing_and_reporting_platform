@@ -36,3 +36,5 @@ croniter>=2.0.0
 
 # Testing
 pytest>=8.0.0
+playwright>=1.40.0
+selenium>=4.15.0
