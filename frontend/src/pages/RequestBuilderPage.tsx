@@ -371,10 +371,11 @@ export default function RequestBuilderPage() {
     setSteps(steps.map((s, idx) => idx === currentStepIndex ? { ...s, ...patch } as RequestStep : s));
   };
 
-  // @ts-ignore
   return (
     <Layout style={{ height: "calc(100vh - 64px)", background: "transparent" }}>
-      <div style={{ width: 280, minWidth: 200, maxWidth: 500, resize: "horizontal", overflow: "hidden", borderRight: `1px solid ${token.colorBorderSecondary}`, background: "#fff", display: "flex", flexDirection: "column" }}>
+      <Splitter style={{ flex: 1, width: "100%", height: "100%" }}>
+        <Splitter.Panel defaultSize={280} min={220} max={500}>
+          <Sider width="100%" theme="light" style={{ height: "100%", borderRight: `1px solid ${token.colorBorderSecondary}` }}>
         <div style={{ padding: "16px 12px", borderBottom: `1px solid ${token.colorBorderSecondary}` }}>
           <Space style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
             <Typography.Text strong>Collections</Typography.Text>
@@ -408,7 +409,9 @@ export default function RequestBuilderPage() {
                         <Typography.Text type="secondary" style={{ fontSize: 11, minWidth: 42, display: "inline-block" }}>
                           {cfgMethod || "FLOW"}
                         </Typography.Text>
-                        <Typography.Text ellipsis={{ tooltip: t.name }} style={{ flex: 1, maxWidth: "100%" }}>{t.name}</Typography.Text>
+                        <Tooltip title={t.name} placement="right">
+                          <Typography.Text ellipsis style={{ maxWidth: 160 }}>{t.name}</Typography.Text>
+                        </Tooltip>
                       </Space>
                     </Space>
                   </List.Item>
@@ -417,9 +420,11 @@ export default function RequestBuilderPage() {
             }}
           />
         </div>
-      </div>
+          </Sider>
+        </Splitter.Panel>
 
-      <Content style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+        <Splitter.Panel>
+          <Content style={{ display: "flex", flexDirection: "column", height: "100%" }}>
         {/* Header Bar */}
         <div style={{ padding: "12px 24px", background: token.colorBgContainer, borderBottom: `1px solid ${token.colorBorderSecondary}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <Space>
@@ -497,8 +502,8 @@ export default function RequestBuilderPage() {
                 <Select value={currentStep.method} onChange={(v) => updateCurrentStep({ method: v })} style={{ width: 120 }} size="large" options={METHODS.map((m) => ({ value: m }))} />
                 <Select allowClear placeholder="Target (optional)" value={currentStep.target} onChange={(v) => {
                   const target = targets.find(t => t.key === v);
-                  const newUrl = target?.base_url && currentStep.url.includes("{{base_url}}") 
-                    ? currentStep.url.replace("{{base_url}}", target.base_url) 
+                  const newUrl = target?.base_url && currentStep.url.includes("{{base_url}}")
+                    ? currentStep.url.replace("{{base_url}}", target.base_url)
                     : currentStep.url;
                   updateCurrentStep({ target: v, url: newUrl });
                 }} style={{ width: 180 }} size="large" options={targets.map((t) => ({ value: t.key, label: t.key }))} />
@@ -542,7 +547,9 @@ export default function RequestBuilderPage() {
             </Splitter.Panel>
           </Splitter>
         </div>
-      </Content>
+          </Content>
+        </Splitter.Panel>
+      </Splitter>
 
       <Modal title="Save Request" open={saveOpen} onCancel={() => setSaveOpen(false)}
         onOk={() => saveForm.validateFields().then((v) => create.mutate(v.name))} confirmLoading={create.isPending}>
