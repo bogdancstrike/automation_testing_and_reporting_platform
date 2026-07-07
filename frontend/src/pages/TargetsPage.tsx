@@ -46,6 +46,7 @@ export default function TargetsPage() {
         columns={[
           { title: "Key", dataIndex: "key", sorter: true, render: (v) => <Typography.Text code>{v}</Typography.Text> },
           { title: "Name", dataIndex: "name", sorter: true, render: (v) => <a>{v}</a> },
+          { title: "Tests Configured", dataIndex: "test_count", render: (v) => <Typography.Text strong>{v || 0}</Typography.Text> },
           { title: "Base URL", dataIndex: "base_url", sorter: true, ellipsis: true },
           { title: "Environment", dataIndex: "environment", sorter: true },
           { title: "Tags", dataIndex: "tags", render: (t) => (t || []).map((x: string) => <Tag key={x}>{x}</Tag>) },

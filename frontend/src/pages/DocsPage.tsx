@@ -171,8 +171,10 @@ export default function DocsPage() {
             { key: "python", href: "#python", title: "Author a Python test" },
             { key: "register", href: "#register", title: "Register (discovery)" },
             { key: "ui", href: "#ui", title: "Create a request test (UI)" },
+            { key: "env-vars", href: "#env-vars", title: "Variables & Secrets" },
             { key: "run", href: "#run", title: "Run on demand" },
             { key: "schedule", href: "#schedule", title: "Schedule recurrence" },
+            { key: "workers", href: "#workers", title: "Worker Architecture" },
             { key: "assertions", href: "#assertions", title: "Assertion catalogue" },
             { key: "extend", href: "#extend", title: "Extend the platform" },
             { key: "api", href: "#api", title: "API reference" },
@@ -184,7 +186,7 @@ export default function DocsPage() {
           <Title level={2}>Developer Guide</Title>
           <Paragraph type="secondary">
             How to add automated tests to QTP — as Python code via the framework, or from the UI — and run them
-            on demand or on a schedule against any target application.
+            on demand or on a schedule against any target application. This guide also covers advanced concepts like data captures and the worker fleet architecture.
           </Paragraph>
 
           <Card id="concepts" title="Concepts" style={{ marginBottom: 20 }}>
@@ -248,8 +250,24 @@ export default function DocsPage() {
             <Code>{SAVE_UI_FLOW}</Code>
           </Card>
 
+          <Card id="env-vars" title="Variables & Secrets" style={{ marginBottom: 20 }}>
+            <Paragraph>
+              QTP supports string interpolation across your request URLs, headers, and bodies. The syntax uses double curly braces: <Text code>{"{{variable_name}}"}</Text>.
+            </Paragraph>
+            <Paragraph>
+              Built-in variables:
+              <ul>
+                <li><Text code>{"{{base_url}}"}</Text> - Resolves to the <Text strong>target's</Text> base URL mapped to the current run. This allows the test to be fully portable across dev, staging, and production environments.</li>
+              </ul>
+            </Paragraph>
+            <Paragraph>
+              Captures:
+              In Multi-Step flows, you can extract tokens, IDs, or any value from one step and use them in subsequent steps. When defining a capture (e.g. `auth_token`), it is injected into the execution context and can be referenced later via <Text code>{"{{auth_token}}"}</Text> or mapped directly in the Auth tab.
+            </Paragraph>
+          </Card>
+
           <Card id="run" title="Run on demand" style={{ marginBottom: 20 }}>
-            <Paragraph>Use “Run now” in the catalog/detail, or:</Paragraph>
+            <Paragraph>Use “Run now” in the catalog/detail, or via API:</Paragraph>
             <Code>{RUN_NOW}</Code>
           </Card>
 
@@ -260,6 +278,18 @@ export default function DocsPage() {
               runs; the worker executes them.
             </Paragraph>
             <Code>{SCHED}</Code>
+          </Card>
+
+          <Card id="workers" title="Worker Architecture" style={{ marginBottom: 20 }}>
+            <Paragraph>
+              QTP's execution model is decoupled. The API server enqueues runs into PostgreSQL, acting as the <Text strong>Run Queue</Text>.
+            </Paragraph>
+            <Paragraph>
+              <Text strong>Worker Nodes</Text> run asynchronously, constantly polling the queue for claimed tasks. They pull a <Text code>TestDefinition</Text>, initialize the <Text code>TestContext</Text>, execute the python adapter (or arbitrary test framework), capture steps, run assertions, and push the <Text code>TestResult</Text> and logs back into the database.
+            </Paragraph>
+            <Paragraph>
+              Workers advertise their <Text code>capabilities</Text> to ensure they only pick up jobs they can process. The system uses a heartbeat mechanism so you can view all active agents globally on the <Text strong>Workers</Text> dashboard.
+            </Paragraph>
           </Card>
 
           <Card id="assertions" title="Assertion catalogue" style={{ marginBottom: 20 }}>

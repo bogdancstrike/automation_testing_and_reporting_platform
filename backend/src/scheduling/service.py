@@ -40,10 +40,6 @@ def list_schedules(db: Session, filters: dict[str, Any] | None = None) -> dict:
     def_ids = {s.test_definition_id for s in schedules if s.test_definition_id}
     defs = {d.id: d for d in db.scalars(select(TestDefinition).where(TestDefinition.id.in_(def_ids))).all()} if def_ids else {}
     
-    target_ids = {d.target_id for d in defs.values() if d.target_id}
-    from src.catalog.models import Target
-    targets = {t.id: t.key for t in db.scalars(select(Target).where(Target.id.in_(target_ids))).all()} if target_ids else {}
-    
     sched_ids = {s.id for s in schedules}
     from src.execution.models import TestRun
     counts = {}
@@ -59,7 +55,7 @@ def list_schedules(db: Session, filters: dict[str, Any] | None = None) -> dict:
     for s in schedules:
         d = defs.get(s.test_definition_id)
         item = serializers.schedule(s, test_name=d.name if d else None)
-        item["target_key"] = targets.get(d.target_id) if d and d.target_id else None
+        item["target_key"] = getattr(d, "target_key", None) if d else None
         item["total_runs"] = counts.get(s.id, 0)
         out.append(item)
         
@@ -70,12 +66,7 @@ def get_schedule_detail(db: Session, schedule_id: str) -> dict:
     if not s:
         raise NotFoundError("schedule not found")
     d = db.get(TestDefinition, s.test_definition_id) if s.test_definition_id else None
-    
-    target_key = None
-    if d and d.target_id:
-        from src.catalog.models import Target
-        tgt = db.get(Target, d.target_id)
-        if tgt: target_key = tgt.key
+    target_key = getattr(d, "target_key", None) if d else None
 
     from src.execution.models import TestRun
     stats = db.execute(

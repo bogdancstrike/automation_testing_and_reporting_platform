@@ -42,7 +42,17 @@ def list_targets(db: Session, project_id: str | None = None) -> list[dict]:
     stmt = select(Target)
     if project_id:
         stmt = stmt.where(Target.project_id == project_id)
-    return [serializers.target(t) for t in db.scalars(stmt.order_by(Target.name)).all()]
+    rows = db.scalars(stmt.order_by(Target.name)).all()
+    target_keys = {t.key for t in rows}
+    counts = {}
+    if target_keys:
+        counts = dict(db.execute(select(TestDefinition.target_key, func.count()).where(TestDefinition.target_key.in_(target_keys)).group_by(TestDefinition.target_key)).all())
+    out = []
+    for t in rows:
+        d = serializers.target(t)
+        d["test_count"] = counts.get(t.key, 0)
+        out.append(d)
+    return out
 
 
 def list_targets_page(db: Session, filters: dict[str, Any]) -> dict:
@@ -59,7 +69,16 @@ def list_targets_page(db: Session, filters: dict[str, Any]) -> dict:
     })
     total = int(db.scalar(select(func.count()).select_from(stmt.order_by(None).subquery())) or 0)
     rows = db.scalars(stmt.offset((params.page - 1) * params.page_size).limit(params.page_size)).all()
-    return envelope([serializers.target(t) for t in rows], total, params)
+    target_keys = {t.key for t in rows}
+    counts = {}
+    if target_keys:
+        counts = dict(db.execute(select(TestDefinition.target_key, func.count()).where(TestDefinition.target_key.in_(target_keys)).group_by(TestDefinition.target_key)).all())
+    out = []
+    for t in rows:
+        d = serializers.target(t)
+        d["test_count"] = counts.get(t.key, 0)
+        out.append(d)
+    return envelope(out, total, params)
 
 
 def create_target(db: Session, payload: dict[str, Any]) -> dict:

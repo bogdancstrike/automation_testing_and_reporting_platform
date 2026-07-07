@@ -2,21 +2,25 @@ import { useState } from "react";
 import {
   Row, Col, Card, Select, Input, Button, Tabs, Table, Space, Typography,
   Tag, App, Modal, Form, Alert, Segmented, List, Popconfirm, InputNumber, Empty, Tooltip,
+  Layout, theme, Divider, Dropdown, MenuProps,
 } from "antd";
 import {
   SendOutlined, PlusOutlined, DeleteOutlined, SaveOutlined, ClockCircleOutlined,
-  FileAddOutlined, ArrowUpOutlined, ArrowDownOutlined, CopyOutlined,
+  FileAddOutlined, ArrowUpOutlined, ArrowDownOutlined, CopyOutlined, PlayCircleOutlined,
+  EditOutlined, MoreOutlined,
 } from "@ant-design/icons";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { qtp } from "../api/qtp";
 import type { SendResult } from "../api/types";
 
-const METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD"];
+const { Header, Content, Sider } = Layout;
+
+const METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"];
 const SOURCES = ["status_code", "json_path", "header", "body_text", "response_time_ms"];
 const OPERATORS = ["equals", "not_equals", "contains", "not_contains", "matches", "exists",
   "not_exists", "gt", "gte", "lt", "lte", "length_gte", "length_lte"];
 const METHOD_COLOR: Record<string, string> = {
-  GET: "green", POST: "blue", PUT: "orange", PATCH: "gold", DELETE: "red", HEAD: "default",
+  GET: "success", POST: "processing", PUT: "warning", PATCH: "gold", DELETE: "error", HEAD: "default", OPTIONS: "cyan",
 };
 
 type KV = { name: string; value: string; enabled: boolean };
@@ -52,7 +56,7 @@ const createInitialSteps = (): RequestStep[] => [
     name: "Request",
     method: "GET",
     target: undefined,
-    url: "{{base_url}}/get",
+    url: "{{base_url}}/api/status",
     headers: [],
     query: [],
     auth: { type: "none" },
@@ -66,6 +70,7 @@ const createInitialSteps = (): RequestStep[] => [
 export default function RequestBuilderPage() {
   const { message } = App.useApp();
   const qc = useQueryClient();
+  const { token } = theme.useToken();
   const { data: targets = [] } = useQuery({ queryKey: ["targets"], queryFn: qtp.targets });
   const { data: saved = [] } = useQuery({ queryKey: ["reqtests"], queryFn: () => qtp.tests("?source=ui") });
 
@@ -79,8 +84,12 @@ export default function RequestBuilderPage() {
 
   const [saveOpen, setSaveOpen] = useState(false);
   const [schedOpen, setSchedOpen] = useState(false);
+  const [renameOpen, setRenameOpen] = useState(false);
+  const [targetContextId, setTargetContextId] = useState<string | null>(null);
+  
   const [saveForm] = Form.useForm();
   const [schedForm] = Form.useForm();
+  const [renameForm] = Form.useForm();
   const schedType = Form.useWatch("recurrence_type", schedForm);
 
   function reset() {
@@ -160,8 +169,8 @@ export default function RequestBuilderPage() {
       target: s.target,
       method: s.method,
       url: s.url,
-      headers: s.headers.filter((h) => h.name),
-      query: s.query.filter((q) => q.name),
+      headers: s.headers.filter((h) => h.name && h.enabled),
+      query: s.query.filter((q) => q.name && q.enabled),
       auth: s.auth && s.auth.type !== "none" ? s.auth : undefined,
       body: s.bodyMode === "none" ? undefined : { mode: s.bodyMode, raw: s.bodyRaw },
       assertions: s.assertions.map((a) => ({ type: a.type, path: a.path, operator: a.operator, expected: coerce(a.expected) })),
@@ -217,13 +226,41 @@ export default function RequestBuilderPage() {
   });
 
   const remove = useMutation({
-    mutationFn: () => qtp.deleteRequestTest(editingId!),
-    onSuccess: () => {
+    mutationFn: (id?: string) => qtp.deleteRequestTest(id || editingId!),
+    onSuccess: (_, id) => {
       message.success("Deleted");
-      reset();
+      if (!id || id === editingId) reset();
       qc.invalidateQueries({ queryKey: ["reqtests"] });
     },
     onError: (e: any) => message.error(e.message || "delete failed"),
+  });
+
+  const duplicate = useMutation({
+    mutationFn: async (id: string) => {
+      const detail = await qtp.test(id);
+      const cfg = detail.revisions[detail.revisions.length - 1]?.config || {};
+      return qtp.createRequestTest({ name: `${detail.name} (Copy)`, config: cfg });
+    },
+    onSuccess: () => {
+      message.success("Duplicated");
+      qc.invalidateQueries({ queryKey: ["reqtests"] });
+    },
+    onError: (e: any) => message.error(e.message || "duplicate failed"),
+  });
+
+  const renameMut = useMutation({
+    mutationFn: async ({ id, name }: { id: string, name: string }) => {
+      const detail = await qtp.test(id);
+      const cfg = detail.revisions[detail.revisions.length - 1]?.config || {};
+      return qtp.updateRequestTest(id, { name, config: cfg });
+    },
+    onSuccess: (_, { id, name }) => {
+      message.success("Renamed");
+      if (editingId === id) setEditingName(name);
+      setRenameOpen(false);
+      qc.invalidateQueries({ queryKey: ["reqtests"] });
+    },
+    onError: (e: any) => message.error(e.message || "rename failed"),
   });
 
   const schedule = useMutation({
@@ -335,170 +372,146 @@ export default function RequestBuilderPage() {
   };
 
   return (
-    <Row gutter={16} style={{ height: "100%" }}>
-      {/* Collection sidebar */}
-      <Col xs={24} md={6}>
-        <Card size="small" styles={{ body: { padding: 8 } }}
-          title={<Space><span>Saved requests</span></Space>}
-          extra={<Button size="small" type="primary" ghost icon={<FileAddOutlined />} onClick={reset}>New</Button>}>
-          <Input.Search placeholder="filter" allowClear size="small" style={{ marginBottom: 8 }} onChange={(e) => setSearch(e.target.value)} />
+    <Layout style={{ height: "calc(100vh - 64px)", background: "transparent" }}>
+      <Sider width={280} theme="light" style={{ borderRight: `1px solid ${token.colorBorderSecondary}` }}>
+        <div style={{ padding: "16px 12px", borderBottom: `1px solid ${token.colorBorderSecondary}` }}>
+          <Space style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
+            <Typography.Text strong>Collections</Typography.Text>
+            <Button size="small" type="primary" ghost icon={<PlusOutlined />} onClick={reset}>New</Button>
+          </Space>
+          <Input.Search placeholder="Search requests..." allowClear size="small" onChange={(e) => setSearch(e.target.value)} />
+        </div>
+        <div style={{ padding: 12, height: "calc(100% - 100px)", overflowY: "auto" }}>
           <List
             size="small"
             dataSource={filtered}
             locale={{ emptyText: <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No saved requests" /> }}
             renderItem={(t) => {
               const cfgMethod = (t as any).method;
+              const menu: MenuProps = {
+                items: [
+                  { key: "rename", label: "Rename", icon: <EditOutlined />, onClick: (e) => { e.domEvent.stopPropagation(); setTargetContextId(t.id); renameForm.setFieldsValue({ name: t.name }); setRenameOpen(true); } },
+                  { key: "duplicate", label: "Duplicate", icon: <CopyOutlined />, onClick: (e) => { e.domEvent.stopPropagation(); duplicate.mutate(t.id); } },
+                  { type: "divider" },
+                  { key: "delete", danger: true, label: "Delete", icon: <DeleteOutlined />, onClick: (e) => { e.domEvent.stopPropagation(); Modal.confirm({ title: "Delete request?", content: "Are you sure you want to delete this saved request?", onOk: () => remove.mutate(t.id) }); } },
+                ]
+              };
               return (
-                <List.Item
-                  onClick={() => load(t.id, t.name)}
-                  style={{ cursor: "pointer", background: editingId === t.id ? "#e6f4ff" : undefined, paddingInline: 8, borderRadius: 4 }}
-                >
-                  <Space style={{ width: "100%", justifyContent: "space-between" }}>
-                    <Space>
-                      <Tag color={METHOD_COLOR[cfgMethod] || "default"} style={{ marginRight: 0, minWidth: 46, textAlign: "center" }}>
-                        {cfgMethod || "FLOW"}
-                      </Tag>
-                      <Typography.Text ellipsis style={{ maxWidth: 120 }}>{t.name}</Typography.Text>
+                <Dropdown menu={menu} trigger={["contextMenu"]}>
+                  <List.Item
+                    onClick={() => load(t.id, t.name)}
+                    style={{ cursor: "pointer", background: editingId === t.id ? token.colorPrimaryBg : "transparent", padding: "6px 8px", borderRadius: 6, borderBottom: "none" }}
+                  >
+                    <Space style={{ width: "100%", justifyContent: "space-between" }}>
+                      <Space>
+                        <Typography.Text type="secondary" style={{ fontSize: 11, minWidth: 42, display: "inline-block" }}>
+                          {cfgMethod || "FLOW"}
+                        </Typography.Text>
+                        <Typography.Text ellipsis style={{ maxWidth: 160 }}>{t.name}</Typography.Text>
+                      </Space>
                     </Space>
-                  </Space>
-                </List.Item>
+                  </List.Item>
+                </Dropdown>
               );
             }}
           />
-        </Card>
-      </Col>
+        </div>
+      </Sider>
 
-      {/* Editor */}
-      <Col xs={24} md={18}>
-        <Space style={{ marginBottom: 8, justifyContent: "space-between", width: "100%" }}>
+      <Content style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+        {/* Header Bar */}
+        <div style={{ padding: "12px 24px", background: token.colorBgContainer, borderBottom: `1px solid ${token.colorBorderSecondary}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <Space>
             <Typography.Title level={4} style={{ margin: 0 }}>
               {editingId ? editingName : "New request"}
             </Typography.Title>
-            {editingId && <Tag color="blue">saved</Tag>}
+            {editingId && <Tag color="blue" bordered={false}>saved</Tag>}
             <Segmented
-              options={[
-                { label: "Single Request", value: "single" },
-                { label: "Multi-step Flow", value: "flow" }
-              ]}
+              options={[{ label: "Single", value: "single" }, { label: "Flow", value: "flow" }]}
               value={mode}
               onChange={handleModeChange}
+              size="small"
             />
           </Space>
           <Space>
             {editingId ? (
-              <Button icon={<SaveOutlined />} loading={update.isPending} onClick={() => update.mutate()}>Update</Button>
+              <Button icon={<SaveOutlined />} loading={update.isPending} onClick={() => update.mutate()}>Save</Button>
             ) : (
               <Button icon={<SaveOutlined />} onClick={() => setSaveOpen(true)}>Save</Button>
             )}
-            <Tooltip title={editingId ? "" : "Save the request first"}>
-              <Button icon={<ClockCircleOutlined />} disabled={!editingId} onClick={() => setSchedOpen(true)}>Schedule</Button>
-            </Tooltip>
+            <Button icon={<ClockCircleOutlined />} disabled={!editingId} onClick={() => setSchedOpen(true)}>Schedule</Button>
             {editingId && (
               <Popconfirm title="Delete this saved request?" onConfirm={() => remove.mutate()}>
-                <Button danger icon={<DeleteOutlined />} loading={remove.isPending}>Delete</Button>
+                <Button danger icon={<DeleteOutlined />} loading={remove.isPending}></Button>
               </Popconfirm>
             )}
           </Space>
-        </Space>
+        </div>
 
-        <Card size="small" style={{ marginBottom: 16 }}>
-          {mode === "flow" ? (
-            <Row gutter={12}>
-              {/* Flow Steps Sidebar */}
-              <Col span={6} style={{ borderRight: "1px solid #f0f0f0", paddingRight: 8 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                  <Typography.Text strong>Flow Steps</Typography.Text>
-                  <Button size="small" type="primary" ghost icon={<PlusOutlined />} onClick={addStep} />
-                </div>
-                <List
-                  size="small"
-                  dataSource={steps}
-                  renderItem={(item, idx) => (
-                    <List.Item
-                      onClick={() => setCurrentStepIndex(idx)}
-                      style={{
-                        cursor: "pointer",
-                        background: currentStepIndex === idx ? "#e6f4ff" : undefined,
-                        paddingInline: 8,
-                        borderRadius: 4,
-                        marginBottom: 4,
-                      }}
-                      actions={[
-                        <Button size="small" type="text" icon={<ArrowUpOutlined />} disabled={idx === 0} onClick={(e) => { e.stopPropagation(); moveStepUp(idx); }} />,
-                        <Button size="small" type="text" icon={<ArrowDownOutlined />} disabled={idx === steps.length - 1} onClick={(e) => { e.stopPropagation(); moveStepDown(idx); }} />,
-                        <Button size="small" type="text" icon={<CopyOutlined />} onClick={(e) => { e.stopPropagation(); duplicateStep(idx); }} />,
-                        <Button size="small" type="text" danger icon={<DeleteOutlined />} disabled={steps.length <= 1} onClick={(e) => { e.stopPropagation(); deleteStep(idx); }} />
-                      ]}
-                    >
-                      <Space>
-                        <Tag color={METHOD_COLOR[item.method]} style={{ marginRight: 0, minWidth: 46, textAlign: "center", fontSize: 10 }}>
-                          {item.method}
-                        </Tag>
-                        <Typography.Text ellipsis style={{ maxWidth: 80, fontSize: 12 }}>{item.name}</Typography.Text>
-                      </Space>
-                    </List.Item>
+        {/* Request Area */}
+        <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
+          {/* Flow sidebar if enabled */}
+          {mode === "flow" && (
+            <div style={{ width: 220, borderRight: `1px solid ${token.colorBorderSecondary}`, background: token.colorBgLayout, padding: 12, overflowY: "auto" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                <Typography.Text strong>Steps</Typography.Text>
+                <Button size="small" type="primary" ghost icon={<PlusOutlined />} onClick={addStep} />
+              </div>
+              {steps.map((item, idx) => (
+                <div key={item.id} onClick={() => setCurrentStepIndex(idx)} style={{ cursor: "pointer", background: currentStepIndex === idx ? token.colorBgContainer : "transparent", border: `1px solid ${currentStepIndex === idx ? token.colorPrimary : "transparent"}`, padding: "8px", borderRadius: 6, marginBottom: 8, boxShadow: currentStepIndex === idx ? "0 2px 4px rgba(0,0,0,0.05)" : "none" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                    <Typography.Text strong style={{ fontSize: 13 }} ellipsis>{item.name}</Typography.Text>
+                  </div>
+                  <Space style={{ fontSize: 11 }}>
+                    <Tag color={METHOD_COLOR[item.method]} style={{ margin: 0, fontSize: 10 }}>{item.method}</Tag>
+                  </Space>
+                  {currentStepIndex === idx && (
+                    <div style={{ marginTop: 8, display: "flex", justifyContent: "flex-end", gap: 4 }}>
+                      <Button size="small" type="text" icon={<ArrowUpOutlined />} disabled={idx === 0} onClick={(e) => { e.stopPropagation(); moveStepUp(idx); }} />
+                      <Button size="small" type="text" icon={<ArrowDownOutlined />} disabled={idx === steps.length - 1} onClick={(e) => { e.stopPropagation(); moveStepDown(idx); }} />
+                      <Button size="small" type="text" icon={<CopyOutlined />} onClick={(e) => { e.stopPropagation(); duplicateStep(idx); }} />
+                      <Button size="small" type="text" danger icon={<DeleteOutlined />} disabled={steps.length <= 1} onClick={(e) => { e.stopPropagation(); deleteStep(idx); }} />
+                    </div>
                   )}
-                />
-              </Col>
-              {/* Selected Step Editor */}
-              <Col span={18}>
-                <Space style={{ marginBottom: 8, display: "flex", width: "100%", justifyContent: "space-between" }}>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Main Request Pane */}
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+            <div style={{ flex: 1, overflowY: "auto", padding: 24, background: token.colorBgContainer }}>
+              {mode === "flow" && (
+                <Space style={{ marginBottom: 16, width: "100%", justifyContent: "space-between" }}>
                   <Space>
-                    <Typography.Text strong>Step Name:</Typography.Text>
-                    <Input size="small" value={currentStep.name} onChange={(e) => updateCurrentStep({ name: e.target.value })} style={{ width: 180 }} />
+                    <Typography.Text type="secondary">Step Name:</Typography.Text>
+                    <Input size="small" value={currentStep.name} onChange={(e) => updateCurrentStep({ name: e.target.value })} style={{ width: 220 }} />
                   </Space>
-                  <Space>
-                    <Typography.Text type="secondary" style={{ fontSize: 12 }}>Step ID:</Typography.Text>
-                    <Input size="small" value={currentStep.id} onChange={(e) => updateCurrentStep({ id: e.target.value })} style={{ width: 120 }} />
-                  </Space>
+                  <Typography.Text type="secondary" code>{currentStep.id}</Typography.Text>
                 </Space>
-                <Space.Compact style={{ width: "100%" }}>
-                  <Select value={currentStep.method} onChange={(v) => updateCurrentStep({ method: v })} style={{ width: 100 }} options={METHODS.map((m) => ({ value: m }))} />
-                  <Select allowClear placeholder="target" value={currentStep.target} onChange={(v) => updateCurrentStep({ target: v })} style={{ width: 140 }}
-                    options={targets.map((t) => ({ value: t.key, label: `${t.key}` }))} />
-                  <Input value={currentStep.url} onChange={(e) => updateCurrentStep({ url: e.target.value })} placeholder="{{base_url}}/path or absolute URL" />
-                  <Button type="primary" icon={<SendOutlined />} loading={send.isPending} onClick={() => send.mutate()}>Send Flow</Button>
-                </Space.Compact>
+              )}
 
-                <Tabs style={{ marginTop: 12 }} items={[
-                  { key: "headers", label: `Headers (${(currentStep.headers || []).filter((h) => h.name).length})`, children: <KVEditor rows={currentStep.headers || []} setRows={(r) => updateCurrentStep({ headers: r })} /> },
-                  { key: "query", label: `Params (${(currentStep.query || []).filter((q) => q.name).length})`, children: <KVEditor rows={currentStep.query || []} setRows={(r) => updateCurrentStep({ query: r })} /> },
-                  { key: "auth", label: `Auth (${currentStep.auth?.type && currentStep.auth.type !== "none" ? "1" : "0"})`, children: <AuthEditor value={currentStep.auth || { type: "none" }} onChange={(v) => updateCurrentStep({ auth: v })} /> },
-                  {
-                    key: "body", label: "Body",
-                    children: (
-                      <div>
-                        <Segmented options={["none", "json", "text", "form", "graphql"]} value={currentStep.bodyMode || "none"} onChange={(v) => updateCurrentStep({ bodyMode: v as any })} />
-                        {(currentStep.bodyMode || "none") !== "none" && <Input.TextArea rows={6} style={{ marginTop: 8, fontFamily: "monospace" }} value={currentStep.bodyRaw || ""} onChange={(e) => updateCurrentStep({ bodyRaw: e.target.value })} placeholder='{"key": "value"}' />}
-                      </div>
-                    ),
-                  },
-                  { key: "assertions", label: `Assertions (${(currentStep.assertions || []).length})`, children: <AssertionEditor rows={currentStep.assertions || []} setRows={(r) => updateCurrentStep({ assertions: r })} /> },
-                  { key: "captures", label: `Captures (${(currentStep.captures || []).length})`, children: <CaptureEditor rows={currentStep.captures || []} setRows={(r) => updateCurrentStep({ captures: r })} /> },
-                ]} />
-              </Col>
-            </Row>
-          ) : (
-            <div>
-              <Space.Compact style={{ width: "100%" }}>
-                <Select value={currentStep.method} onChange={(v) => updateCurrentStep({ method: v })} style={{ width: 110 }} options={METHODS.map((m) => ({ value: m }))} />
-                <Select allowClear placeholder="target" value={currentStep.target} onChange={(v) => updateCurrentStep({ target: v })} style={{ width: 160 }}
-                  options={targets.map((t) => ({ value: t.key, label: `${t.key}` }))} />
-                <Input value={currentStep.url} onChange={(e) => updateCurrentStep({ url: e.target.value })} placeholder="{{base_url}}/path or absolute URL" />
-                <Button type="primary" icon={<SendOutlined />} loading={send.isPending} onClick={() => send.mutate()}>Send</Button>
-              </Space.Compact>
+              {/* URL Bar */}
+              <div style={{ display: "flex", gap: 0, marginBottom: 24 }}>
+                <Select value={currentStep.method} onChange={(v) => updateCurrentStep({ method: v })} style={{ width: 120 }} size="large" options={METHODS.map((m) => ({ value: m }))} />
+                <Select allowClear placeholder="Target (optional)" value={currentStep.target} onChange={(v) => updateCurrentStep({ target: v })} style={{ width: 180 }} size="large" options={targets.map((t) => ({ value: t.key, label: t.key }))} />
+                <Input value={currentStep.url} onChange={(e) => updateCurrentStep({ url: e.target.value })} placeholder="Enter request URL" size="large" style={{ flex: 1, borderRadius: 0 }} />
+                <Button type="primary" size="large" icon={<SendOutlined />} loading={send.isPending} onClick={() => send.mutate()} style={{ borderRadius: "0 6px 6px 0" }}>
+                  {mode === "flow" ? "Send Flow" : "Send"}
+                </Button>
+              </div>
 
-              <Tabs style={{ marginTop: 12 }} items={[
-                { key: "headers", label: `Headers (${(currentStep.headers || []).filter((h) => h.name).length})`, children: <KVEditor rows={currentStep.headers || []} setRows={(r) => updateCurrentStep({ headers: r })} /> },
-                { key: "query", label: `Params (${(currentStep.query || []).filter((q) => q.name).length})`, children: <KVEditor rows={currentStep.query || []} setRows={(r) => updateCurrentStep({ query: r })} /> },
-                { key: "auth", label: `Auth (${currentStep.auth?.type && currentStep.auth.type !== "none" ? "1" : "0"})`, children: <AuthEditor value={currentStep.auth || { type: "none" }} onChange={(v) => updateCurrentStep({ auth: v })} /> },
+              {/* Tabs for Request Details */}
+              <Tabs items={[
+                { key: "query", label: `Params`, children: <KVEditor rows={currentStep.query || []} setRows={(r) => updateCurrentStep({ query: r })} /> },
+                { key: "auth", label: `Authorization`, children: <AuthEditor value={currentStep.auth || { type: "none" }} onChange={(v) => updateCurrentStep({ auth: v })} /> },
+                { key: "headers", label: `Headers`, children: <KVEditor rows={currentStep.headers || []} setRows={(r) => updateCurrentStep({ headers: r })} /> },
                 {
                   key: "body", label: "Body",
                   children: (
                     <div>
                       <Segmented options={["none", "json", "text", "form", "graphql"]} value={currentStep.bodyMode || "none"} onChange={(v) => updateCurrentStep({ bodyMode: v as any })} />
-                      {(currentStep.bodyMode || "none") !== "none" && <Input.TextArea rows={6} style={{ marginTop: 8, fontFamily: "monospace" }} value={currentStep.bodyRaw || ""} onChange={(e) => updateCurrentStep({ bodyRaw: e.target.value })} placeholder='{"key": "value"}' />}
+                      {(currentStep.bodyMode || "none") !== "none" && <Input.TextArea rows={8} style={{ marginTop: 12, fontFamily: "monospace", background: "#fafafa" }} value={currentStep.bodyRaw || ""} onChange={(e) => updateCurrentStep({ bodyRaw: e.target.value })} placeholder='{"key": "value"}' />}
                     </div>
                   ),
                 },
@@ -506,16 +519,35 @@ export default function RequestBuilderPage() {
                 { key: "captures", label: `Captures (${(currentStep.captures || []).length})`, children: <CaptureEditor rows={currentStep.captures || []} setRows={(r) => updateCurrentStep({ captures: r })} /> },
               ]} />
             </div>
-          )}
-        </Card>
 
-        {result && <ResponseView result={result} />}
-      </Col>
+            {/* Response Area Container (Splitter) */}
+            <div style={{ height: "40%", minHeight: 200, borderTop: `1px solid ${token.colorBorderSecondary}`, background: "#fafafa", overflowY: "auto", position: "relative" }}>
+              {!result ? (
+                <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: token.colorTextQuaternary }}>
+                  <Space direction="vertical" align="center">
+                    <SendOutlined style={{ fontSize: 32 }} />
+                    <Typography.Text type="secondary">Enter the URL and click Send to get a response</Typography.Text>
+                  </Space>
+                </div>
+              ) : (
+                <ResponseView result={result} />
+              )}
+            </div>
+          </div>
+        </div>
+      </Content>
 
-      <Modal title="Save as request test" open={saveOpen} onCancel={() => setSaveOpen(false)}
+      <Modal title="Save Request" open={saveOpen} onCancel={() => setSaveOpen(false)}
         onOk={() => saveForm.validateFields().then((v) => create.mutate(v.name))} confirmLoading={create.isPending}>
         <Form form={saveForm} layout="vertical">
-          <Form.Item name="name" label="Test name" rules={[{ required: true }]}><Input placeholder="e.g. Orders API creates order" /></Form.Item>
+          <Form.Item name="name" label="Test Name" rules={[{ required: true }]}><Input placeholder="e.g. Orders API creates order" /></Form.Item>
+        </Form>
+      </Modal>
+
+      <Modal title="Rename Request" open={renameOpen} onCancel={() => setRenameOpen(false)}
+        onOk={() => renameForm.validateFields().then((v) => targetContextId && renameMut.mutate({ id: targetContextId, name: v.name }))} confirmLoading={renameMut.isPending}>
+        <Form form={renameForm} layout="vertical">
+          <Form.Item name="name" label="Test Name" rules={[{ required: true }]}><Input placeholder="New name" /></Form.Item>
         </Form>
       </Modal>
 
@@ -528,7 +560,7 @@ export default function RequestBuilderPage() {
           {schedType === "cron" && <Form.Item name="cron_expression" label="Cron" rules={[{ required: true }]}><Input placeholder="*/5 * * * *" /></Form.Item>}
         </Form>
       </Modal>
-    </Row>
+    </Layout>
   );
 }
 
@@ -542,59 +574,62 @@ function coerce(v?: string): any {
 
 function KVEditor({ rows, setRows }: { rows: KV[]; setRows: (r: KV[]) => void }) {
   const upd = (i: number, patch: Partial<KV>) => setRows(rows.map((r, j) => (j === i ? { ...r, ...patch } : r)));
+  const add = () => setRows([...rows, { name: "", value: "", enabled: true }]);
   return (
     <div>
       {rows.map((r, i) => (
-        <Space key={i} style={{ display: "flex", marginBottom: 6 }}>
-          <Input placeholder="name" value={r.name} onChange={(e) => upd(i, { name: e.target.value })} style={{ width: 220 }} />
-          <Input placeholder="value" value={r.value} onChange={(e) => upd(i, { value: e.target.value })} style={{ width: 320 }} />
-          <Button icon={<DeleteOutlined />} onClick={() => setRows(rows.filter((_, j) => j !== i))} />
+        <Space key={i} style={{ display: "flex", marginBottom: 8 }}>
+          <Input placeholder="Key" value={r.name} onChange={(e) => upd(i, { name: e.target.value })} style={{ width: 220 }} />
+          <Input placeholder="Value" value={r.value} onChange={(e) => upd(i, { value: e.target.value })} style={{ width: 380 }} />
+          <Button type="text" danger icon={<DeleteOutlined />} onClick={() => setRows(rows.filter((_, j) => j !== i))} />
         </Space>
       ))}
-      <Button icon={<PlusOutlined />} onClick={() => setRows([...rows, { name: "", value: "", enabled: true }])}>Add item</Button>
+      <Button type="dashed" icon={<PlusOutlined />} onClick={add} style={{ width: "100%", maxWidth: 640 }}>Add Item</Button>
     </div>
   );
 }
 
 function AssertionEditor({ rows, setRows }: { rows: Assn[]; setRows: (r: Assn[]) => void }) {
   const upd = (i: number, patch: Partial<Assn>) => setRows(rows.map((r, j) => (j === i ? { ...r, ...patch } : r)));
+  const add = () => setRows([...rows, { type: "status_code", operator: "equals", expected: "200" }]);
   return (
     <div>
       {rows.map((r, i) => (
-        <Space key={i} style={{ display: "flex", marginBottom: 6 }} wrap>
-          <Select value={r.type} onChange={(v) => upd(i, { type: v })} style={{ width: 150 }} options={SOURCES.map((s) => ({ value: s }))} />
+        <Space key={i} style={{ display: "flex", marginBottom: 8 }} wrap>
+          <Select value={r.type} onChange={(v) => upd(i, { type: v })} style={{ width: 160 }} options={SOURCES.map((s) => ({ value: s }))} />
           {(r.type === "json_path" || r.type === "header") &&
             <Input placeholder={r.type === "json_path" ? "$.path.to.field" : "Header-Name"} value={r.path} onChange={(e) => upd(i, { path: e.target.value })} style={{ width: 200 }} />}
-          <Select value={r.operator} onChange={(v) => upd(i, { operator: v })} style={{ width: 130 }} options={OPERATORS.map((o) => ({ value: o }))} />
-          <Input placeholder="expected" value={r.expected} onChange={(e) => upd(i, { expected: e.target.value })} style={{ width: 160 }} />
-          <Button icon={<DeleteOutlined />} onClick={() => setRows(rows.filter((_, j) => j !== i))} />
+          <Select value={r.operator} onChange={(v) => upd(i, { operator: v })} style={{ width: 140 }} options={OPERATORS.map((o) => ({ value: o }))} />
+          <Input placeholder="Expected value" value={r.expected} onChange={(e) => upd(i, { expected: e.target.value })} style={{ width: 220 }} />
+          <Button type="text" danger icon={<DeleteOutlined />} onClick={() => setRows(rows.filter((_, j) => j !== i))} />
         </Space>
       ))}
-      <Button icon={<PlusOutlined />} onClick={() => setRows([...rows, { type: "status_code", operator: "equals", expected: "200" }])}>Add assertion</Button>
+      <Button type="dashed" icon={<PlusOutlined />} onClick={add} style={{ width: "100%", maxWidth: 800 }}>Add Assertion</Button>
     </div>
   );
 }
 
 function CaptureEditor({ rows, setRows }: { rows: Capture[]; setRows: (r: Capture[]) => void }) {
   const upd = (i: number, patch: Partial<Capture>) => setRows(rows.map((r, j) => (j === i ? { ...r, ...patch } as Capture : r)));
+  const add = () => setRows([...rows, { name: "", source: "json_path", path: "", optional: false }]);
   return (
     <div>
       {rows.map((r, i) => (
-        <Space key={i} style={{ display: "flex", marginBottom: 6 }} wrap>
-          <Input placeholder="variable name (e.g. token)" value={r.name} onChange={(e) => upd(i, { name: e.target.value })} style={{ width: 180 }} />
-          <Select value={r.source} onChange={(v) => upd(i, { source: v })} style={{ width: 140 }}
+        <Space key={i} style={{ display: "flex", marginBottom: 8 }} wrap>
+          <Input placeholder="Variable name (e.g. token)" value={r.name} onChange={(e) => upd(i, { name: e.target.value })} style={{ width: 200 }} />
+          <Select value={r.source} onChange={(v) => upd(i, { source: v })} style={{ width: 160 }}
             options={[
               { value: "json_path", label: "JSON Path" },
               { value: "header", label: "Header" },
               { value: "body_text", label: "Body Text" }
             ]} />
           {r.source !== "body_text" && (
-            <Input placeholder={r.source === "json_path" ? "$.access_token" : "Header-Name"} value={r.path} onChange={(e) => upd(i, { path: e.target.value })} style={{ width: 220 }} />
+            <Input placeholder={r.source === "json_path" ? "$.access_token" : "Header-Name"} value={r.path} onChange={(e) => upd(i, { path: e.target.value })} style={{ width: 260 }} />
           )}
-          <Button icon={<DeleteOutlined />} onClick={() => setRows(rows.filter((_, j) => j !== i))} />
+          <Button type="text" danger icon={<DeleteOutlined />} onClick={() => setRows(rows.filter((_, j) => j !== i))} />
         </Space>
       ))}
-      <Button icon={<PlusOutlined />} onClick={() => setRows([...rows, { name: "", source: "json_path", path: "", optional: false }])}>Add capture</Button>
+      <Button type="dashed" icon={<PlusOutlined />} onClick={add} style={{ width: "100%", maxWidth: 700 }}>Add Capture</Button>
     </div>
   );
 }
@@ -606,47 +641,50 @@ function AuthEditor({ value, onChange }: { value: any; onChange: (v: any) => voi
     <div>
       <Segmented
         options={[
-          { label: "None", value: "none" },
+          { label: "No Auth", value: "none" },
           { label: "Bearer Token", value: "bearer" },
           { label: "Basic Auth", value: "basic" },
           { label: "API Key", value: "apikey" }
         ]}
         value={atype}
         onChange={(v) => onChange({ type: v })}
-        style={{ marginBottom: 12 }}
+        style={{ marginBottom: 16 }}
       />
-      {atype === "bearer" && (
-        <Form.Item label="Token (or Secret reference)" style={{ marginBottom: 0 }}>
-          <Input placeholder="token or {{secret_ref}}" value={value?.tokenSecretRef || value?.token || ""}
-            onChange={(e) => upd({ tokenSecretRef: e.target.value, token: e.target.value })} />
-        </Form.Item>
-      )}
-      {atype === "basic" && (
-        <Space direction="vertical" style={{ width: "100%" }}>
-          <Form.Item label="Username" style={{ marginBottom: 0 }}>
-            <Input placeholder="username" value={value?.username || ""} onChange={(e) => upd({ username: e.target.value })} />
+      <div style={{ maxWidth: 400 }}>
+        {atype === "bearer" && (
+          <Form.Item label="Token (or Secret reference)" style={{ marginBottom: 0 }}>
+            <Input placeholder="token or {{secret_ref}}" value={value?.tokenSecretRef || value?.token || ""}
+              onChange={(e) => upd({ tokenSecretRef: e.target.value, token: e.target.value })} />
           </Form.Item>
-          <Form.Item label="Password" style={{ marginBottom: 0 }}>
-            <Input.Password placeholder="password" value={value?.password || ""} onChange={(e) => upd({ password: e.target.value })} />
-          </Form.Item>
-        </Space>
-      )}
-      {atype === "apikey" && (
-        <Space style={{ display: "flex" }}>
-          <Form.Item label="Header Name" style={{ marginBottom: 0 }}>
-            <Input placeholder="X-API-Key" value={value?.headerName || "X-API-Key"} onChange={(e) => upd({ headerName: e.target.value })} style={{ width: 180 }} />
-          </Form.Item>
-          <Form.Item label="Value" style={{ marginBottom: 0 }}>
-            <Input placeholder="key value" value={value?.value || ""} onChange={(e) => upd({ value: e.target.value })} style={{ width: 300 }} />
-          </Form.Item>
-        </Space>
-      )}
+        )}
+        {atype === "basic" && (
+          <Space direction="vertical" style={{ width: "100%" }}>
+            <Form.Item label="Username" style={{ marginBottom: 0 }}>
+              <Input placeholder="username" value={value?.username || ""} onChange={(e) => upd({ username: e.target.value })} />
+            </Form.Item>
+            <Form.Item label="Password" style={{ marginBottom: 0 }}>
+              <Input.Password placeholder="password" value={value?.password || ""} onChange={(e) => upd({ password: e.target.value })} />
+            </Form.Item>
+          </Space>
+        )}
+        {atype === "apikey" && (
+          <Space direction="vertical" style={{ width: "100%" }}>
+            <Form.Item label="Header Name" style={{ marginBottom: 0 }}>
+              <Input placeholder="X-API-Key" value={value?.headerName || "X-API-Key"} onChange={(e) => upd({ headerName: e.target.value })} />
+            </Form.Item>
+            <Form.Item label="Value" style={{ marginBottom: 0 }}>
+              <Input placeholder="key value" value={value?.value || ""} onChange={(e) => upd({ value: e.target.value })} />
+            </Form.Item>
+          </Space>
+        )}
+      </div>
     </div>
   );
 }
 
 function ResponseView({ result }: { result: SendResult }) {
   const [selectedResultStepIdx, setSelectedResultStepIdx] = useState<number>(0);
+  const { token } = theme.useToken();
   const r = result.response || {};
   const isFlow = Array.isArray(r.steps) && r.steps.length > 0;
 
@@ -658,110 +696,92 @@ function ResponseView({ result }: { result: SendResult }) {
     });
 
     return (
-      <Card size="small" title={
-        <Space>Flow Execution Result <Tag color={result.status === "passed" ? "success" : "error"}>{result.status}</Tag>
-          {r.elapsed_ms != null && <Tag>{r.elapsed_ms} ms total</Tag>}
-        </Space>}>
-        {result.error_message && <Alert type="error" message={result.error_message} style={{ marginBottom: 12 }} />}
-        <Row gutter={16}>
-          <Col span={6} style={{ borderRight: "1px solid #f0f0f0", paddingRight: 12 }}>
-            <Typography.Text type="secondary" style={{ display: "block", marginBottom: 8 }}>Steps</Typography.Text>
+      <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
+        <div style={{ padding: "8px 16px", background: token.colorBgContainer, borderBottom: `1px solid ${token.colorBorderSecondary}`, display: "flex", justifyContent: "space-between" }}>
+          <Space>
+            <Typography.Text strong>Flow Result</Typography.Text>
+            <Tag color={result.status === "passed" ? "success" : "error"}>{result.status}</Tag>
+          </Space>
+          <Typography.Text type="secondary">{r.elapsed_ms != null ? `${r.elapsed_ms} ms total` : ""}</Typography.Text>
+        </div>
+        <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
+          <div style={{ width: 220, borderRight: `1px solid ${token.colorBorderSecondary}`, overflowY: "auto", background: token.colorBgContainer }}>
             <List
               size="small"
               dataSource={r.steps}
               renderItem={(s: any, idx) => (
-                <List.Item
-                  onClick={() => setSelectedResultStepIdx(idx)}
-                  style={{
-                    cursor: "pointer",
-                    background: selectedResultStepIdx === idx ? "#e6f4ff" : undefined,
-                    paddingInline: 8,
-                    borderRadius: 4,
-                    marginBottom: 4,
-                  }}
-                >
+                <List.Item onClick={() => setSelectedResultStepIdx(idx)} style={{ cursor: "pointer", background: selectedResultStepIdx === idx ? "#e6f4ff" : undefined, padding: "8px 16px" }}>
                   <Space style={{ width: "100%", justifyContent: "space-between" }}>
                     <Typography.Text ellipsis style={{ maxWidth: 120 }}>{s.name}</Typography.Text>
-                    <Tag color={s.status === "passed" ? "success" : "error"}>{s.status === "passed" ? "✓" : "✗"}</Tag>
+                    <Tag color={s.status === "passed" ? "success" : "error"} style={{ margin: 0 }}>{s.status === "passed" ? "✓" : "✗"}</Tag>
                   </Space>
                 </List.Item>
               )}
             />
-          </Col>
-          <Col span={18}>
-            <div style={{ marginBottom: 12 }}>
-              <Typography.Title level={5} style={{ margin: 0 }}>
-                {stepResponse.name} <Tag color={METHOD_COLOR[stepResponse.method]}>{stepResponse.method}</Tag>
-              </Typography.Title>
-              <Typography.Text code ellipsis style={{ display: "block", marginTop: 4, maxWidth: "100%" }}>
-                {stepResponse.url}
-              </Typography.Text>
-              <Space style={{ marginTop: 8 }}>
-                {stepRespData.status_code != null && <Tag>Status: {stepRespData.status_code}</Tag>}
-                {stepRespData.elapsed_ms != null && <Tag>Time: {stepRespData.elapsed_ms} ms</Tag>}
-              </Space>
-              {stepResponse.error_message && <Alert type="error" message={stepResponse.error_message} style={{ marginTop: 8 }} />}
-            </div>
-            <Row gutter={16}>
-              <Col span={14}>
-                <Typography.Text type="secondary">Body</Typography.Text>
-                <pre className="qtp-code" style={{ maxHeight: 320 }}>{(stepRespData.body_text || "").slice(0, 5000) || "(empty)"}</pre>
-              </Col>
-              <Col span={10}>
-                <Typography.Text type="secondary">Assertions</Typography.Text>
-                <Table rowKey={(_, i) => String(i)} size="small" pagination={false} dataSource={stepAssertions}
-                  columns={[
-                    { title: "Check", render: (_, a) => {
-                      const cleanTarget = a.target?.includes(":") ? a.target.split(":").slice(1).join(":") : a.target;
-                      return `${a.source}${cleanTarget ? " " + cleanTarget : ""} ${a.operator} ${a.expected ?? ""}`;
-                    }},
-                    { title: "Actual", dataIndex: "actual", render: (v) => <Typography.Text code>{JSON.stringify(v)}</Typography.Text> },
-                    { title: "", dataIndex: "passed", width: 40, render: (p) => <Tag color={p ? "success" : "error"}>{p ? "✓" : "✗"}</Tag> },
-                  ]} />
-                {stepResponse.captures && stepResponse.captures.length > 0 && (
-                  <div style={{ marginTop: 12 }}>
-                    <Typography.Text type="secondary">Captured Variables</Typography.Text>
-                    <List size="small" dataSource={stepResponse.captures} renderItem={(capName: any) => (
-                      <List.Item style={{ padding: "4px 8px" }}>
-                        <Space>
-                          <Typography.Text code>{capName}</Typography.Text>
-                          <Typography.Text type="secondary">extracted</Typography.Text>
-                        </Space>
-                      </List.Item>
-                    )} />
-                  </div>
-                )}
-              </Col>
-            </Row>
-          </Col>
-        </Row>
-      </Card>
+          </div>
+          <div style={{ flex: 1, overflowY: "auto", padding: 16 }}>
+             <Typography.Title level={5} style={{ margin: 0 }}>
+               <Tag color={METHOD_COLOR[stepResponse.method]}>{stepResponse.method}</Tag> {stepResponse.url}
+             </Typography.Title>
+             <Space style={{ marginTop: 8, marginBottom: 16 }}>
+               {stepRespData.status_code != null && <Tag color={stepRespData.status_code >= 400 ? "error" : "success"}>Status: {stepRespData.status_code}</Tag>}
+               {stepRespData.elapsed_ms != null && <Tag>Time: {stepRespData.elapsed_ms} ms</Tag>}
+             </Space>
+             <Row gutter={24}>
+               <Col span={14}>
+                 <Typography.Text strong>Response Body</Typography.Text>
+                 <pre style={{ background: token.colorBgContainer, padding: 12, borderRadius: 6, border: `1px solid ${token.colorBorderSecondary}`, marginTop: 8, overflowX: "auto" }}>
+                   {(stepRespData.body_text || "").slice(0, 5000) || "(empty)"}
+                 </pre>
+               </Col>
+               <Col span={10}>
+                 <Typography.Text strong>Assertions</Typography.Text>
+                 <Table rowKey={(_, i) => String(i)} size="small" pagination={false} dataSource={stepAssertions} style={{ marginTop: 8 }}
+                   columns={[
+                     { title: "Check", render: (_, a) => {
+                       const cleanTarget = a.target?.includes(":") ? a.target.split(":").slice(1).join(":") : a.target;
+                       return `${a.source}${cleanTarget ? " " + cleanTarget : ""} ${a.operator} ${a.expected ?? ""}`;
+                     }},
+                     { title: "Passed", dataIndex: "passed", width: 60, render: (p) => <Tag color={p ? "success" : "error"}>{p ? "✓" : "✗"}</Tag> },
+                   ]} />
+               </Col>
+             </Row>
+          </div>
+        </div>
+      </div>
     );
   }
 
   const allPass = result.assertions.every((a) => a.passed);
   return (
-    <Card size="small" title={
-      <Space>Response <Tag color={result.status === "passed" ? "success" : "error"}>{result.status}</Tag>
-        {r.status_code != null && <Tag>{r.status_code}</Tag>}
-        {r.elapsed_ms != null && <Tag>{r.elapsed_ms} ms</Tag>}
-      </Space>}>
-      {result.error_message && <Alert type="error" message={result.error_message} style={{ marginBottom: 12 }} />}
-      <Row gutter={16}>
-        <Col span={14}>
-          <Typography.Text type="secondary">Body</Typography.Text>
-          <pre className="qtp-code" style={{ maxHeight: 320 }}>{(r.body_text || "").slice(0, 5000) || "(empty)"}</pre>
-        </Col>
-        <Col span={10}>
-          <Typography.Text type="secondary">Assertions {allPass ? "✓" : "✗"}</Typography.Text>
-          <Table rowKey={(_, i) => String(i)} size="small" pagination={false} dataSource={result.assertions}
-            columns={[
-              { title: "Check", render: (_, a) => `${a.source}${a.target ? " " + a.target : ""} ${a.operator} ${a.expected ?? ""}` },
-              { title: "Actual", dataIndex: "actual", render: (v) => <Typography.Text code>{JSON.stringify(v)}</Typography.Text> },
-              { title: "", dataIndex: "passed", width: 40, render: (p) => <Tag color={p ? "success" : "error"}>{p ? "✓" : "✗"}</Tag> },
+    <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
+      <div style={{ padding: "8px 16px", background: token.colorBgContainer, borderBottom: `1px solid ${token.colorBorderSecondary}`, display: "flex", justifyContent: "space-between" }}>
+        <Space>
+          <Typography.Text strong>Response</Typography.Text>
+          {r.status_code != null && <Typography.Text type={r.status_code >= 400 ? "danger" : "success"}>{r.status_code} {r.status_code >= 400 ? "Error" : "OK"}</Typography.Text>}
+          {r.elapsed_ms != null && <Typography.Text type="secondary">{r.elapsed_ms} ms</Typography.Text>}
+        </Space>
+        <Tag color={result.status === "passed" ? "success" : "error"} style={{ margin: 0 }}>{result.status.toUpperCase()}</Tag>
+      </div>
+      <div style={{ flex: 1, padding: 16, overflowY: "auto" }}>
+        {result.error_message && <Alert type="error" message={result.error_message} style={{ marginBottom: 16 }} />}
+        <Row gutter={24}>
+          <Col span={14}>
+            <Tabs items={[
+              { key: "body", label: "Body", children: <pre style={{ background: token.colorBgContainer, padding: 12, borderRadius: 6, border: `1px solid ${token.colorBorderSecondary}`, marginTop: 0, overflowX: "auto" }}>{(r.body_text || "").slice(0, 5000) || "(empty)"}</pre> },
+              { key: "headers", label: "Headers", children: <Empty description="Headers not implemented in preview" image={Empty.PRESENTED_IMAGE_SIMPLE} /> }
             ]} />
-        </Col>
-      </Row>
-    </Card>
+          </Col>
+          <Col span={10}>
+            <Typography.Text strong style={{ display: "inline-block", marginBottom: 12 }}>Test Results</Typography.Text>
+            <Table rowKey={(_, i) => String(i)} size="small" pagination={false} dataSource={result.assertions}
+              columns={[
+                { title: "Assertion Check", render: (_, a) => <Typography.Text style={{ fontSize: 13 }}>{`${a.source}${a.target ? " " + a.target : ""} ${a.operator} ${a.expected ?? ""}`}</Typography.Text> },
+                { title: "Status", dataIndex: "passed", width: 80, render: (p) => <Tag color={p ? "success" : "error"}>{p ? "Pass" : "Fail"}</Tag> },
+              ]} />
+          </Col>
+        </Row>
+      </div>
+    </div>
   );
 }
