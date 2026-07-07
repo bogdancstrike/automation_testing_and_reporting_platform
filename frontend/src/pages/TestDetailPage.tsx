@@ -5,6 +5,10 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { qtp } from "../api/qtp";
 import { StatusTag, TypeTag } from "../components/tags";
 
+const METHOD_COLOR: Record<string, string> = {
+  GET: "green", POST: "blue", PUT: "orange", PATCH: "gold", DELETE: "red", HEAD: "default",
+};
+
 export default function TestDetailPage() {
   const { id = "" } = useParams();
   const nav = useNavigate();
@@ -71,7 +75,83 @@ export default function TestDetailPage() {
               <pre className="qtp-code" style={{ maxHeight: 520 }}>{t.source_code}</pre>
             </div>
           ) : (
-            <pre className="qtp-code" style={{ maxHeight: 520 }}>{JSON.stringify(t.config, null, 2)}</pre>
+            t.steps && t.steps.length > 0 ? (
+              <Table
+                rowKey="id"
+                size="small"
+                pagination={false}
+                dataSource={t.steps}
+                columns={[
+                  { title: "Step ID", dataIndex: "id" },
+                  { title: "Name", dataIndex: "name" },
+                  { title: "Method", dataIndex: "method", render: (m) => <Tag color={METHOD_COLOR[m] || "default"}>{m}</Tag> },
+                  { title: "Target", dataIndex: "target", render: (tgt) => tgt ? <Tag color="geekblue">{tgt}</Tag> : "—" },
+                  { title: "URL", dataIndex: "url" },
+                  { title: "Assertions", render: (_, s: any) => (s.assertions || []).length },
+                  { title: "Captures", render: (_, s: any) => (s.captures || []).length },
+                ]}
+                expandable={{
+                  expandedRowRender: (s: any) => (
+                    <div style={{ padding: "8px 16px", background: "#fafafa" }}>
+                      <Descriptions size="small" column={1} bordered style={{ marginBottom: 12 }}>
+                        {s.headers && s.headers.length > 0 && (
+                          <Descriptions.Item label="Headers">
+                            {s.headers.map((h: any, idx: number) => (
+                              <div key={idx}><Typography.Text code>{h.name}: {h.value}</Typography.Text></div>
+                            ))}
+                          </Descriptions.Item>
+                        )}
+                        {s.query && s.query.length > 0 && (
+                          <Descriptions.Item label="Query Params">
+                            {s.query.map((q: any, idx: number) => (
+                              <div key={idx}><Typography.Text code>{q.name}={q.value}</Typography.Text></div>
+                            ))}
+                          </Descriptions.Item>
+                        )}
+                        {s.auth && s.auth.type !== "none" && (
+                          <Descriptions.Item label="Auth">
+                            <Typography.Text code>Type: {s.auth.type}</Typography.Text>
+                          </Descriptions.Item>
+                        )}
+                        {s.body && s.body.mode !== "none" && (
+                          <Descriptions.Item label="Body">
+                            <pre style={{ margin: 0, fontSize: 11 }}>{s.body.raw}</pre>
+                          </Descriptions.Item>
+                        )}
+                      </Descriptions>
+                      
+                      {s.assertions && s.assertions.length > 0 && (
+                        <div style={{ marginBottom: 12 }}>
+                          <Typography.Text strong style={{ display: "block", marginBottom: 4 }}>Assertions:</Typography.Text>
+                          <Table rowKey={(_, idx) => String(idx)} size="small" pagination={false} dataSource={s.assertions}
+                            columns={[
+                              { title: "Source", render: (_, a: any) => a.type || a.source },
+                              { title: "Target", render: (_, a: any) => a.path || a.target || "—" },
+                              { title: "Operator", dataIndex: "operator" },
+                              { title: "Expected", dataIndex: "expected", render: (v) => <Typography.Text code>{JSON.stringify(v)}</Typography.Text> },
+                            ]} />
+                        </div>
+                      )}
+
+                      {s.captures && s.captures.length > 0 && (
+                        <div>
+                          <Typography.Text strong style={{ display: "block", marginBottom: 4 }}>Captures:</Typography.Text>
+                          <Table rowKey={(_, idx) => String(idx)} size="small" pagination={false} dataSource={s.captures}
+                            columns={[
+                              { title: "Variable Name", dataIndex: "name" },
+                              { title: "Source", dataIndex: "source" },
+                              { title: "Path", dataIndex: "path", render: (v) => v || "—" },
+                            ]} />
+                        </div>
+                      )}
+                    </div>
+                  ),
+                  rowExpandable: () => true,
+                }}
+              />
+            ) : (
+              <pre className="qtp-code" style={{ maxHeight: 520 }}>{JSON.stringify(t.config, null, 2)}</pre>
+            )
           ),
         },
         {

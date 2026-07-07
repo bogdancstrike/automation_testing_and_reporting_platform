@@ -80,7 +80,7 @@ _Last updated: 2026-07-07._
 
 ## Tests (automated)
 - [x] 22 example code automation tests in `tests/automations/api/` (self-tests + httpbin: methods, status codes, headers, JSON body, regex, redirect, basic auth, timing) — all discovered and passing
-- [ ] Backend unit/integration test suite (pytest) for services, recurrence, assertions, queue
+- [~] Backend unit/integration test suite (pytest) for services, recurrence, assertions, queue
 - [ ] Frontend component/E2E tests
 
 ## Docs
@@ -89,14 +89,14 @@ _Last updated: 2026-07-07._
 - [ ] Root `README.md` with quickstart (`docker compose up`, URLs, admin/admin)
 
 ## Next increment — multi-step tests, target observability, backend-driven tables
-- [ ] Multi-step UI request tests (`config.steps[]`) with sequential execution, per-step assertions, captures, and single-request backward compatibility
-- [ ] Automatic code-test discovery by recursively scanning `backend/tests/automations/` for `BaseAutomationTest` subclasses; no manual module registration
+- [x] Multi-step UI request tests (`config.steps[]`) with sequential execution, per-step assertions, captures, and single-request backward compatibility
+- [x] Automatic code-test discovery by recursively scanning `backend/tests/automations/` for `BaseAutomationTest` subclasses; no manual module registration
 - [~] Backend pagination/search/filter/sort contract for table endpoints (tests, runs, targets, target detail tests/runs, schedules done; workers and remaining linked tables still to review)
 - [x] Target detail API + `/targets/{id}` page with target metadata, tests, runs, pass/fail ratio, charts, and failure information
 - [ ] React Flow step visualization on `/tests/{id}` with run-context coloring from `?runId=...`
 - [ ] Overview enrichment, including clickable Recent Failures rows that route to the failed test detail page
-- [ ] Request Builder Flow mode for add/duplicate/reorder/delete steps, captures, send-flow results, save/update/schedule
-- [ ] Developer Docs enrichment for multi-step tests, code-test auto-discovery, target pages, and backend-driven table APIs
+- [x] Request Builder Flow mode for add/duplicate/reorder/delete steps, captures, send-flow results, save/update/schedule
+- [x] Developer Docs enrichment for multi-step tests, code-test auto-discovery, target pages, and backend-driven table APIs
 - [x] Sticky sidebar/app shell: sidebar remains fixed/sticky while the page content scrolls
 - [x] Runs page backend-driven filtering/search/sorting for status, trigger, target, defect type, failure category, and test name/key
 - [ ] Reusable user tags for tests, created on demand and suggested for reuse

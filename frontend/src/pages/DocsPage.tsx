@@ -94,6 +94,33 @@ const SAVE_UI = `POST /qtp/api/request-tests
   }
 }`;
 
+const SAVE_UI_FLOW = `POST /qtp/api/request-tests
+{
+  "name": "Multi-step Flow Test",
+  "config": {
+    "steps": [
+      {
+        "id": "get_token",
+        "name": "Get Token",
+        "method": "POST",
+        "url": "{{base_url}}/api/auth",
+        "body": {"mode": "json", "raw": "{\\"user\\":\\"admin\\"}"},
+        "assertions": [{"type": "status_code", "operator": "equals", "expected": 200}],
+        "captures": [{"name": "auth_token", "source": "json_path", "path": "$.token"}]
+      },
+      {
+        "id": "create_item",
+        "name": "Create Item",
+        "method": "POST",
+        "url": "{{base_url}}/api/items",
+        "auth": {"type": "bearer", "tokenSecretRef": "auth_token"},
+        "body": {"mode": "json", "raw": "{\\"name\\":\\"widget\\"}"},
+        "assertions": [{"type": "status_code", "operator": "equals", "expected": 201}]
+      }
+    ]
+  }
+}`;
+
 const TOKEN = `# Obtain a bearer token from Keycloak (direct grant, dev only):
 curl -s http://localhost:8080/realms/qtp/protocol/openid-connect/token \\
   -d grant_type=password -d client_id=qtp-spa \\
@@ -197,7 +224,8 @@ export default function DocsPage() {
 
           <Card id="register" title="Register it (discovery)" style={{ marginBottom: 20 }}>
             <Paragraph>
-              Discovery imports the configured modules and upserts a definition per unique <Text code>metadata.key</Text>,
+              QTP automatically discovers code-based tests by recursively scanning the <Text code>backend/tests/automations/</Text> directory. You do not need to manually register your test files.
+              Discovery imports the modules and upserts a definition per unique <Text code>metadata.key</Text>,
               creating a new immutable revision only when the code reference or default config changed. Tests that vanish
               from source are marked <Text code>missing_from_source</Text>, never deleted.
             </Paragraph>
@@ -208,9 +236,16 @@ export default function DocsPage() {
             <Paragraph>
               Open <Text strong>Request Builder</Text>, pick a target (or type an absolute URL), set method/headers/body,
               add assertions on the response, click <Text strong>Send</Text> to try it, then <Text strong>Save</Text> to
-              persist it as a managed test. The equivalent API call:
+              persist it as a managed test. You can also toggle <Text strong>Multi-step Flow</Text> to string together multiple requests sequentially, passing variables between steps using captures.
+            </Paragraph>
+            <Paragraph>
+              Equivalent single request API call:
             </Paragraph>
             <Code>{SAVE_UI}</Code>
+            <Paragraph>
+              Equivalent multi-step flow request API call:
+            </Paragraph>
+            <Code>{SAVE_UI_FLOW}</Code>
           </Card>
 
           <Card id="run" title="Run on demand" style={{ marginBottom: 20 }}>
