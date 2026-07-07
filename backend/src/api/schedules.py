@@ -14,6 +14,12 @@ def list_schedules(app, operation, request, principal=None, **kwargs):
         return service.list_schedules(db, query_args(request)), 200
 
 
+@require_authenticated
+def get_schedule(app, operation, request, schedule_id=None, principal=None, **kwargs):
+    with session_scope() as db:
+        return service.get_schedule_detail(db, schedule_id), 200
+
+
 @require_role(ROLE_TEST_AUTHOR)
 def create_schedule(app, operation, request, principal=None, **kwargs):
     with session_scope() as db:

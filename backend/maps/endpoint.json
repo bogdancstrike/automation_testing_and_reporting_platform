@@ -297,6 +297,19 @@
     },
     {
       "namespace": "qtp",
+      "operation_name": "schedules_get",
+      "model_name": "Empty",
+      "request_method": [
+        "GET"
+      ],
+      "api_url": "/api/schedules/<schedule_id>",
+      "exec_method": {
+        "module_name": "src.api.schedules",
+        "method_name": "get_schedule"
+      }
+    },
+    {
+      "namespace": "qtp",
       "operation_name": "schedules_create",
       "model_name": "Empty",
       "request_method": [
@@ -501,6 +514,19 @@
       "exec_method": {
         "module_name": "src.api.comments",
         "method_name": "create_run_comment"
+      }
+    },
+    {
+      "namespace": "qtp",
+      "operation_name": "targets_run_all",
+      "model_name": "Empty",
+      "request_method": [
+        "POST"
+      ],
+      "api_url": "/api/targets/<target_id>/run-all",
+      "exec_method": {
+        "module_name": "src.api.targets",
+        "method_name": "run_all_target_tests"
       }
     }
   ]

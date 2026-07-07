@@ -86,6 +86,8 @@ def _list_runs(db: Session, filters: dict[str, Any]) -> dict:
         stmt = stmt.where(TestRun.test_definition_id == filters["test_definition_id"])
     if filters.get("target_id"):
         stmt = stmt.where(TestRun.target_id == filters["target_id"])
+    if filters.get("schedule_id"):
+        stmt = stmt.where(TestRun.schedule_id == filters["schedule_id"])
     if filters.get("trigger"):
         stmt = stmt.where(TestRun.trigger == filters["trigger"])
     if filters.get("defect_type"):

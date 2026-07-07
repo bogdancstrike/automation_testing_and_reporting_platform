@@ -86,15 +86,15 @@ _Last updated: 2026-07-07._
 ## Docs
 - [x] `architecture.md`, `implementation_plan.md` updated (Testkube+ReportPortal framing, targets, cleanup hook, docs tab)
 - [x] `docs/TODO.md` (this file)
-- [ ] Root `README.md` with quickstart (`docker compose up`, URLs, admin/admin)
+- [x] Root `README.md` with quickstart (`docker compose up`, URLs, admin/admin)
 
 ## Next increment — multi-step tests, target observability, backend-driven tables
 - [x] Multi-step UI request tests (`config.steps[]`) with sequential execution, per-step assertions, captures, and single-request backward compatibility
 - [x] Automatic code-test discovery by recursively scanning `backend/tests/automations/` for `BaseAutomationTest` subclasses; no manual module registration
-- [~] Backend pagination/search/filter/sort contract for table endpoints (tests, runs, targets, target detail tests/runs, schedules done; workers and remaining linked tables still to review)
+- [x] Backend pagination/search/filter/sort contract for table endpoints (tests, runs, targets, target detail tests/runs, schedules done; workers and remaining linked tables reviewed and verified)
 - [x] Target detail API + `/targets/{id}` page with target metadata, tests, runs, pass/fail ratio, charts, and failure information
-- [ ] React Flow step visualization on `/tests/{id}` with run-context coloring from `?runId=...`
-- [ ] Overview enrichment, including clickable Recent Failures rows that route to the failed test detail page
+- [x] React Flow step visualization on `/tests/{id}` with run-context coloring from `?runId=...`
+- [x] Overview enrichment, including clickable Recent Failures rows that route to the failed test detail page
 - [x] Request Builder Flow mode for add/duplicate/reorder/delete steps, captures, send-flow results, save/update/schedule
 - [x] Developer Docs enrichment for multi-step tests, code-test auto-discovery, target pages, and backend-driven table APIs
 - [x] Sticky sidebar/app shell: sidebar remains fixed/sticky while the page content scrolls
@@ -102,5 +102,5 @@ _Last updated: 2026-07-07._
 - [x] Reusable user tags for tests, created on demand and suggested for reuse
 - [x] Test detail comments with optional tags
 - [x] Run detail comments with optional tags
-- [~] Backend tracing spans for run execution, flow execution, HTTP steps, discovery, target stats, comments, and tags (core spans added; final trace coverage review remains)
+- [x] Backend tracing spans for run execution, flow execution, HTTP steps, discovery, target stats, comments, and tags
 - [ ] Keep this TODO updated as items move to done, partial, or deferred during the implementation

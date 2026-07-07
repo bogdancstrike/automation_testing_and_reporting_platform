@@ -1,11 +1,14 @@
 """Targets (apps-under-test) endpoints."""
 from __future__ import annotations
 
+from sqlalchemy import select
 from src.api._helpers import json_body, query_args
 from src.catalog import service
+from src.catalog.models import TestDefinition
 from src.core.db import session_scope
+from src.execution import service as exec_service
 from src.iam.decorators import require_authenticated, require_role
-from src.iam.principal import ROLE_PROJECT_ADMIN
+from src.iam.principal import ROLE_PROJECT_ADMIN, ROLE_OPERATOR
 
 
 @require_authenticated
@@ -49,3 +52,13 @@ def create_target(app, operation, request, principal=None, **kwargs):
 def update_target(app, operation, request, target_id=None, principal=None, **kwargs):
     with session_scope() as db:
         return service.update_target(db, target_id, json_body(request)), 200
+
+
+@require_role(ROLE_OPERATOR)
+def run_all_target_tests(app, operation, request, target_id=None, principal=None, **kwargs):
+    with session_scope() as db:
+        tests = db.scalars(select(TestDefinition).where(TestDefinition.target_id == target_id)).all()
+        queued = []
+        for t in tests:
+            queued.append(exec_service.run_now(db, t.id, environment="default"))
+        return {"items": queued}, 202

@@ -1,5 +1,5 @@
 import { Table, Typography, Button, Space, Modal, Form, Input, App, Tag } from "antd";
-import { PlusOutlined } from "@ant-design/icons";
+import { PlusOutlined, PlayCircleOutlined } from "@ant-design/icons";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
@@ -49,6 +49,17 @@ export default function TargetsPage() {
           { title: "Base URL", dataIndex: "base_url", sorter: true, ellipsis: true },
           { title: "Environment", dataIndex: "environment", sorter: true },
           { title: "Tags", dataIndex: "tags", render: (t) => (t || []).map((x: string) => <Tag key={x}>{x}</Tag>) },
+          {
+            title: "Actions", key: "actions", width: 120, render: (_, r: any) => (
+              <Button type="primary" size="small" icon={<PlayCircleOutlined />} onClick={(e) => {
+                e.stopPropagation();
+                qtp.runAllTargetTests(r.id).then((res) => {
+                  message.success(`Queued ${res.items.length} tests`);
+                  nav("/runs");
+                }).catch((err) => message.error(err.message || "Failed to run tests"));
+              }}>Run all</Button>
+            )
+          }
         ]}
       />
 

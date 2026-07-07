@@ -17,6 +17,7 @@ import RequestBuilderPage from "./pages/RequestBuilderPage";
 import RunsPage from "./pages/RunsPage";
 import RunDetailPage from "./pages/RunDetailPage";
 import SchedulesPage from "./pages/SchedulesPage";
+import ScheduleDetailPage from "./pages/ScheduleDetailPage";
 import TargetsPage from "./pages/TargetsPage";
 import TargetDetailPage from "./pages/TargetDetailPage";
 import WorkersPage from "./pages/WorkersPage";
@@ -87,6 +88,7 @@ export default function QtpApp() {
             <Route path="/runs" element={<RunsPage />} />
             <Route path="/runs/:id" element={<RunDetailPage />} />
             <Route path="/schedules" element={<SchedulesPage />} />
+            <Route path="/schedules/:id" element={<ScheduleDetailPage />} />
             <Route path="/targets" element={<TargetsPage />} />
             <Route path="/targets/:id" element={<TargetDetailPage />} />
             <Route path="/workers" element={<WorkersPage />} />

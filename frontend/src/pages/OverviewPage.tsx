@@ -3,8 +3,10 @@ import { useQuery } from "@tanstack/react-query";
 import ReactECharts from "echarts-for-react";
 import { qtp } from "../api/qtp";
 import { StatusTag, DefectTag } from "../components/tags";
+import { useNavigate } from "react-router-dom";
 
 export default function OverviewPage() {
+  const nav = useNavigate();
   const { data: ov } = useQuery({ queryKey: ["overview"], queryFn: () => qtp.overview(24), refetchInterval: 5000 });
   const { data: fail } = useQuery({ queryKey: ["failures"], queryFn: () => qtp.failures(168), refetchInterval: 8000 });
 
@@ -90,6 +92,7 @@ export default function OverviewPage() {
               size="small"
               pagination={false}
               dataSource={fail?.recent_failed || []}
+              onRow={(r: any) => ({ onClick: () => nav(`/runs/${r.id}`), style: { cursor: "pointer" } })}
               columns={[
                 { title: "Test", dataIndex: "test_name" },
                 { title: "Status", dataIndex: "status", render: (s) => <StatusTag status={s} /> },

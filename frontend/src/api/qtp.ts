@@ -31,6 +31,7 @@ export const qtp = {
   targetTests: (id: string, params: QueryParams = {}) => api.get<Page<TestDef>>(`/api/targets/${id}/tests${qs(params)}`),
   targetRuns: (id: string, params: QueryParams = {}) => api.get<Page<RunSummary>>(`/api/targets/${id}/runs${qs(params)}`),
   createTarget: (b: Partial<Target>) => api.post<Target>("/api/targets", b),
+  runAllTargetTests: (id: string, environment = "default") => api.post<any>(`/api/targets/${id}/run-all`, { environment }),
 
   testsPage: (params: QueryParams = {}) => api.get<Page<TestDef>>(`/api/tests${qs(params)}`),
   tests: (query = "") => api.get<Page<TestDef>>(`/api/tests${qs({ page_size: 100, ...fromLegacyQuery(query) })}`).then(list<TestDef>()),
@@ -59,6 +60,7 @@ export const qtp = {
 
   schedulesPage: (params: QueryParams = {}) => api.get<Page<Schedule>>(`/api/schedules${qs(params)}`),
   schedules: () => api.get<Page<Schedule>>(`/api/schedules${qs({ page_size: 100 })}`).then(list<Schedule>()),
+  schedule: (id: string) => api.get<any>(`/api/schedules/${id}`),
   createSchedule: (b: Partial<Schedule>) => api.post<Schedule>("/api/schedules", b),
   updateSchedule: (id: string, b: Partial<Schedule>) => api.patch<Schedule>(`/api/schedules/${id}`, b),
   deleteSchedule: (id: string) => api.del<any>(`/api/schedules/${id}`),

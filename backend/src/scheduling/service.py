@@ -36,9 +36,65 @@ def list_schedules(db: Session, filters: dict[str, Any] | None = None) -> dict:
     })
     total = int(db.scalar(select(func.count()).select_from(stmt.order_by(None).subquery())) or 0)
     schedules = list(db.scalars(stmt.offset((params.page - 1) * params.page_size).limit(params.page_size)).all())
-    def_ids = {s.test_definition_id for s in schedules}
-    defs = {d.id: d.name for d in db.scalars(select(TestDefinition).where(TestDefinition.id.in_(def_ids))).all()} if def_ids else {}
-    return envelope([serializers.schedule(s, test_name=defs.get(s.test_definition_id)) for s in schedules], total, params)
+    
+    def_ids = {s.test_definition_id for s in schedules if s.test_definition_id}
+    defs = {d.id: d for d in db.scalars(select(TestDefinition).where(TestDefinition.id.in_(def_ids))).all()} if def_ids else {}
+    
+    target_ids = {d.target_id for d in defs.values() if d.target_id}
+    from src.catalog.models import Target
+    targets = {t.id: t.key for t in db.scalars(select(Target).where(Target.id.in_(target_ids))).all()} if target_ids else {}
+    
+    sched_ids = {s.id for s in schedules}
+    from src.execution.models import TestRun
+    counts = {}
+    if sched_ids:
+        run_counts = db.execute(
+            select(TestRun.schedule_id, func.count())
+            .where(TestRun.schedule_id.in_(sched_ids))
+            .group_by(TestRun.schedule_id)
+        ).all()
+        counts = {sid: c for sid, c in run_counts}
+
+    out = []
+    for s in schedules:
+        d = defs.get(s.test_definition_id)
+        item = serializers.schedule(s, test_name=d.name if d else None)
+        item["target_key"] = targets.get(d.target_id) if d and d.target_id else None
+        item["total_runs"] = counts.get(s.id, 0)
+        out.append(item)
+        
+    return envelope(out, total, params)
+
+def get_schedule_detail(db: Session, schedule_id: str) -> dict:
+    s = db.get(Schedule, schedule_id)
+    if not s:
+        raise NotFoundError("schedule not found")
+    d = db.get(TestDefinition, s.test_definition_id) if s.test_definition_id else None
+    
+    target_key = None
+    if d and d.target_id:
+        from src.catalog.models import Target
+        tgt = db.get(Target, d.target_id)
+        if tgt: target_key = tgt.key
+
+    from src.execution.models import TestRun
+    stats = db.execute(
+        select(TestRun.status, func.count())
+        .where(TestRun.schedule_id == s.id)
+        .group_by(TestRun.status)
+    ).all()
+    
+    last_run = db.scalars(
+        select(TestRun).where(TestRun.schedule_id == s.id).order_by(TestRun.queued_at.desc()).limit(1)
+    ).first()
+
+    out = serializers.schedule(s, test_name=d.name if d else None)
+    out["target_key"] = target_key
+    out["total_runs"] = sum(c for _, c in stats)
+    out["status_counts"] = {st: c for st, c in stats}
+    out["last_run_status"] = last_run.status if last_run else None
+    out["last_run_id"] = last_run.id if last_run else None
+    return out
 
 
 def create_schedule(db: Session, payload: dict[str, Any]) -> dict:
