@@ -7,6 +7,7 @@ from tests.automations._base import SimpleHttpTest, jpath, status, within_ms
 from src.testkit.base import TYPE_HTTP, TestMetadata
 from src.testkit.context import TestContext
 from src.testkit.result import TestResult
+from src.testkit.result import TestResult
 from src.config import Config
 import requests
 import json
@@ -301,7 +302,7 @@ class SelfAuthenticatedTargetsCRUD(AuthHttpTest):
                 {
                     "id": "get", "name": "Get Target", "method": "GET", "url": "{{base_url}}/api/targets/{{target_id}}",
                     "auth": {"type": "bearer", "token": "{{auth_token}}"},
-                    "assertions": [status(200), jpath("$.key", "equals", "test_tgt")]
+                    "assertions": [status(200), jpath("$.target.key", "equals", "test_tgt")]
                 },
                 {
                     "id": "list", "name": "List Targets", "method": "GET", "url": "{{base_url}}/api/targets",
@@ -455,7 +456,7 @@ class SelfAuthenticatedRunsCRUD(AuthHttpTest):
                 {
                     "id": "put_defect", "name": "Put Defect", "method": "PUT", "url": "{{base_url}}/api/runs/{{run_id}}/defect",
                     "auth": {"type": "bearer", "token": "{{auth_token}}"},
-                    "body": {"mode": "json", "raw": json.dumps({"defect_id": "BUG-123"})},
+                    "body": {"mode": "json", "raw": "{\"defect_type\": \"bug\"}"},
                     "assertions": [status(200)]
                 },
                 {
@@ -791,9 +792,9 @@ class AddRunCommentEmpty(AuthHttpTest):
 class PutDefectMissingId(AuthHttpTest):
     """QTP · Put Defect missing id"""
     metadata = TestMetadata(
-        key="self.auth.put_defect_400", name="QTP · Put Defect missing id", type=TYPE_HTTP,
+        key="self.auth.put_defect_404_id", name="QTP · Put Defect missing id", type=TYPE_HTTP,
         tags=["self", "api", "automated"], owner="admin", target=TARGET,
-        default_config={"method": "PUT", "url": "{{base_url}}/api/runs/00000000-0000-0000-0000-000000000000/defect", "auth": {"type": "bearer", "token": "{{auth_token}}"}, "body": {"mode":"json","raw":"{}"}, "assertions": [status(400)]}
+        default_config={"method": "PUT", "url": "{{base_url}}/api/runs/missing-id/defect", "auth": {"type": "bearer", "token": "{{auth_token}}"}, "body": {"mode":"json","raw":"{\"defect_type\":\"bug\"}"}, "assertions": [status(404)]}
     )
 
 class CreateScheduleMissingTestId(AuthHttpTest):
@@ -847,9 +848,9 @@ class UpdateTestBadPayload(AuthHttpTest):
 class UpdateScheduleBadPayload(AuthHttpTest):
     """QTP · Update Schedule bad payload"""
     metadata = TestMetadata(
-        key="self.auth.update_schedule_400", name="QTP · Update Schedule bad payload", type=TYPE_HTTP,
+        key="self.auth.update_schedule_404_payload", name="QTP · Update Schedule bad payload", type=TYPE_HTTP,
         tags=["self", "api", "automated"], owner="admin", target=TARGET,
-        default_config={"method": "PATCH", "url": "{{base_url}}/api/schedules/00000000-0000-0000-0000-000000000000", "auth": {"type": "bearer", "token": "{{auth_token}}"}, "body": {"mode":"json","raw":"[]"}, "assertions": [status(400)]}
+        default_config={"method": "PATCH", "url": "{{base_url}}/api/schedules/missing-id", "auth": {"type": "bearer", "token": "{{auth_token}}"}, "body": {"mode":"json","raw":"{\"is_enabled\":false}"}, "assertions": [status(404)]}
     )
 
 class TargetsMethodNotAllowed(AuthHttpTest):

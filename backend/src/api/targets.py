@@ -72,7 +72,7 @@ def run_all_target_tests(app, operation, request, target_id=None, principal=None
         target = db.get(Target, target_id)
         if not target:
             return {"error": "target not found"}, 404
-        tests = db.scalars(select(TestDefinition).where(TestDefinition.target_key == target.key)).all()
+        tests = db.scalars(select(TestDefinition).where(TestDefinition.target_key == target.key, TestDefinition.status != "missing_from_source")).all()
         queued = []
         test_map = {}
         for t in tests:
