@@ -496,7 +496,13 @@ export default function RequestBuilderPage() {
               {/* URL Bar */}
               <div style={{ display: "flex", gap: 0, marginBottom: 24 }}>
                 <Select value={currentStep.method} onChange={(v) => updateCurrentStep({ method: v })} style={{ width: 120 }} size="large" options={METHODS.map((m) => ({ value: m }))} />
-                <Select allowClear placeholder="Target (optional)" value={currentStep.target} onChange={(v) => updateCurrentStep({ target: v })} style={{ width: 180 }} size="large" options={targets.map((t) => ({ value: t.key, label: t.key }))} />
+                <Select allowClear placeholder="Target (optional)" value={currentStep.target} onChange={(v) => {
+                  const target = targets.find(t => t.key === v);
+                  const newUrl = target?.base_url && currentStep.url.includes("{{base_url}}") 
+                    ? currentStep.url.replace("{{base_url}}", target.base_url) 
+                    : currentStep.url;
+                  updateCurrentStep({ target: v, url: newUrl });
+                }} style={{ width: 180 }} size="large" options={targets.map((t) => ({ value: t.key, label: t.key }))} />
                 <Input value={currentStep.url} onChange={(e) => updateCurrentStep({ url: e.target.value })} placeholder="Enter request URL" size="large" style={{ flex: 1, borderRadius: 0 }} />
                 <Button type="primary" size="large" icon={<SendOutlined />} loading={send.isPending} onClick={() => send.mutate()} style={{ borderRadius: "0 6px 6px 0" }}>
                   {mode === "flow" ? "Send Flow" : "Send"}
