@@ -36,6 +36,12 @@ class Config:
     DB_MAX_OVERFLOW = _int("DB_MAX_OVERFLOW", 10)
     DB_POOL_TIMEOUT = _int("DB_POOL_TIMEOUT", 30)
 
+    # ── Redis (only read by the QF ETL import chain; QTP does not use it) ──
+    REDIS_URL  = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+    REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
+    REDIS_PORT = os.getenv("REDIS_PORT", "6379")
+    REDIS_DB   = os.getenv("REDIS_DB", "0")
+
     # ── Keycloak ───────────────────────────────────────────────────────────
     # PUBLIC url = what the browser and issuer claim use (host-reachable).
     # INTERNAL url = what the API container uses to fetch JWKS (compose network).

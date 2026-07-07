@@ -387,9 +387,22 @@ class BaseAutomationTest(ABC):
     def execute(self, context: "TestContext") -> "TestResult":
         raise NotImplementedError
 
+    def cleanup(self, context: "TestContext") -> None:
+        # Optional. Undo data the test created (e.g. DELETE what a POST created).
+        # Runs after execute() on BOTH success and failure, before teardown().
+        # A failure here is logged but never changes the test's pass/fail status.
+        return None
+
     def teardown(self, context: "TestContext") -> None:
         return None
 ```
+
+The lifecycle the runner guarantees is `validate_config -> setup -> execute ->
+cleanup -> teardown`, where `cleanup` and `teardown` always run even when
+`execute` raised. `cleanup` is for reverting side effects on the
+app-under-test (so mutating tests don't leak state between runs); `teardown` is
+for releasing resources the test held (sessions, browsers, drivers). GET-only
+tests usually implement neither.
 
 `TestContext` exposes the target, variables, secrets, logger, artifact writer,
 correlation id, and cancellation token:

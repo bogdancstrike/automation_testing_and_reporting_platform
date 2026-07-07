@@ -42,17 +42,24 @@ def _run_code_test(code_ref: str, ctx: TestContext) -> TestResult:
     module = importlib.import_module(module_name)
     cls = getattr(module, class_name)
     instance = cls()
+    result: TestResult
     try:
         instance.validate_config(dict(getattr(cls.metadata, "default_config", {})))
         instance.setup(ctx)
         result = instance.execute(ctx)
     except Exception as e:  # pragma: no cover - defensive
-        return TestResult(status=ERROR, error_category="script_error", error_message=str(e))
+        result = TestResult(status=ERROR, error_category="script_error", error_message=str(e))
     finally:
+        # cleanup() runs on success AND failure (undo test-created data); a
+        # cleanup failure is logged but never changes the test's status.
+        try:
+            instance.cleanup(ctx)
+        except Exception as e:
+            ctx.log("warning", f"cleanup() failed: {e}")
         try:
             instance.teardown(ctx)
-        except Exception:
-            pass
+        except Exception as e:
+            ctx.log("warning", f"teardown() failed: {e}")
     return result
 
 

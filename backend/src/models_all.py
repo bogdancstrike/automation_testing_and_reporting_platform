@@ -1,0 +1,9 @@
+"""Import every ORM model so ``Base.metadata`` is complete.
+
+Imported by the DB init script and by Alembic's env before create_all/autogenerate.
+"""
+from src.catalog import models as _catalog          # noqa: F401
+from src.execution import models as _execution        # noqa: F401
+from src.scheduling import models as _scheduling       # noqa: F401
+
+__all__ = ["_catalog", "_execution", "_scheduling"]

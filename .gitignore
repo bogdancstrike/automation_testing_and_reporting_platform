@@ -218,3 +218,7 @@ __marimo__/
 node_modules
 node_modules/
 /data/
+
+# local env (keep .env.example)
+backend/.env
+.env
