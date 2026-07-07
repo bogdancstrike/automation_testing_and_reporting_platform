@@ -103,6 +103,13 @@ Discovery recursively scans `backend/tests/automations/`, imports Python modules
 
 The Developer Docs should teach this as the default workflow: create one Python file, subclass the base test, run discovery from the UI or API, then run or schedule the test.
 
+
+## Framework Ergonomics
+
+The testing framework should be easy to understand and use. A new tester should be able to open one Python file, understand what app it targets, what steps it performs, what it asserts, and what it cleans up. Multi-step helpers should hide platform internals and use tester-facing names like step, request, capture, assert, and cleanup.
+
+Backend abstractions should stay small and explicit: reusable helpers are welcome when they remove boilerplate from tests, but test authors should not need to understand the worker queue, ORM models, or request adapter internals to write a useful test. Developer Docs and examples should prefer complete, copyable tests over fragmented snippets.
+
 ## Backend API Contract
 
 ### Backend-Driven Tables
@@ -154,6 +161,7 @@ The UI uses a restrained operations-console style:
 - Clickable rows with predictable navigation.
 - Charts used for operational insight, not decoration.
 - Responsive layouts that remain usable on laptop screens.
+- Sidebar navigation stays sticky/fixed at viewport height; page scrolling happens in the main content area only.
 
 ### Overview
 

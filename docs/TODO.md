@@ -97,4 +97,5 @@ _Last updated: 2026-07-07._
 - [ ] Overview enrichment, including clickable Recent Failures rows that route to the failed test detail page
 - [ ] Request Builder Flow mode for add/duplicate/reorder/delete steps, captures, send-flow results, save/update/schedule
 - [ ] Developer Docs enrichment for multi-step tests, code-test auto-discovery, target pages, and backend-driven table APIs
+- [ ] Sticky sidebar/app shell: sidebar remains fixed/sticky while the page content scrolls
 - [ ] Keep this TODO updated as items move to done, partial, or deferred during the implementation
