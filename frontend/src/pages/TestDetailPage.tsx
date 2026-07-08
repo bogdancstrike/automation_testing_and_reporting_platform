@@ -149,6 +149,7 @@ export default function TestDetailPage() {
       <Space style={{ marginBottom: 12 }}>
         <Button icon={<ArrowLeftOutlined />} onClick={() => nav("/scenarios")}>Scenarios</Button>
         <Button type="primary" icon={<PlayCircleOutlined />} loading={run.isPending} onClick={() => run.mutate()}>Run now</Button>
+        <Button icon={<EditOutlined />} onClick={() => { setEditingTags(t.tags || []); setIsEditingTags(true); }}>Edit tags</Button>
         {t.source === "ui" && (
           <Button danger icon={<DeleteOutlined />} onClick={() => {
             Modal.confirm({
