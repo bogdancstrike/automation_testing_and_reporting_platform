@@ -202,14 +202,14 @@ export default function ScheduleDetailPage() {
                 onChange={(pagination, filters, sorter: any, extra) => setTableRunsParams((p) => nextTableParams(
                   p, pagination, filters, sorter, extra,
                   { test_name: "test_name", status: "status", defect_type: "defect_type" },
-                  { sort: "queued_at", order: "desc", pageSize: 10, schedule_id: id }
+                  { sort: "queued_at", order: "desc", pageSize: 10 }
                 ))}
                 onRow={(r: any) => ({ onClick: () => nav(`/runs/${r.id}`), style: { cursor: "pointer" } })}
                 columns={[
                   { title: "Scenario", dataIndex: "test_name", render: (n, r: any) => n || r.test_definition_id, sorter: true, sortOrder: antSortOrder(tableRunsParams, "test_name"), ...textFilter("test_name", tableRunsParams, "Search scenario") },
-                  { title: "Status", dataIndex: "status", render: (st) => <StatusTag status={st} />, ...menuFilter("status", tableRunsParams, ["queued", "running", "passed", "failed", "error", "timeout", "canceled"]) },
+                  { title: "Status", dataIndex: "status", render: (st) => <StatusTag status={st} />, ...menuFilter("status", tableRunsParams, ["queued", "running", "passed", "failed", "error", "timeout", "canceled"].map(s => ({ text: s, value: s }))) },
                   { title: "Duration", dataIndex: "duration_ms", render: (ms) => ms != null ? `${ms} ms` : "—", sorter: true, sortOrder: antSortOrder(tableRunsParams, "duration_ms") },
-                  { title: "Defect", dataIndex: "defect_type", render: (d) => d || "—", ...menuFilter("defect_type", tableRunsParams, ["timeout", "validation_failed", "target_unavailable", "script_error", "infrastructure_error"]) },
+                  { title: "Defect", dataIndex: "defect_type", render: (d) => d || "—", ...menuFilter("defect_type", tableRunsParams, ["timeout", "validation_failed", "target_unavailable", "script_error", "infrastructure_error"].map(s => ({ text: s, value: s }))) },
                   { title: "Queued", dataIndex: "queued_at", render: (v) => formatLocalTime(v), sorter: true, sortOrder: antSortOrder(tableRunsParams, "queued_at") },
                 ]}
               />
