@@ -84,6 +84,10 @@ class Config:
     )
     # How many runs one worker process executes concurrently (ETL thread pool).
     WORKER_MAX_CONCURRENCY = _int("WORKER_MAX_CONCURRENCY", 4)
+    # Browser scenarios (playwright/selenium) run in a separate OS process so the
+    # sync browser APIs don't collide with the worker's gevent hub. This bounds
+    # how long that child may run before it is killed and the run marked timeout.
+    BROWSER_RUN_TIMEOUT_S = _int("BROWSER_RUN_TIMEOUT_S", 180)
     WORKER_POLL_SECONDS  = float(os.getenv("WORKER_POLL_SECONDS", "1.0"))
     WORKER_HEARTBEAT_SECONDS = float(os.getenv("WORKER_HEARTBEAT_SECONDS", "5.0"))
     WORKER_STALE_SECONDS = float(os.getenv("WORKER_STALE_SECONDS", "30.0"))

@@ -7,6 +7,7 @@ import time
 from sqlalchemy.orm import Session
 
 from src.catalog.models import Target, TestDefinition, TestRevision
+from src.config import Config
 from src.core.clock import utcnow
 from framework.tracing import get_tracer
 from src.execution.failure_classifier import record_failure
@@ -15,6 +16,7 @@ from src.execution.models import (RunLog, TestRun, TestRunAssertion,
 from src.testkit.adapters.http import execute_http
 from src.testkit.adapters.stubs import unsupported
 from src.testkit.base import TYPE_HTTP
+from src.testkit.subprocess_exec import BROWSER_TYPES, run_scenario_in_subprocess
 from src.testkit.context import ResolvedTarget, TestContext
 from src.testkit.result import (CANCELED, ERROR, FAILED, TERMINAL_STATUSES,
                                 TIMEOUT, TestResult)
@@ -96,7 +98,13 @@ def execute_run(db: Session, run: TestRun, worker_name: str) -> None:
             started = time.monotonic()
             try:
                 if revision and revision.code_ref:
-                    result = _run_code_test(revision.code_ref, ctx)
+                    # Browser scenarios run out-of-process: sync Playwright/Selenium
+                    # cannot share the worker's gevent hub (see subprocess_exec).
+                    if definition and definition.type in BROWSER_TYPES:
+                        result = run_scenario_in_subprocess(
+                            revision.code_ref, ctx, timeout_s=Config.BROWSER_RUN_TIMEOUT_S)
+                    else:
+                        result = _run_code_test(revision.code_ref, ctx)
                 elif definition.type == TYPE_HTTP:
                     result = execute_http(dict(revision.config if revision else {}), ctx)
                 else:
