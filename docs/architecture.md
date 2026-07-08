@@ -113,7 +113,7 @@ Backend:
 
 - Python 3.12.
 - Flask 3 with Flask-RESTX through the QF Framework.
-- QF Framework local wheel `dist/qf-1.0.2-py3-none-any.whl`.
+- QF Framework local wheel `dist/qf-1.0.3-py3-none-any.whl`.
 - SQLAlchemy 2, Alembic, psycopg.
 - PostgreSQL 15+.
 - Pydantic 2 for request validation and DTOs.
