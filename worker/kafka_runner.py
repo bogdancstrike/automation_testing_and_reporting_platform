@@ -20,7 +20,7 @@ from src.core.clock import utcnow
 from src.core.db import session_scope
 from src.execution import queue
 from src.execution.models import TestRun, Worker
-from src.execution.runner import execute_run
+from src.execution.runner import execute_run, mark_run_running
 from src.testkit.result import TERMINAL_STATUSES
 from framework.commons.logger import logger as log
 
@@ -64,7 +64,12 @@ def execute_run_message(message: dict, consumer_name: str, metadatas: dict):
                 span.set_attribute("run.skipped", f"terminal:{run.status}")
                 log.info(f"run {run_id} already {run.status}; skipping (redelivery)")
                 return None
+            if run.status == "running":
+                span.set_attribute("run.skipped", "active:running")
+                log.info(f"run {run_id} is already running; skipping (redelivery)")
+                return None
             span.set_attribute("test.definition_id", run.test_definition_id)
+            mark_run_running(db, run, instance)
             queue.heartbeat(db, instance, status="busy", current_run_id=run.id)
 
         try:

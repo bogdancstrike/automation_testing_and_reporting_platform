@@ -25,6 +25,15 @@ from src.core.secrets import get_secrets_for_project
 tracer = get_tracer()
 
 
+def mark_run_running(db: Session, run: TestRun, worker_name: str) -> None:
+    """Mark a run as visibly in progress within the caller's transaction."""
+    run.status = RUNNING
+    run.worker_name = worker_name
+    if run.started_at is None:
+        run.started_at = utcnow()
+    db.flush()
+
+
 def _build_context(db: Session, run: TestRun, definition: TestDefinition,
                    target: Target | None) -> TestContext:
     ctx = TestContext(correlation_id=run.correlation_id)
@@ -87,10 +96,7 @@ def execute_run(db: Session, run: TestRun, worker_name: str) -> None:
         if target:
             span.set_attribute("target.key", target.key)
 
-        run.status = RUNNING
-        run.worker_name = worker_name
-        run.started_at = utcnow()
-        db.flush()
+        mark_run_running(db, run, worker_name)
 
         ctx = _build_context(db, run, definition, target)
 

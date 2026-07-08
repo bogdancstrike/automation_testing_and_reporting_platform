@@ -10,6 +10,7 @@ import WaterfallChart from "../components/WaterfallChart";
 import CodeSnippet from "../components/CodeSnippet";
 
 const DEFECTS = ["product_bug", "automation_bug", "system_issue", "to_investigate", "no_defect"];
+const ACTIVE_RUN_REFETCH_MS = 1000;
 
 export default function RunDetailPage() {
   const { id = "" } = useParams();
@@ -23,7 +24,7 @@ export default function RunDetailPage() {
   const active = (s?: string) => ["queued", "claimed", "running"].includes(s || "");
   const { data: run } = useQuery({
     queryKey: ["run", id], queryFn: () => qtp.run(id),
-    refetchInterval: (q) => (active((q.state.data as any)?.status) ? 2000 : false),
+    refetchInterval: (q) => (active((q.state.data as any)?.status) ? ACTIVE_RUN_REFETCH_MS : false),
   });
   
   const { data: testDefinition } = useQuery({

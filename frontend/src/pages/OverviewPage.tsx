@@ -3,6 +3,7 @@ import { Row, Col, Card, Typography, Table, Empty, Progress, Radio, DatePicker, 
 import {
   PlayCircleOutlined, CheckCircleOutlined, InboxOutlined, ClusterOutlined,
   CloseCircleOutlined, WarningOutlined, FieldTimeOutlined, ThunderboltOutlined,
+  LoadingOutlined,
 } from "@ant-design/icons";
 import { useQuery } from "@tanstack/react-query";
 import ReactECharts from "echarts-for-react";
@@ -131,6 +132,7 @@ export default function OverviewPage() {
         <Col xs={12} md={6}><StatCard label="Total runs" value={totals.total_runs || 0} icon={<PlayCircleOutlined />} accent="#2563eb" /></Col>
         <Col xs={12} md={6}><StatCard label="Pass rate" value={ov?.pass_rate != null ? ov.pass_rate * 100 : 0} precision={1} suffix="%" icon={<CheckCircleOutlined />} accent="#16a34a" tintValue /></Col>
         <Col xs={12} md={6}><StatCard label="Queue backlog" value={ov?.queue_backlog || 0} icon={<InboxOutlined />} accent="#0891b2" /></Col>
+        <Col xs={12} md={6}><StatCard label="Running" value={totals.running || 0} icon={<LoadingOutlined spin />} accent="#2563eb" tintValue /></Col>
         <Col xs={12} md={6}><StatCard label="Active workers" value={ov?.active_workers || 0} icon={<ClusterOutlined />} accent="#7c3aed" /></Col>
         <Col xs={12} md={6}><StatCard label="Failed" value={totals.failed || 0} icon={<CloseCircleOutlined />} accent="#dc2626" tintValue /></Col>
         <Col xs={12} md={6}><StatCard label="Errors" value={totals.error || 0} icon={<WarningOutlined />} accent="#ea580c" tintValue /></Col>

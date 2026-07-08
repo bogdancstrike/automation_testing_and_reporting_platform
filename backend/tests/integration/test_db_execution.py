@@ -9,7 +9,7 @@ from src.execution.models import RunQueue, TestRun
 from src.catalog import service as catalog_service
 from src.execution import service as execution_service
 from src.execution import queue as execution_queue
-from src.execution.runner import execute_run
+from src.execution.runner import execute_run, mark_run_running
 from src.testkit.result import CANCELED
 
 # PostgreSQL Test Database URL
@@ -71,6 +71,39 @@ def test_enqueue_and_claim(db_session):
     assert claimed.id == run.id
     assert claimed.status == "claimed"
     assert claimed.worker_name == "worker-1"
+
+
+def test_mark_run_running_is_visible_before_final_result(db_session):
+    db = db_session
+    catalog_service.create_target(db, {
+        "key": "demo",
+        "name": "Demo Target",
+        "base_url": "http://example.com"
+    })
+    test_def = catalog_service.create_request_test(db, {
+        "key": "ui.running",
+        "name": "Running Visibility Test",
+        "config": {
+            "target": "demo",
+            "method": "GET",
+            "url": "/get",
+        }
+    })
+    run = execution_service.enqueue_run(db, db.get(TestDefinition, test_def["id"]))
+    db.commit()
+
+    Session = sessionmaker(bind=db.get_bind(), expire_on_commit=False)
+    with Session() as worker_db:
+        worker_run = worker_db.get(TestRun, run.id)
+        mark_run_running(worker_db, worker_run, "worker-1")
+        worker_db.commit()
+
+    db.expire(run)
+    visible = db.get(TestRun, run.id)
+    assert visible.status == "running"
+    assert visible.worker_name == "worker-1"
+    assert visible.started_at is not None
+
 
 def test_cancel_queued_run(db_session):
     db = db_session
