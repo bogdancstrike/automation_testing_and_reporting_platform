@@ -26,6 +26,7 @@ import WorkerDetailPage from "./pages/WorkerDetailPage";
 import DocsPage from "./pages/DocsPage";
 import ProfilePage from "./pages/ProfilePage";
 import AuditExplorerPage from "./pages/AuditExplorerPage";
+import AuditEntityPage from "./pages/AuditEntityPage";
 import { AuditOutlined } from "@ant-design/icons";
 
 const { Header, Sider, Content } = Layout;
@@ -221,6 +222,7 @@ function AppShell({ mode, setMode }: { mode: ThemeMode; setMode: (mode: ThemeMod
             <Route path="/workers" element={<WorkersPage />} />
             <Route path="/workers/:id" element={<WorkerDetailPage />} />
             <Route path="/audit" element={<AuditExplorerPage />} />
+            <Route path="/audit/:id" element={<AuditEntityPage />} />
             <Route path="/docs" element={<DocsPage />} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="*" element={<Navigate to="/overview" replace />} />

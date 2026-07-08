@@ -21,6 +21,9 @@ def _record_event(mapper: Mapper, connection: Connection, target, action: str):
     if isinstance(target, AuditEvent):
         return
     
+    if target.__tablename__ in ("run_logs", "test_run_steps", "test_run_assertions", "run_queue", "workers"):
+        return
+    
     # Wait, getting the actor requires Flask request context.
     from flask import has_request_context, g
     actor = None

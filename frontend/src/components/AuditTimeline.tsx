@@ -6,25 +6,9 @@ import type { AuditEventDto } from '../api/types'
 import dayjs from 'dayjs'
 
 const ACTION_COLORS: Record<string, string> = {
-  ticket_created: 'green',
-  ticket_updated: 'blue',
-  ticket_deleted: 'red',
-  ticket_assigned_to_sector: 'cyan',
-  ticket_assigned_to_user: 'cyan',
-  ticket_assigned_to_me: 'cyan',
-  ticket_reassigned: 'cyan',
-  ticket_marked_done: 'green',
-  ticket_closed: 'green',
-  ticket_reopened: 'purple',
-  ticket_cancelled: 'red',
-  ticket_priority_changed: 'orange',
-  comment_created: 'geekblue',
-  comment_deleted: 'red',
-  attachment_uploaded: 'geekblue',
-  attachment_deleted: 'red',
-  ticket_metadata_set: 'gold',
-  ticket_metadata_deleted: 'red',
-  ticket_reviewed: 'magenta',
+  CREATED: 'green',
+  UPDATED: 'blue',
+  DELETED: 'red',
 }
 
 function actionLabel(action: string): string {

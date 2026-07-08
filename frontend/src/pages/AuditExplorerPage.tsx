@@ -9,6 +9,7 @@ import { AuditTimeline } from '../components/AuditTimeline'
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table'
 import type { FilterValue, SorterResult, FilterDropdownProps } from 'antd/es/table/interface'
 import { ReloadOutlined, SearchOutlined } from '@ant-design/icons'
+import { useNavigate } from 'react-router-dom'
 import { qtp } from '../api/qtp'
 import type { AuditEventDto } from '../api/types'
 
@@ -68,6 +69,7 @@ interface AuditFilterState {
 
 export default function AuditExplorerPage() {
   const { token } = antTheme.useToken()
+  const nav = useNavigate()
   const [params, setParams] = useState<AuditFilterState>({ sort_by: 'created_at', sort_dir: 'desc' })
   const audit = useQuery({
     queryKey: ['audit', params],
@@ -169,8 +171,8 @@ export default function AuditExplorerPage() {
   }
 
   return (
-    <div style={{ padding: 24, maxWidth: 1600, margin: '0 auto' }}>
-      <Flex justify="space-between" align="center" style={{ marginBottom: 24 }}>
+    <div>
+      <Space style={{ marginBottom: 16, justifyContent: "space-between", width: "100%" }}>
         <div>
           <Typography.Title level={3} style={{ margin: 0 }}>Audit Explorer</Typography.Title>
           <Typography.Text type="secondary">Global event ledger across the system</Typography.Text>
@@ -178,7 +180,7 @@ export default function AuditExplorerPage() {
         <Space>
           <Button icon={<ReloadOutlined />} onClick={() => audit.refetch()}>Refresh</Button>
         </Space>
-      </Flex>
+      </Space>
 
       <Card size="small" style={{ marginBottom: 16 }}>
         <Form layout="inline" size="small">
@@ -225,42 +227,14 @@ export default function AuditExplorerPage() {
         size="small"
         pagination={false}
         onChange={handleTableChange}
-        expandable={{
-          expandedRowRender: (record) => (
-            <div style={{ padding: '16px 24px', background: token.colorFillAlter }}>
-              <Descriptions size="small" column={2} bordered style={{ background: token.colorBgContainer }}>
-                <Descriptions.Item label="Record ID">{record.id}</Descriptions.Item>
-                <Descriptions.Item label="IP Address">{record.request_ip || '-'}</Descriptions.Item>
-                <Descriptions.Item label="User Agent" span={2}>{record.user_agent || '-'}</Descriptions.Item>
-              </Descriptions>
-              
-              <div style={{ display: 'flex', gap: 24, marginTop: 16 }}>
-                <div style={{ flex: 1 }}>
-                  <Typography.Text strong>Old Value</Typography.Text>
-                  <Card size="small" style={{ marginTop: 8, height: 200, overflowY: 'auto' }}>
-                    <AuditValue value={record.old_value} />
-                  </Card>
-                </div>
-                <div style={{ flex: 1 }}>
-                  <Typography.Text strong>New Value</Typography.Text>
-                  <Card size="small" style={{ marginTop: 8, height: 200, overflowY: 'auto' }}>
-                    <AuditValue value={record.new_value} />
-                  </Card>
-                </div>
-              </div>
-
-              {record.metadata && Object.keys(record.metadata).length > 0 && (
-                <div style={{ marginTop: 16 }}>
-                  <Typography.Text strong>Metadata</Typography.Text>
-                  <Card size="small" style={{ marginTop: 8 }}>
-                    <AuditValue value={record.metadata} />
-                  </Card>
-                </div>
-              )}
-            </div>
-          ),
-          expandRowByClick: true,
-        }}
+        onRow={(record) => ({
+          onClick: () => {
+            if (record.entity_id) {
+              nav(`/audit/${record.entity_id}`)
+            }
+          },
+          style: { cursor: record.entity_id ? 'pointer' : 'default' }
+        })}
       />
     </div>
   )

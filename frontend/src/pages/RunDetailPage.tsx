@@ -9,6 +9,7 @@ import ExecutionFlow from "../components/ExecutionFlow";
 import WaterfallChart from "../components/WaterfallChart";
 import CodeSnippet from "../components/CodeSnippet";
 import { formatLocalTime } from "../components/tags";
+import { AuditTimeline } from "../components/AuditTimeline";
 
 const DEFECTS = ["product_bug", "automation_bug", "system_issue", "to_investigate", "no_defect"];
 const ACTIVE_RUN_REFETCH_MS = 1000;
@@ -37,6 +38,7 @@ export default function RunDetailPage() {
   const { data: logs = [] } = useQuery({ queryKey: ["runlogs", id, run?.status], queryFn: () => qtp.runLogs(id) });
   const { data: comments = [] } = useQuery({ queryKey: ["runComments", id], queryFn: () => qtp.runComments(id) });
   const { data: allTags = [] } = useQuery({ queryKey: ["allTags"], queryFn: () => qtp.tags("") });
+  const { data: auditEvents = [], isLoading: auditLoading } = useQuery({ queryKey: ["run-audit", id], queryFn: () => qtp.entityAudit("test_runs", id!).then(r => r.items) });
 
   const cancel = useMutation({
     mutationFn: () => qtp.cancelRun(id),
@@ -279,6 +281,14 @@ export default function RunDetailPage() {
                   <Button type="primary" htmlType="submit" loading={addComment.isPending}>Add comment</Button>
                 </Form>
               </Card>
+            </div>
+          ),
+        },
+        {
+          key: "audit", label: `Audit`,
+          children: (
+            <div style={{ marginTop: 12 }}>
+              <AuditTimeline events={auditEvents} loading={auditLoading} />
             </div>
           ),
         },
