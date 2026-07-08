@@ -41,9 +41,8 @@ export default function CatalogPage() {
       </Space>
 
       <Row gutter={12} style={{ marginBottom: 16 }}>
-        <Col xs={12} md={6}><Card size="small"><Statistic title="Matching tests" value={page?.total || 0} /></Card></Col>
-        <Col xs={12} md={6}><Card size="small"><Statistic title="Current page" value={tests.length} /></Card></Col>
-        <Col xs={24} md={12}><Card size="small"><Space wrap>{["http_request", "python_script", "playwright", "selenium", "cli"].map((k) => <Tag key={k}>{k}</Tag>)}</Space></Card></Col>
+        <Col xs={12} md={12}><Card size="small"><Statistic title="Matching tests" value={page?.total || 0} /></Card></Col>
+        <Col xs={12} md={2}><Card size="small"><Statistic title="Current page" value={tests.length} /></Card></Col>
       </Row>
 
       <Table
