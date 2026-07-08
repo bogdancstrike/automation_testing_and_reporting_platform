@@ -1,5 +1,6 @@
-import { Card, Descriptions, Typography, Space, Button, Table, Tag, Switch, App, Tabs, Row, Col } from "antd";
-import { ArrowLeftOutlined, PlayCircleOutlined, CheckCircleOutlined, CloseCircleOutlined, ThunderboltOutlined, BlockOutlined } from "@ant-design/icons";
+import { Card, Descriptions, Typography, Space, Button, Table, Tag, Switch, App, Tabs, Row, Col, Modal, Form, Select, Input, InputNumber } from "antd";
+import { ArrowLeftOutlined, PlayCircleOutlined, CheckCircleOutlined, CloseCircleOutlined, ThunderboltOutlined, BlockOutlined, EditOutlined } from "@ant-design/icons";
+import { useState } from "react";
 import { StatCard } from "../components/StatCard";
 import { formatDurationMs } from "../components/tags";
 import { useParams, useNavigate } from "react-router-dom";
@@ -13,9 +14,14 @@ export default function ScheduleDetailPage() {
   const nav = useNavigate();
   const qc = useQueryClient();
   const { message } = App.useApp();
+  const [openEdit, setOpenEdit] = useState(false);
+  const [form] = Form.useForm();
+  const rtype = Form.useWatch("recurrence_type", form);
 
   const { data: s } = useQuery({ queryKey: ["schedule", id], queryFn: () => qtp.schedule(id) });
   const { data: runsPage } = useQuery({ queryKey: ["runs", "bySchedule", id], queryFn: () => qtp.runs(`?schedule_id=${id}`) });
+  const { data: testsPage } = useQuery({ queryKey: ["testsOptions"], queryFn: () => qtp.testsPage({ page_size: 100, sort: "name", order: "asc" }) });
+  const testsOptions = testsPage?.items || [];
 
   const toggle = useMutation({
     mutationFn: () => qtp.updateSchedule(id, { is_enabled: !s?.is_enabled }),
@@ -24,6 +30,29 @@ export default function ScheduleDetailPage() {
       qc.invalidateQueries({ queryKey: ["schedule", id] });
     }
   });
+
+  const update = useMutation({
+    mutationFn: (v: any) => qtp.updateSchedule(id, v),
+    onSuccess: () => { 
+      message.success("Schedule updated"); 
+      setOpenEdit(false); 
+      qc.invalidateQueries({ queryKey: ["schedule", id] }); 
+    },
+    onError: (e: any) => message.error(e.message || "failed"),
+  });
+
+  const handleEdit = () => {
+    form.setFieldsValue({
+      name: s.name,
+      test_definition_ids: (s.tests || []).map((t: any) => t.id),
+      recurrence_type: s.recurrence_type,
+      interval_seconds: s.interval_seconds,
+      cron_expression: s.cron_expression,
+      timezone: s.timezone,
+      is_enabled: s.is_enabled,
+    });
+    setOpenEdit(true);
+  };
 
   if (!s) return null;
 
@@ -68,6 +97,7 @@ export default function ScheduleDetailPage() {
 
       <Typography.Title level={3}>
         {s.name} {s.is_enabled ? <Tag color="green">Active</Tag> : <Tag>Disabled</Tag>}
+        <Button size="small" type="text" icon={<EditOutlined />} onClick={handleEdit} style={{ marginLeft: 8 }} />
       </Typography.Title>
       
       <Card size="small" style={{ marginBottom: 16 }}>
@@ -168,6 +198,18 @@ export default function ScheduleDetailPage() {
           )
         }
       ]} />
+
+      <Modal title="Edit schedule" open={openEdit} onCancel={() => setOpenEdit(false)} onOk={() => form.validateFields().then((v) => update.mutate(v))} confirmLoading={update.isPending}>
+        <Form form={form} layout="vertical">
+          <Form.Item name="test_definition_ids" label="Scenarios" rules={[{ required: true }]}><Select mode="multiple" showSearch optionFilterProp="label" options={testsOptions.map((t) => ({ value: t.id, label: `${t.name} (${t.key})` }))} /></Form.Item>
+          <Form.Item name="name" label="Name"><Input placeholder="optional" /></Form.Item>
+          <Form.Item name="recurrence_type" label="Recurrence"><Select options={["interval", "cron", "once"].map((value) => ({ value }))} /></Form.Item>
+          {rtype === "interval" && <Form.Item name="interval_seconds" label="Interval (seconds)" rules={[{ required: true }]}><InputNumber min={5} style={{ width: "100%" }} /></Form.Item>}
+          {rtype === "cron" && <Form.Item name="cron_expression" label="Cron expression" rules={[{ required: true }]}><Input placeholder="*/5 * * * *" /></Form.Item>}
+          <Form.Item name="timezone" label="Timezone"><Input /></Form.Item>
+          <Form.Item name="is_enabled" label="Enabled" valuePropName="checked"><Switch /></Form.Item>
+        </Form>
+      </Modal>
     </div>
   );
 }
