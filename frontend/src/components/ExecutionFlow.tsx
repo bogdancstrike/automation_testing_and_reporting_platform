@@ -47,8 +47,12 @@ export default function ExecutionFlow({ steps, status }: { steps: any[], status:
     const initialNodes: any[] = [];
     const initialEdges: any[] = [];
     
-    // Filter out network calls for a cleaner logical execution flow
-    const flowSteps = steps.filter(s => !s.timings?.is_network);
+    // Filter out network calls for a cleaner logical execution flow, 
+    // but if the test consists entirely of network calls (e.g. API tests), show them all!
+    let flowSteps = steps.filter(s => !s.timings?.is_network);
+    if (flowSteps.length === 0 && steps.length > 0) {
+      flowSteps = steps;
+    }
 
     flowSteps.forEach((step, idx) => {
       let bg = "#ffffff", borderColor = "#d9d9d9";

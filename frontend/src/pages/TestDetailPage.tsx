@@ -4,10 +4,12 @@ import { PlayCircleOutlined, ArrowLeftOutlined, ApiOutlined, EditOutlined } from
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { qtp } from "../api/qtp";
-import { StatusTag, TypeTag } from "../components/tags";
+import { StatusTag, TypeTag, formatDurationMs } from "../components/tags";
 import ExecutionFlow from "../components/ExecutionFlow";
 import ReactECharts from "echarts-for-react";
 import CodeSnippet from "../components/CodeSnippet";
+import { StatCard } from "../components/StatCard";
+import { CheckCircleOutlined, CloseCircleOutlined, FieldTimeOutlined, ThunderboltOutlined, DeleteOutlined } from "@ant-design/icons";
 
 const METHOD_COLOR: Record<string, string> = {
   GET: "green", POST: "blue", PUT: "orange", PATCH: "gold", DELETE: "red", HEAD: "default",
@@ -60,6 +62,12 @@ export default function TestDetailPage() {
       commentForm.resetFields();
     },
     onError: (e: any) => message.error(e.message || "failed to add comment"),
+  });
+
+  const deleteScenario = useMutation({
+    mutationFn: () => qtp.deleteTest(id),
+    onSuccess: () => { message.success("Scenario deleted"); nav("/scenarios"); },
+    onError: (e: any) => message.error(e.message || "failed to delete scenario"),
   });
 
   if (!t) return null;
@@ -115,6 +123,15 @@ export default function TestDetailPage() {
   };
 
   const chartData = runs.slice().reverse();
+  
+  const totalRuns = runs.length;
+  const passedCount = runs.filter((r: any) => r.status === 'passed').length;
+  const failedCount = runs.filter((r: any) => ['failed', 'error', 'timeout'].includes(r.status)).length;
+  const passRate = totalRuns > 0 ? (passedCount / totalRuns) * 100 : 0;
+  const durations = runs.map((r: any) => r.duration_ms).filter((v: any) => v != null).sort((a: any, b: any) => a - b);
+  const p50 = durations.length ? durations[Math.floor(durations.length * 0.5)] : 0;
+  const p95 = durations.length ? durations[Math.floor(durations.length * 0.95)] : 0;
+
   const runChartOptions = {
     tooltip: { trigger: 'axis', formatter: (params: any) => { const p = params[0]; const data = chartData[p.dataIndex]; return `${data.queued_at?.replace("T", " ").slice(0, 19)}<br/>Status: ${data.status}<br/>Duration: ${data.duration_ms || 0} ms`; } },
     xAxis: { type: 'category', data: chartData.map((r: any) => ""), show: false },
@@ -131,6 +148,16 @@ export default function TestDetailPage() {
       <Space style={{ marginBottom: 12 }}>
         <Button icon={<ArrowLeftOutlined />} onClick={() => nav("/scenarios")}>Scenarios</Button>
         <Button type="primary" icon={<PlayCircleOutlined />} loading={run.isPending} onClick={() => run.mutate()}>Run now</Button>
+        {t.source === "ui" && (
+          <Button danger icon={<DeleteOutlined />} onClick={() => {
+            Modal.confirm({
+              title: "Delete Scenario",
+              content: "Are you sure you want to delete this scenario? This will also delete all its runs and schedules.",
+              okText: "Delete", okType: "danger", cancelText: "Cancel",
+              onOk: () => deleteScenario.mutate(),
+            });
+          }}>Delete Scenario</Button>
+        )}
       </Space>
       <Typography.Title level={3}>
         {t.name} <TypeTag type={t.type} />
@@ -162,18 +189,31 @@ export default function TestDetailPage() {
       </Card>
 
       {runs.length > 0 && (
-        <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
-          <Col xs={24} md={12}>
-            <Card size="small" title="Status Distribution" bordered={false} style={{ boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
-              <ReactECharts option={pieOptionStatus} style={{ height: 200 }} />
-            </Card>
-          </Col>
-          <Col xs={24} md={12}>
-            <Card size="small" title="Trigger Distribution" bordered={false} style={{ boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
-              <ReactECharts option={pieOptionTrigger} style={{ height: 200 }} />
-            </Card>
-          </Col>
-        </Row>
+        <>
+          <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
+            <Col xs={12} md={6}><StatCard label="Total runs" value={totalRuns} icon={<PlayCircleOutlined />} accent="#2563eb" /></Col>
+            <Col xs={12} md={6}><StatCard label="Pass rate" value={passRate} precision={1} suffix="%" icon={<CheckCircleOutlined />} accent="#16a34a" tintValue /></Col>
+            <Col xs={12} md={6}><StatCard label="Failed" value={failedCount} icon={<CloseCircleOutlined />} accent="#dc2626" tintValue /></Col>
+            <Col xs={12} md={6}><StatCard label="p95 duration" value={p95} icon={<ThunderboltOutlined />} accent="#d97706" formatter={(v) => formatDurationMs(Number(v))} /></Col>
+          </Row>
+          
+          <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
+            <Col xs={24} md={12}>
+              <Card size="small" title="Status Distribution" bordered={false} style={{ boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
+                <ReactECharts option={pieOptionStatus} style={{ height: 200 }} />
+              </Card>
+            </Col>
+            <Col xs={24} md={12}>
+              <Card size="small" title="Trigger Distribution" bordered={false} style={{ boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
+                <ReactECharts option={pieOptionTrigger} style={{ height: 200 }} />
+              </Card>
+            </Col>
+          </Row>
+
+          <Card size="small" title="Execution Duration History" bordered={false} style={{ marginBottom: 16, boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
+            <ReactECharts option={runChartOptions} style={{ height: 120, width: '100%' }} />
+          </Card>
+        </>
       )}
 
       <Tabs items={[
@@ -291,12 +331,6 @@ export default function TestDetailPage() {
           key: "runs", label: `Recent runs (${runs.length})`,
           children: (
             <div>
-              {runs.length > 0 && (
-                <div style={{ marginBottom: 16, padding: '16px 0', borderBottom: '1px solid #f0f0f0' }}>
-                  <Typography.Text type="secondary" style={{ display: 'block', marginBottom: 8 }}>Execution Duration History</Typography.Text>
-                  <ReactECharts option={runChartOptions} style={{ height: 120, width: '100%' }} />
-                </div>
-              )}
               <Table rowKey="id" size="small" dataSource={runs}
               onRow={(r) => ({ onClick: () => nav(`/runs/${r.id}`), style: { cursor: "pointer" } })}
               columns={[

@@ -33,3 +33,8 @@ def run_test(app, operation, request, test_id=None, principal=None, **kwargs):
     actor = getattr(principal, "username", None) or getattr(principal, "subject", None)
     with session_scope() as db:
         return execution.run_now(db, test_id, environment=body.get("environment", "default"), triggered_by=actor), 202
+
+@require_role(ROLE_TEST_AUTHOR)
+def delete_test(app, operation, request, test_id=None, principal=None, **kwargs):
+    with session_scope() as db:
+        return service.delete_test(db, test_id), 200

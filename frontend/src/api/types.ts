@@ -49,6 +49,7 @@ export interface Revision {
   code_ref?: string;
   config: Record<string, any>;
   created_at: string;
+  source_code?: string;
 }
 
 export interface TestDetail extends TestDef {
@@ -77,6 +78,7 @@ export interface AssertionResult {
 export interface RunSummary {
   id: string;
   test_definition_id: string;
+  revision_id?: string;
   test_name?: string;
   target_id?: string;
   target_key?: string;

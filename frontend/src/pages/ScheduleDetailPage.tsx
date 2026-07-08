@@ -1,5 +1,7 @@
-import { Card, Descriptions, Typography, Space, Button, Table, Tag, Switch, App, Tabs } from "antd";
-import { ArrowLeftOutlined } from "@ant-design/icons";
+import { Card, Descriptions, Typography, Space, Button, Table, Tag, Switch, App, Tabs, Row, Col } from "antd";
+import { ArrowLeftOutlined, PlayCircleOutlined, CheckCircleOutlined, CloseCircleOutlined, ThunderboltOutlined, BlockOutlined } from "@ant-design/icons";
+import { StatCard } from "../components/StatCard";
+import { formatDurationMs } from "../components/tags";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { qtp } from "../api/qtp";
@@ -36,6 +38,26 @@ export default function ScheduleDetailPage() {
       type: 'bar', barMaxWidth: 20, itemStyle: { borderRadius: [2, 2, 0, 0] }
     }],
     grid: { left: 40, right: 10, top: 10, bottom: 0 },
+  };
+
+  const totalRuns = runs.length;
+  const passedCount = runs.filter((r: any) => r.status === 'passed').length;
+  const failedCount = runs.filter((r: any) => ['failed', 'error', 'timeout'].includes(r.status)).length;
+  const passRate = totalRuns > 0 ? (passedCount / totalRuns) * 100 : 0;
+  const durations = runs.map((r: any) => r.duration_ms).filter((v: any) => v != null).sort((a: any, b: any) => a - b);
+  const p50 = durations.length ? durations[Math.floor(durations.length * 0.5)] : 0;
+  const p95 = durations.length ? durations[Math.floor(durations.length * 0.95)] : 0;
+
+  const statusCounts = runs.reduce((acc: any, r: any) => {
+    acc[r.status] = (acc[r.status] || 0) + 1;
+    return acc;
+  }, {});
+  const pieOptionStatus = {
+    tooltip: { trigger: "item" }, legend: { bottom: 0 },
+    series: [{
+      type: "pie", radius: ["45%", "70%"], center: ["50%", "45%"],
+      data: Object.entries(statusCounts).map(([k, v]) => ({ name: k, value: v as number, itemStyle: { color: k === 'passed' ? '#52c41a' : k === 'failed' ? '#ff4d4f' : k === 'error' ? '#fa541c' : '#faad14' } })),
+    }],
   };
 
   return (
@@ -80,6 +102,29 @@ export default function ScheduleDetailPage() {
         </Descriptions>
       </Card>
 
+      {runs.length > 0 && (
+        <>
+          <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
+            <Col xs={12} md={6}><StatCard label="Total runs" value={totalRuns} icon={<PlayCircleOutlined />} accent="#2563eb" /></Col>
+            <Col xs={12} md={6}><StatCard label="Pass rate" value={passRate} precision={1} suffix="%" icon={<CheckCircleOutlined />} accent="#16a34a" tintValue /></Col>
+            <Col xs={12} md={6}><StatCard label="Failed" value={failedCount} icon={<CloseCircleOutlined />} accent="#dc2626" tintValue /></Col>
+            <Col xs={12} md={6}><StatCard label="p95 duration" value={p95} icon={<ThunderboltOutlined />} accent="#d97706" formatter={(v) => formatDurationMs(Number(v))} /></Col>
+          </Row>
+          <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
+            <Col xs={24} md={12}>
+              <Card size="small" title="Status Distribution" bordered={false} style={{ boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
+                <ReactECharts option={pieOptionStatus} style={{ height: 200 }} />
+              </Card>
+            </Col>
+            <Col xs={24} md={12}>
+              <Card size="small" title="Execution Duration History" bordered={false} style={{ boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
+                <ReactECharts option={runChartOptions} style={{ height: 200, width: '100%' }} />
+              </Card>
+            </Col>
+          </Row>
+        </>
+      )}
+
       <Tabs items={[
         {
           key: "scenarios", 
@@ -106,12 +151,6 @@ export default function ScheduleDetailPage() {
           label: `Recent Runs (${runs.length})`,
           children: (
             <div>
-              {runs.length > 0 && (
-                <div style={{ marginBottom: 16, padding: '16px 0', borderBottom: '1px solid #f0f0f0' }}>
-                  <Typography.Text type="secondary" style={{ display: 'block', marginBottom: 8 }}>Execution Duration History</Typography.Text>
-                  <ReactECharts option={runChartOptions} style={{ height: 120, width: '100%' }} />
-                </div>
-              )}
               <Table
                 rowKey="id"
                 size="small"

@@ -45,6 +45,7 @@ export const qtp = {
   createTestComment: (id: string, body: string, tags: string[] = []) => api.post<CommentItem>(`/api/tests/${id}/comments`, { body, tags }),
   discover: () => api.post<any>("/api/tests/discover"),
   runTest: (id: string, environment = "default") => api.post<RunSummary>(`/api/tests/${id}/run`, { environment }),
+  deleteTest: (id: string) => api.del<any>(`/api/tests/${id}`),
 
   tags: (q = "") => api.get<{ items: string[] }>(`/api/tags${qs({ q })}`).then(list<string>()),
 

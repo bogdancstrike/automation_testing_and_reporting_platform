@@ -105,7 +105,7 @@ export default function RunDetailPage() {
       <Tabs items={[
         ...(sourceCode ? [{
           key: "code", 
-          label: "Scenario Code",
+          label: "Code",
           children: (
             <CodeSnippet language={testDefinition?.source === "ui" ? "json" : "python"} code={sourceCode} maxHeight={600} />
           )

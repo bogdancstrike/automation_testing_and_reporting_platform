@@ -180,6 +180,19 @@
     },
     {
       "namespace": "qtp",
+      "operation_name": "tests_delete",
+      "model_name": "Empty",
+      "request_method": [
+        "DELETE"
+      ],
+      "api_url": "/api/tests/<test_id>",
+      "exec_method": {
+        "module_name": "src.api.tests",
+        "method_name": "delete_test"
+      }
+    },
+    {
+      "namespace": "qtp",
       "operation_name": "request_send",
       "model_name": "Empty",
       "request_method": [

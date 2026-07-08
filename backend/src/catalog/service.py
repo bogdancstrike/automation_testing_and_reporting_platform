@@ -357,6 +357,57 @@ def get_test_detail(db: Session, test_id: str) -> dict:
     return detail
 
 
+def delete_test(db: Session, test_id: str) -> dict:
+    from sqlalchemy import delete as sa_delete
+    from src.execution.models import RunLog, RunQueue, TestRun, TestRunAssertion, TestRunStep
+    from src.scheduling.models import Schedule, ScheduleTest
+
+    d = db.get(TestDefinition, test_id)
+    if not d:
+        raise NotFoundError("test not found")
+    
+    if d.source != "ui":
+        raise ConflictError("only tests created via the UI can be deleted here")
+        
+    active = db.scalars(
+        select(TestRun.id).where(
+            TestRun.test_definition_id == test_id,
+            TestRun.status.not_in(list(TERMINAL_STATUSES)),
+        )
+    ).all()
+    if active:
+        raise ConflictError(
+            f"cannot delete test: {len(active)} run(s) still active (queued/running); "
+            "wait for them to finish or cancel them first",
+            details={"active_runs": len(active)},
+        )
+
+    run_ids_subq = select(TestRun.id).where(TestRun.test_definition_id == test_id)
+    db.execute(sa_delete(RunLog).where(RunLog.test_run_id.in_(run_ids_subq)))
+    db.execute(sa_delete(TestRunStep).where(TestRunStep.test_run_id.in_(run_ids_subq)))
+    db.execute(sa_delete(TestRunAssertion).where(TestRunAssertion.test_run_id.in_(run_ids_subq)))
+    db.execute(sa_delete(RunQueue).where(RunQueue.test_run_id.in_(run_ids_subq)))
+    db.execute(sa_delete(TestRun).where(TestRun.test_definition_id == test_id))
+
+    schedule_ids = list(db.scalars(select(ScheduleTest.schedule_id).where(ScheduleTest.test_definition_id == test_id)).all())
+    db.execute(sa_delete(ScheduleTest).where(ScheduleTest.test_definition_id == test_id))
+    for schedule_id in schedule_ids:
+        schedule = db.get(Schedule, schedule_id)
+        if not schedule:
+            continue
+        replacement = db.scalars(select(ScheduleTest).where(ScheduleTest.schedule_id == schedule_id).order_by(ScheduleTest.created_at)).first()
+        if replacement:
+            schedule.test_definition_id = replacement.test_definition_id
+        else:
+            db.delete(schedule)
+
+    db.execute(sa_delete(TestRevision).where(TestRevision.test_definition_id == test_id))
+    db.execute(sa_delete(TestDefinition).where(TestDefinition.id == test_id))
+    db.flush()
+    
+    return {"deleted": test_id}
+
+
 def _make_revision(db: Session, definition: TestDefinition, *, code_ref=None, config=None) -> TestRevision:
     n = (max((r.revision_number for r in definition.revisions), default=0)) + 1
     rev = TestRevision(test_definition_id=definition.id, revision_number=n, code_ref=code_ref, config=config or {})
