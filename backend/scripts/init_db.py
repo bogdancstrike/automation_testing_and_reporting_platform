@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Create tables and seed the demo data.
 
-Idempotent: safe to re-run. Seeds one project, the demo httpbin target, discovers
+Idempotent: safe to re-run. Seeds one project, discovers
 code-based tests, creates a sample UI request test, a schedule, and enqueues one
 immediate run so the dashboard has data on first load.
 """
@@ -31,9 +31,6 @@ from src.execution.service import enqueue_run  # noqa: E402
 from src.scheduling.models import Schedule  # noqa: E402
 from src.scheduling.service import create_schedule  # noqa: E402
 from framework.commons.logger import logger as log  # noqa: E402
-
-DEMO_TARGET_URL = os.getenv("DEMO_TARGET_URL", "http://httpbin:8080")
-
 
 def wait_for_db(timeout: int = 60) -> None:
     deadline = time.time() + timeout
