@@ -55,7 +55,7 @@ export default function OverviewPage() {
     if (timeRange === "custom" && customRange) {
       return { start_time: customRange[0].toISOString(), end_time: customRange[1].toISOString() };
     }
-    const hours = timeRange === "1h" ? 1 : timeRange === "24h" ? 24 : timeRange === "7d" ? 168 : 720;
+    const hours = timeRange === "1h" ? 1 : timeRange === "8h" ? 8 : timeRange === "24h" ? 24 : timeRange === "7d" ? 168 : 720;
     return { hours };
   };
 
@@ -113,6 +113,7 @@ export default function OverviewPage() {
         <Space wrap>
           <Radio.Group value={timeRange} onChange={e => setTimeRange(e.target.value)} buttonStyle="solid">
             <Radio.Button value="1h">Last 1h</Radio.Button>
+            <Radio.Button value="8h">Last 8h</Radio.Button>
             <Radio.Button value="24h">Last 24h</Radio.Button>
             <Radio.Button value="7d">Last 7d</Radio.Button>
             <Radio.Button value="30d">Last 30d</Radio.Button>
@@ -122,6 +123,9 @@ export default function OverviewPage() {
             <RangePicker
               showTime
               format="YYYY-MM-DD HH:mm"
+              presets={[
+                { label: 'Now', value: [dayjs(), dayjs()] }
+              ]}
               value={customRange as any}
               onChange={(dates) => setCustomRange(dates as [dayjs.Dayjs, dayjs.Dayjs])}
             />

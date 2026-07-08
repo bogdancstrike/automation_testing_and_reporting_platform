@@ -273,6 +273,26 @@ def list_tests(db: Session, filters: dict[str, Any]) -> dict:
 def _list_tests(db: Session, filters: dict[str, Any]) -> dict:
     params = parse_page(filters, default_sort="name", default_order="asc")
     stmt = select(Scenario)
+    if filters.get("schedule_id"):
+        from sqlalchemy import and_
+        from src.scheduling.models import Schedule, ScheduleTest
+        s = db.get(Schedule, filters["schedule_id"])
+        if s:
+            conds = [
+                Scenario.id.in_(select(ScheduleTest.scenario_id).where(ScheduleTest.schedule_id == s.id))
+            ]
+            if getattr(s, "target_tags", None):
+                tag_conds = [Scenario.tags.contains([t]) for t in s.target_tags]
+                conds.append(
+                    and_(
+                        Scenario.project_id == s.project_id,
+                        Scenario.status != "archived",
+                        or_(*tag_conds)
+                    )
+                )
+            stmt = stmt.where(or_(*conds))
+        else:
+            stmt = stmt.where(False)
     if filters.get("type"):
         stmt = stmt.where(Scenario.type == filters["type"])
     if filters.get("status"):

@@ -29,6 +29,9 @@ export default function ScheduleDetailPage() {
   const [tableRunsParams, setTableRunsParams] = useState<QueryParams>({ page: 1, page_size: 10, sort: "queued_at", order: "desc", schedule_id: id });
   const { data: tableRuns, isLoading: isTableRunsLoading } = useQuery({ queryKey: ["runsPage", tableRunsParams], queryFn: () => qtp.runsPage(tableRunsParams) });
 
+  const [tableScenariosParams, setTableScenariosParams] = useState<QueryParams>({ page: 1, page_size: 10, sort: "name", order: "asc", schedule_id: id });
+  const { data: tableScenarios, isLoading: isTableScenariosLoading } = useQuery({ queryKey: ["testsPage", tableScenariosParams], queryFn: () => qtp.testsPage(tableScenariosParams) });
+
   const toggle = useMutation({
     mutationFn: () => qtp.updateSchedule(id, { is_enabled: !s?.is_enabled }),
     onSuccess: () => {
@@ -176,14 +179,20 @@ export default function ScheduleDetailPage() {
             <Table
               rowKey="id"
               size="small"
-              pagination={false}
-              dataSource={s.tests?.length ? s.tests : [{ id: s.scenario_id, name: s.test_name, key: s.scenario_id, target_key: s.target_key }]}
+              loading={isTableScenariosLoading}
+              dataSource={tableScenarios?.items || []}
+              pagination={{ current: tableScenarios?.page || 1, pageSize: tableScenarios?.page_size || 10, total: tableScenarios?.total || 0, showSizeChanger: true }}
+              onChange={(pagination, filters, sorter: any, extra) => setTableScenariosParams((p) => nextTableParams(
+                p, pagination, filters, sorter, extra,
+                { name: "name", key: "key", target_key: "target_key" },
+                { sort: "name", order: "asc", pageSize: 10 }
+              ))}
               onRow={(scenario: any) => ({ onClick: () => nav(`/scenarios/${scenario.id}`), style: { cursor: "pointer" } })}
               columns={[
-                { title: "Name", dataIndex: "name", render: (value, scenario: any) => <a>{value || scenario.id}</a>, ...textFilterLocal("name", "Search name") },
-                { title: "Key", dataIndex: "key", render: (value) => <Typography.Text code>{value || "—"}</Typography.Text>, ...textFilterLocal("key", "Search key") },
+                { title: "Name", dataIndex: "name", render: (value, scenario: any) => <a>{value || scenario.id}</a>, sorter: true, sortOrder: antSortOrder(tableScenariosParams, "name"), ...textFilter("name", tableScenariosParams, "Search name") },
+                { title: "Key", dataIndex: "key", render: (value) => <Typography.Text code>{value || "—"}</Typography.Text>, sorter: true, sortOrder: antSortOrder(tableScenariosParams, "key"), ...textFilter("key", tableScenariosParams, "Search key") },
                 { title: "Type", dataIndex: "type", render: (value) => value ? <Tag>{value}</Tag> : "—" },
-                { title: "Target", dataIndex: "target_key", render: (value) => value ? <Tag color="geekblue">{value}</Tag> : "—", ...textFilterLocal("target_key", "Search target") },
+                { title: "Target", dataIndex: "target_key", render: (value) => value ? <Tag color="geekblue">{value}</Tag> : "—", sorter: true, sortOrder: antSortOrder(tableScenariosParams, "target_key"), ...textFilter("target_key", tableScenariosParams, "Search target") },
                 { title: "Status", dataIndex: "status", render: (value) => value ? <Tag>{value}</Tag> : "—" },
               ]}
             />
