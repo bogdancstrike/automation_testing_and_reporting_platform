@@ -171,15 +171,28 @@ def _execute_http_step(config: dict[str, Any], ctx: TestContext, *, session: req
         raw = raw[:max_bytes]
         body_text = raw.decode(resp.encoding or "utf-8", errors="replace")
         elapsed_ms = int((time.monotonic() - started) * 1000)
+        
+        headers_dict = dict(resp.headers)
+        lower_headers = {k.lower(): v for k, v in headers_dict.items()}
+        content_type = lower_headers.get("content-type", "").split(";")[0]
+        content_length_str = lower_headers.get("content-length", "0")
+        content_length = int(content_length_str) if str(content_length_str).isdigit() else len(raw)
+
         response = {
             "status_code": resp.status_code,
-            "headers": dict(resp.headers),
+            "headers": headers_dict,
             "body_text": body_text,
             "elapsed_ms": elapsed_ms,
             "timings": {
                 "dns": dns_ms,
                 "ttfb": ttfb_ms,
                 "download": download_ms,
+                "method": current_method,
+                "url": resp.url,
+                "status_code": resp.status_code,
+                "content_type": content_type,
+                "content_length": content_length,
+                "is_network": True
             },
             "truncated": truncated,
             "url": resp.url,

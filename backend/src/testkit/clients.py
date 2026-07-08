@@ -67,6 +67,23 @@ class HttpClient:
         )
         self._ctx._last_response = raw
         self._ctx.log("info", f"-> {raw.get('status_code')} in {raw.get('elapsed_ms')}ms")
+        timings = raw.get("timings", {})
+        headers = raw.get("headers", {})
+        
+        # normalize headers key for case insensitivity
+        lower_headers = {k.lower(): v for k, v in headers.items()}
+        
+        self._ctx.record_network_call(
+            method=method,
+            url=url,
+            status_code=raw.get("status_code", 0),
+            duration_ms=raw.get("elapsed_ms", 0),
+            dns=timings.get("dns", 0),
+            ttfb=timings.get("ttfb", 0),
+            download=timings.get("download", 0),
+            content_type=lower_headers.get("content-type", "").split(";")[0],
+            content_length=int(lower_headers.get("content-length", 0)) if lower_headers.get("content-length", "0").isdigit() else 0
+        )
         return Response(self._ctx, raw)
 
     def get(self, path: str, **kw) -> Response:
@@ -193,6 +210,7 @@ class BrowserClient:
         options.add_argument("--headless")
         options.add_argument("--no-sandbox")
         options.add_argument("--disable-dev-shm-usage")
+        options.set_capability("goog:loggingPrefs", {"performance": "ALL"})
         self._driver = webdriver.Chrome(options=options)
         return self._driver
 
@@ -225,6 +243,38 @@ class BrowserClient:
             url = urljoin(base.rstrip("/") + "/", self._ctx.render(path).lstrip("/"))
         self._ctx.log("info", f"browser visit {url}")
         page = self._browser.new_page()
+
+        def on_request_finished(request):
+            try:
+                timing = request.timing
+                response = request.response()
+                if timing and response:
+                    dns = max(0, timing["domainLookupEnd"] - timing["domainLookupStart"])
+                    base_for_connect = timing["domainLookupEnd"] if timing["domainLookupEnd"] >= 0 else 0
+                    ttfb = max(0, timing["responseStart"] - base_for_connect)
+                    download = max(0, timing["responseEnd"] - timing["responseStart"])
+                    dur = max(0, timing["responseEnd"])
+                    
+                    headers = response.headers
+                    content_type = headers.get("content-type", "").split(";")[0]
+                    content_length = int(headers.get("content-length", 0))
+
+                    self._ctx.record_network_call(
+                        method=request.method,
+                        url=request.url,
+                        status_code=response.status,
+                        duration_ms=int(dur),
+                        dns=int(dns),
+                        ttfb=int(ttfb),
+                        download=int(download),
+                        content_type=content_type,
+                        content_length=content_length
+                    )
+            except Exception:
+                pass
+
+        page.on("requestfinished", on_request_finished)
+
         started = time.monotonic()
         resp = page.goto(url, wait_until="load")
         dur = int((time.monotonic() - started) * 1000)

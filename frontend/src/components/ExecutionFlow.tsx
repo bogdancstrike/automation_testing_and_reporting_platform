@@ -46,8 +46,11 @@ export default function ExecutionFlow({ steps, status }: { steps: any[], status:
   useEffect(() => {
     const initialNodes: any[] = [];
     const initialEdges: any[] = [];
+    
+    // Filter out network calls for a cleaner logical execution flow
+    const flowSteps = steps.filter(s => !s.timings?.is_network);
 
-    steps.forEach((step, idx) => {
+    flowSteps.forEach((step, idx) => {
       let bg = "#ffffff", borderColor = "#d9d9d9";
       if (step.status === "passed") { bg = "#f6ffed"; borderColor = "#b7eb8f"; }
       else if (step.status === "failed") { bg = "#fff2f0"; borderColor = "#ffccc7"; }
@@ -56,15 +59,17 @@ export default function ExecutionFlow({ steps, status }: { steps: any[], status:
       else if (status === "running" && step.status === "running") { bg = "#e6f4ff"; borderColor = "#91caff"; }
       else { bg = "#fafafa"; borderColor = "#e8e8e8"; }
 
+      const currentId = String(step.id || step.name || `step-${idx}`);
+
       initialNodes.push({
-        id: step.id || step.name || `step-${idx}`,
+        id: currentId,
         data: { 
           label: (
             <div style={{ padding: 4, textAlign: 'left' }}>
               <div style={{ fontWeight: 600, fontSize: 13, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{step.name}</div>
               <div style={{ fontSize: 11, color: "#666", marginTop: 4 }}>
-                {step.method && <Tag color="blue" style={{ fontSize: 9, lineHeight: '14px', padding: '0 4px' }}>{step.method}</Tag>} 
-                {step.duration_ms !== undefined ? `${step.duration_ms}ms` : step.url || ""}
+                {step.timings?.method && <Tag color="blue" style={{ fontSize: 9, lineHeight: '14px', padding: '0 4px' }}>{step.timings.method}</Tag>} 
+                {step.duration_ms !== undefined ? `${step.duration_ms}ms` : ""}
               </div>
             </div>
           )
@@ -79,11 +84,12 @@ export default function ExecutionFlow({ steps, status }: { steps: any[], status:
       });
 
       if (idx > 0) {
-        const prev = steps[idx - 1];
+        const prev = flowSteps[idx - 1];
+        const prevId = String(prev.id || prev.name || `step-${idx - 1}`);
         initialEdges.push({
-          id: `e-${prev.id || prev.name}-${step.id || step.name}`,
-          source: prev.id || prev.name || `step-${idx - 1}`,
-          target: step.id || step.name || `step-${idx}`,
+          id: `e-${prevId}-${currentId}`,
+          source: prevId,
+          target: currentId,
           animated: status === "running",
           markerEnd: { type: MarkerType.ArrowClosed, color: '#b1b1b7' },
           style: { stroke: '#b1b1b7', strokeWidth: 1.5 },

@@ -138,6 +138,22 @@ class TestContext:
                 step_id=f"step-{len(self._steps) + 1}"))
             self._current_step = prev
 
+    def record_network_call(self, method: str, url: str, status_code: int, duration_ms: int, dns: int=0, ttfb: int=0, download: int=0, content_type: str="", content_length: int=0) -> None:
+        from src.testkit.result import PASSED, FAILED, StepResult
+        st = PASSED if 200 <= status_code < 400 else FAILED
+        self._steps.append(StepResult(
+            name=f"{method} {url}",
+            status=st,
+            duration_ms=duration_ms,
+            step_id=f"net-{len(self._steps) + 1}",
+            timings={
+                "dns": dns, "ttfb": ttfb, "download": download,
+                "method": method, "url": url, "status_code": status_code,
+                "content_type": content_type, "content_length": content_length,
+                "is_network": True
+            }
+        ))
+
     def _record_assertion(self, assertion: Any) -> None:
         self._assertions.append(assertion)
 

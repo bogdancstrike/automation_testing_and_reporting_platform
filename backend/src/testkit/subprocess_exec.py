@@ -211,6 +211,42 @@ def _run_lifecycle(code_ref: str, ctx: Any) -> Any:
     except Exception as e:  # noqa: BLE001
         result = TestResult(status=ERROR, error_category="script_error", error_message=str(e))
     finally:
+        if hasattr(ctx, '_browser') and getattr(ctx._browser, '_driver', None):
+            try:
+                logs = ctx._browser._driver.get_log("performance")
+                for entry in logs:
+                    msg = json.loads(entry.get("message", "{}")).get("message", {})
+                    if msg.get("method") == "Network.responseReceived":
+                        resp = msg.get("params", {}).get("response", {})
+                        url = resp.get("url", "")
+                        status = resp.get("status", 0)
+                        timing = resp.get("timing", {})
+                        if url and timing:
+                            dns = max(0, timing.get("dnsEnd", 0) - timing.get("dnsStart", 0))
+                            ttfb = max(0, timing.get("receiveHeadersEnd", 0) - timing.get("connectStart", 0))
+                            # CDP timings don't directly have duration, just use relative estimates
+                            download = 0
+                            dur = ttfb + dns
+                            
+                            headers = resp.get("headers", {})
+                            lower_headers = {k.lower(): v for k, v in headers.items()}
+                            content_type = resp.get("mimeType", "").split(";")[0]
+                            content_length = int(lower_headers.get("content-length", 0)) if str(lower_headers.get("content-length", "0")).isdigit() else 0
+
+                            ctx.record_network_call(
+                                method="GET", # approximation for Selenium logs without full request parsing
+                                url=url,
+                                status_code=status,
+                                duration_ms=int(dur),
+                                dns=int(dns),
+                                ttfb=int(ttfb),
+                                download=int(download),
+                                content_type=content_type,
+                                content_length=content_length
+                            )
+            except Exception:
+                pass
+
         try:
             instance.cleanup(ctx)
         except Exception as e:  # noqa: BLE001

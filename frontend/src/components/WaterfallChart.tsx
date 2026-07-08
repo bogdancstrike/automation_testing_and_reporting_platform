@@ -5,6 +5,10 @@ interface Timings {
   dns?: number;
   ttfb?: number;
   download?: number;
+  method?: string;
+  url?: string;
+  status_code?: number;
+  is_network?: boolean;
 }
 
 interface Step {
@@ -23,17 +27,69 @@ interface WaterfallChartProps {
 export default function WaterfallChart({ steps }: WaterfallChartProps) {
   // Find the total duration across all steps to calculate percentages
   const maxDuration = steps.reduce((max, step) => Math.max(max, step.duration_ms), 100);
+  
+  const networkSteps = steps.filter(s => s.timings?.is_network);
+  const totalSize = networkSteps.reduce((acc, s) => acc + (s.timings?.content_length || 0), 0);
 
   const columns = [
     {
-      title: "Name",
+      title: "Name / URL",
       dataIndex: "name",
-      width: 250,
-      render: (name: string, step: Step) => (
-        <Typography.Text ellipsis style={{ width: 230 }} title={name}>
-          {name}
-        </Typography.Text>
+      width: 280,
+      render: (name: string, step: Step) => {
+        const method = step.timings?.method;
+        const status = step.timings?.status_code;
+        const url = step.timings?.url;
+        
+        if (step.timings?.is_network) {
+          return (
+            <div style={{ display: "flex", flexDirection: "column", maxWidth: 260 }}>
+              <Space>
+                {status && (
+                  <span style={{ 
+                    fontSize: 10, 
+                    fontWeight: "bold", 
+                    color: status >= 400 ? "#ef4444" : "#10b981" 
+                  }}>
+                    {status}
+                  </span>
+                )}
+                {method && <span style={{ fontSize: 10, fontWeight: "bold" }}>{method}</span>}
+              </Space>
+              <Typography.Text ellipsis style={{ width: 260, fontSize: 11 }} title={url || name}>
+                {url || name}
+              </Typography.Text>
+            </div>
+          );
+        }
+
+        return (
+          <Typography.Text ellipsis style={{ width: 260 }} title={name}>
+            {name}
+          </Typography.Text>
+        );
+      },
+    },
+    {
+      title: "Type",
+      key: "type",
+      width: 100,
+      render: (_: any, step: Step) => (
+        <span style={{ fontSize: 11, color: "#666" }}>
+          {step.timings?.content_type || (step.timings?.is_network ? "unknown" : "")}
+        </span>
       ),
+    },
+    {
+      title: "Size",
+      key: "size",
+      width: 80,
+      render: (_: any, step: Step) => {
+        const size = step.timings?.content_length;
+        if (size === undefined) return null;
+        if (size < 1024) return <span style={{ fontSize: 11 }}>{size} B</span>;
+        return <span style={{ fontSize: 11 }}>{(size / 1024).toFixed(1)} KB</span>;
+      },
     },
     {
       title: "Duration",
@@ -112,6 +168,15 @@ export default function WaterfallChart({ steps }: WaterfallChartProps) {
           <Typography.Text type="secondary" style={{ fontSize: 12 }}>Content Download</Typography.Text>
         </div>
       </Space>
+      
+      {/* Aggregate Stats */}
+      {networkSteps.length > 0 && (
+        <div style={{ marginBottom: 12, padding: "8px 12px", background: "#f8fafc", borderRadius: 4, display: "flex", gap: 24, fontSize: 12 }}>
+          <div><strong>Total Requests:</strong> {networkSteps.length}</div>
+          <div><strong>Total Transferred:</strong> {totalSize < 1024 * 1024 ? (totalSize / 1024).toFixed(1) + " KB" : (totalSize / 1024 / 1024).toFixed(2) + " MB"}</div>
+        </div>
+      )}
+
       <Table
         rowKey={(record, idx) => record.id || String(idx)}
         size="small"
