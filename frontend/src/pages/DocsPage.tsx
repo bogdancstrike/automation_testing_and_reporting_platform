@@ -24,6 +24,7 @@ import {
 import { Callout } from "fumadocs-ui/components/callout";
 import { Card as FumaCard, Cards } from "fumadocs-ui/components/card";
 import "fumadocs-ui/style.css";
+import CodeSnippet from "../components/CodeSnippet";
 
 const { Paragraph, Text } = Typography;
 
@@ -93,7 +94,9 @@ function scrollToHash(hash: string) {
 }
 
 function Code({ children, language = "plaintext" }: { children: string; language?: string }) {
-  return <pre className={`qtp-code qtp-docs-code language-${language}`}>{children}</pre>;
+  return (
+    <CodeSnippet language={language} code={children} />
+  );
 }
 
 function H2({ id, icon, children }: { id: string; icon?: React.ReactNode; children: React.ReactNode }) {
@@ -589,7 +592,7 @@ ctx.http.get("/secure-data", headers={"Authorization": f"Bearer {ctx.get_var('au
               <li><strong>Assertions View:</strong> A diff view showing exactly what was expected vs. what was received.</li>
               <li><strong>Response:</strong> Complete HTTP headers and body payloads for deep debugging.</li>
               <li><strong>Logs:</strong> Standard output from Python or the CLI worker.</li>
-              <li><strong>Waterfall:</strong> A rich Chrome DevTools-style network waterfall chart. Playwright/Selenium scenarios automatically inject CDP/Performance API scripts to trace <strong>DNS, TTFB, Content Download</strong>, <strong>User Interaction Delay</strong> (>200ms freezes), <strong>Page Visibility State changes</strong>, and catch <strong>N+1 Duplicate API Calls</strong>.</li>
+              <li><strong>Waterfall:</strong> A rich Chrome DevTools-style network waterfall chart. Playwright/Selenium scenarios automatically inject CDP/Performance API scripts to trace <strong>DNS, TTFB, Content Download</strong>, <strong>User Interaction Delay</strong> (&gt;200ms freezes), <strong>Page Visibility State changes</strong>, and catch <strong>N+1 Duplicate API Calls</strong>.</li>
               <li><strong>Steps Flow & Steps Table:</strong> Logical grouped breakdown of test execution phases.</li>
             </ul>
             <Paragraph>

@@ -6,6 +6,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { qtp } from "../api/qtp";
 import { StatusTag, TypeTag } from "../components/tags";
 import ExecutionFlow from "../components/ExecutionFlow";
+import ReactECharts from "echarts-for-react";
+import CodeSnippet from "../components/CodeSnippet";
 
 const METHOD_COLOR: Record<string, string> = {
   GET: "green", POST: "blue", PUT: "orange", PATCH: "gold", DELETE: "red", HEAD: "default",
@@ -79,50 +81,54 @@ export default function TestDetailPage() {
   };
   const flowSteps = getFlowSteps();
 
+  const chartData = runs.slice().reverse();
+  const runChartOptions = {
+    tooltip: { trigger: 'axis', formatter: (params: any) => { const p = params[0]; const data = chartData[p.dataIndex]; return `${data.queued_at?.replace("T", " ").slice(0, 19)}<br/>Status: ${data.status}<br/>Duration: ${data.duration_ms || 0} ms`; } },
+    xAxis: { type: 'category', data: chartData.map((r: any) => ""), show: false },
+    yAxis: { type: 'value', splitLine: { lineStyle: { type: 'dashed', color: '#f0f0f0' } } },
+    series: [{
+      data: chartData.map((r: any) => ({ value: r.duration_ms || 0, itemStyle: { color: r.status === 'passed' ? '#52c41a' : (r.status === 'error' || r.status === 'failed' ? '#ff4d4f' : '#faad14') } })),
+      type: 'bar', barMaxWidth: 20, itemStyle: { borderRadius: [2, 2, 0, 0] }
+    }],
+    grid: { left: 40, right: 10, top: 10, bottom: 0 },
+  };
+
   return (
     <div>
       <Space style={{ marginBottom: 12 }}>
         <Button icon={<ArrowLeftOutlined />} onClick={() => nav("/scenarios")}>Scenarios</Button>
         <Button type="primary" icon={<PlayCircleOutlined />} loading={run.isPending} onClick={() => run.mutate()}>Run now</Button>
       </Space>
-      <Typography.Title level={3} style={{ marginBottom: 4 }}>{t.name} <TypeTag type={t.type} /></Typography.Title>
-      <Typography.Text type="secondary" code>{t.key}</Typography.Text>
+      <Typography.Title level={3}>
+        {t.name} <TypeTag type={t.type} />
+      </Typography.Title>
 
-      <Row gutter={16} style={{ marginTop: 16 }}>
-        <Col xs={24} lg={12}>
-          <Card size="small" title="Definition">
-            <Descriptions column={1} size="small">
-              <Descriptions.Item label="Source">{t.source === "code" ? "Python (framework)" : "UI request builder"}</Descriptions.Item>
-              <Descriptions.Item label="Owner">{t.owner || "—"}</Descriptions.Item>
-              <Descriptions.Item label="Status"><Tag>{t.status}</Tag></Descriptions.Item>
-              <Descriptions.Item label="Last result"><StatusTag status={t.last_run_status} /></Descriptions.Item>
-              <Descriptions.Item label="Tags">
-                <Space wrap>
-                  {(t.tags || []).map((x) => <Tag key={x}>{x}</Tag>)}
-                  <Button size="small" type="dashed" icon={<EditOutlined />} onClick={() => { setEditingTags(t.tags || []); setIsEditingTags(true); }}>Edit</Button>
-                </Space>
-              </Descriptions.Item>
-              {t.code_ref && <Descriptions.Item label="Code ref"><Typography.Text code>{t.code_ref}</Typography.Text></Descriptions.Item>}
-            </Descriptions>
-          </Card>
-        </Col>
-        <Col xs={24} lg={12}>
-          <Card size="small" title={<Space><ApiOutlined /> Target application under test</Space>}>
-            {t.target ? (
-              <Descriptions column={1} size="small">
-                <Descriptions.Item label="Target"><Tag color="geekblue">{t.target.key}</Tag> {t.target.name}</Descriptions.Item>
-                <Descriptions.Item label="Base URL"><Typography.Text code>{t.target.base_url}</Typography.Text></Descriptions.Item>
-                <Descriptions.Item label="Calls">
-                  {t.method && <Tag>{t.method}</Tag>}
-                  <Typography.Text code>{effectiveUrl || t.url_template || "—"}</Typography.Text>
-                </Descriptions.Item>
-              </Descriptions>
-            ) : <Alert type="warning" showIcon message={`Target '${t.target_key}' not found — the URL cannot be resolved.`} />}
-          </Card>
-        </Col>
-      </Row>
+      <Card size="small" style={{ marginBottom: 16 }}>
+        <Descriptions column={3} size="small">
+          <Descriptions.Item label="Key"><Typography.Text code>{t.key}</Typography.Text></Descriptions.Item>
+          <Descriptions.Item label="Source">{t.source === "code" ? "Python (framework)" : "UI request builder"}</Descriptions.Item>
+          <Descriptions.Item label="Last result"><StatusTag status={t.last_run_status} /></Descriptions.Item>
+          
+          <Descriptions.Item label="Target">{t.target ? <><Tag color="geekblue">{t.target.key}</Tag> {t.target.name}</> : "—"}</Descriptions.Item>
+          <Descriptions.Item label="Base URL">{t.target ? <Typography.Text code>{t.target.base_url}</Typography.Text> : "—"}</Descriptions.Item>
+          <Descriptions.Item label="Owner">{t.owner || "—"}</Descriptions.Item>
 
-      <Tabs style={{ marginTop: 16 }} defaultActiveKey={runId ? "flow" : "code"} items={[
+          <Descriptions.Item label="Calls">
+            {t.method && <Tag>{t.method}</Tag>}
+            <Typography.Text code>{effectiveUrl || t.url_template || "—"}</Typography.Text>
+          </Descriptions.Item>
+          {t.code_ref && <Descriptions.Item label="Code ref"><Typography.Text code>{t.code_ref}</Typography.Text></Descriptions.Item>}
+          
+          <Descriptions.Item label="Tags" span={3}>
+            <Space wrap>
+              {(t.tags || []).map((x: string) => <Tag key={x}>{x}</Tag>)}
+              <Button size="small" type="dashed" icon={<EditOutlined />} onClick={() => { setEditingTags(t.tags || []); setIsEditingTags(true); }}>Edit</Button>
+            </Space>
+          </Descriptions.Item>
+        </Descriptions>
+      </Card>
+
+      <Tabs items={[
         ...(flowSteps.length > 0 ? [{
           key: "flow", label: "Execution Plan (Flow)",
           children: (
@@ -135,10 +141,10 @@ export default function TestDetailPage() {
           key: "code", label: t.source === "code" ? "Code" : "Request definition",
           children: t.source_code ? (
             <div>
-              <Typography.Paragraph type="secondary">
+              <Typography.Paragraph type="secondary" style={{ marginTop: 8 }}>
                 Reflected source of <Typography.Text code>{t.code_ref}</Typography.Text> — this is exactly what runs.
               </Typography.Paragraph>
-              <pre className="qtp-code" style={{ maxHeight: 520 }}>{t.source_code}</pre>
+              <CodeSnippet language="python" code={t.source_code} maxHeight={520} />
             </div>
           ) : (
             t.steps && t.steps.length > 0 ? (
@@ -181,7 +187,7 @@ export default function TestDetailPage() {
                         )}
                         {s.body && s.body.mode !== "none" && (
                           <Descriptions.Item label="Body">
-                            <pre style={{ margin: 0, fontSize: 11 }}>{s.body.raw}</pre>
+                            <CodeSnippet language="json" code={s.body.raw} />
                           </Descriptions.Item>
                         )}
                       </Descriptions>
@@ -216,7 +222,7 @@ export default function TestDetailPage() {
                 }}
               />
             ) : (
-              <pre className="qtp-code" style={{ maxHeight: 520 }}>{JSON.stringify(t.config, null, 2)}</pre>
+              <CodeSnippet language="json" code={JSON.stringify(t.config, null, 2)} maxHeight={520} />
             )
           ),
         },
@@ -236,7 +242,14 @@ export default function TestDetailPage() {
         {
           key: "runs", label: `Recent runs (${runs.length})`,
           children: (
-            <Table rowKey="id" size="small" dataSource={runs}
+            <div>
+              {runs.length > 0 && (
+                <div style={{ marginBottom: 16, padding: '16px 0', borderBottom: '1px solid #f0f0f0' }}>
+                  <Typography.Text type="secondary" style={{ display: 'block', marginBottom: 8 }}>Execution Duration History</Typography.Text>
+                  <ReactECharts option={runChartOptions} style={{ height: 120, width: '100%' }} />
+                </div>
+              )}
+              <Table rowKey="id" size="small" dataSource={runs}
               onRow={(r) => ({ onClick: () => nav(`/runs/${r.id}`), style: { cursor: "pointer" } })}
               columns={[
                 { title: "Status", dataIndex: "status", render: (s) => <StatusTag status={s} /> },
@@ -244,6 +257,7 @@ export default function TestDetailPage() {
                 { title: "Duration", dataIndex: "duration_ms", render: (m) => m != null ? `${m} ms` : "—" },
                 { title: "Queued", dataIndex: "queued_at", render: (v) => v?.replace("T", " ").slice(0, 19) },
               ]} />
+            </div>
           ),
         },
         {
@@ -256,7 +270,7 @@ export default function TestDetailPage() {
                 { title: "Created", dataIndex: "created_at", render: (v) => v?.replace("T", " ").slice(0, 19) },
               ]}
               expandable={{
-                expandedRowRender: (r) => <pre className="qtp-code">{JSON.stringify(r.config, null, 2)}</pre>,
+                expandedRowRender: (r) => <CodeSnippet language="json" code={JSON.stringify(r.config, null, 2)} />,
                 rowExpandable: (r) => Object.keys(r.config || {}).length > 0,
               }} />
           ),

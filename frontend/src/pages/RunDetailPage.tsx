@@ -7,6 +7,7 @@ import { qtp } from "../api/qtp";
 import { StatusTag, DefectTag, Duration } from "../components/tags";
 import ExecutionFlow from "../components/ExecutionFlow";
 import WaterfallChart from "../components/WaterfallChart";
+import CodeSnippet from "../components/CodeSnippet";
 
 const DEFECTS = ["product_bug", "automation_bug", "system_issue", "to_investigate", "no_defect"];
 
@@ -24,6 +25,13 @@ export default function RunDetailPage() {
     queryKey: ["run", id], queryFn: () => qtp.run(id),
     refetchInterval: (q) => (active((q.state.data as any)?.status) ? 2000 : false),
   });
+  
+  const { data: testDefinition } = useQuery({
+    queryKey: ["test", run?.test_definition_id],
+    queryFn: () => qtp.test(run!.test_definition_id),
+    enabled: !!run?.test_definition_id
+  });
+
   const { data: logs = [] } = useQuery({ queryKey: ["runlogs", id, run?.status], queryFn: () => qtp.runLogs(id) });
   const { data: comments = [] } = useQuery({ queryKey: ["runComments", id], queryFn: () => qtp.runComments(id) });
   const { data: allTags = [] } = useQuery({ queryKey: ["allTags"], queryFn: () => qtp.tags("") });
@@ -92,6 +100,13 @@ export default function RunDetailPage() {
       </Card>
 
       <Tabs items={[
+        ...(testDefinition?.source_code ? [{
+          key: "code", 
+          label: "Scenario Code",
+          children: (
+            <CodeSnippet language="python" code={testDefinition.source_code} maxHeight={600} />
+          )
+        }] : []),
         {
           key: "assertions", label: `Assertions (${run.assertions.length})`,
           children: (
@@ -147,7 +162,7 @@ export default function RunDetailPage() {
                     </div>
                     <Row gutter={16}>
                       <Col span={16}>
-                        <pre className="qtp-code" style={{ maxHeight: 320 }}>{sResp.body_text || "(no body captured)"}</pre>
+                        <CodeSnippet language="json" code={sResp.body_text || "(no body captured)"} maxHeight={320} />
                       </Col>
                       <Col span={8}>
                         <Descriptions column={1} size="small" bordered>
@@ -176,7 +191,7 @@ export default function RunDetailPage() {
             }
             return (
               <Row gutter={16}>
-                <Col span={16}><pre className="qtp-code" style={{ maxHeight: 400 }}>{resp.body_text || "(no body captured)"}</pre></Col>
+                <Col span={16}><CodeSnippet language="json" code={resp.body_text || "(no body captured)"} maxHeight={400} /></Col>
                 <Col span={8}>
                   <Descriptions column={1} size="small" bordered>
                     <Descriptions.Item label="Status">{resp.status_code ?? "—"}</Descriptions.Item>
@@ -190,7 +205,7 @@ export default function RunDetailPage() {
         },
         {
           key: "logs", label: `Logs (${logs.length})`,
-          children: <pre className="qtp-code" style={{ maxHeight: 400 }}>{logs.map((l: any) => `[${l.level}] ${l.message}`).join("\n") || "(no logs)"}</pre>,
+          children: <CodeSnippet language="plaintext" code={logs.map((l: any) => `[${l.level}] ${l.message}`).join("\n") || "(no logs)"} maxHeight={400} />,
         },
         {
           key: "waterfall", label: "Waterfall",
