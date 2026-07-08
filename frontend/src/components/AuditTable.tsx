@@ -67,6 +67,71 @@ function getEntityUrl(type: string, id: string): string | null {
   return null
 }
 
+function getAuditDescription(record: AuditEventDto, nav: ReturnType<typeof useNavigate>) {
+  const { action, entity_type, actor, new_value, old_value } = record
+
+  let newObj: any = {}
+  let oldObj: any = {}
+  try { newObj = typeof new_value === 'string' ? JSON.parse(new_value) : (new_value || {}) } catch (e) {}
+  try { oldObj = typeof old_value === 'string' ? JSON.parse(old_value) : (old_value || {}) } catch (e) {}
+
+  const actorName = actor ? (actor === 'system' ? 'System' : `User (${actor})`) : 'System'
+
+  if (entity_type === 'test_runs') {
+    if (action === 'CREATED') {
+      if (newObj.schedule_id) {
+        return (
+          <span>
+            {actorName} automatically ran the scenario based on the schedule{' '}
+            <a onClick={(e) => { e.stopPropagation(); nav(`/schedules/${newObj.schedule_id}`) }}>
+              {newObj.schedule_id.slice(0, 8)}
+            </a>.
+          </span>
+        )
+      }
+      return <span>{actorName} has run a scenario.</span>
+    }
+    if (action === 'UPDATED') {
+      if (oldObj.status && newObj.status && oldObj.status !== newObj.status) {
+        return (
+          <span>
+            {actorName} changed run state from <Tag bordered={false} style={{ marginInline: 4 }}>{oldObj.status}</Tag> to <Tag bordered={false} style={{ marginInline: 4 }}>{newObj.status}</Tag>.
+          </span>
+        )
+      }
+      if (newObj.defect_type || newObj.failure_signature) {
+        return <span>{actorName} updated defect analysis for this run.</span>
+      }
+    }
+  }
+
+  if (entity_type === 'scenarios') {
+    if (action === 'CREATED') return <span>{actorName} created a new scenario.</span>
+    if (action === 'UPDATED') return <span>{actorName} updated scenario details.</span>
+    if (action === 'DELETED') return <span>{actorName} deleted the scenario.</span>
+  }
+
+  if (entity_type === 'schedules') {
+    if (action === 'CREATED') return <span>{actorName} created a new schedule.</span>
+    if (action === 'UPDATED') {
+      if (oldObj.is_enabled !== undefined && newObj.is_enabled !== undefined && oldObj.is_enabled !== newObj.is_enabled) {
+        return <span>{actorName} {newObj.is_enabled ? 'enabled' : 'disabled'} the schedule.</span>
+      }
+      return <span>{actorName} updated the schedule.</span>
+    }
+    if (action === 'DELETED') return <span>{actorName} deleted the schedule.</span>
+  }
+
+  if (entity_type === 'comments') {
+    if (action === 'CREATED') {
+      return <span>{actorName} commented on this entity.</span>
+    }
+  }
+
+  const entitySingular = entity_type ? entity_type.replace(/s$/, '').replace('_', ' ') : 'entity'
+  return <span>{actorName} {action.toLowerCase()} this {entitySingular}.</span>
+}
+
 export function AuditTable({ baseFilters, onRowClick }: { baseFilters?: Partial<AuditFilterState>; onRowClick?: (record: AuditEventDto) => void }) {
   const nav = useNavigate()
   const [params, setParams] = useState<AuditFilterState>({ sort_by: 'created_at', sort_dir: 'desc', page: 1, page_size: 20, ...baseFilters })
@@ -129,6 +194,11 @@ export function AuditTable({ baseFilters, onRowClick }: { baseFilters?: Partial<
       ),
       filterDropdown: textFilterDropdown('Entity ID (UUID)'),
       filteredValue: params.entity_id ? [params.entity_id] : null,
+    },
+    {
+      title: 'Description',
+      key: 'description',
+      render: (_, row) => getAuditDescription(row, nav),
     },
     {
       title: 'Correlation ID',
