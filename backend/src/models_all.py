@@ -9,3 +9,4 @@ from src.comments import models as _comments         # noqa: F401
 from src.audit import models as _audit               # noqa: F401
 
 __all__ = ["_catalog", "_execution", "_scheduling", "_comments", "_audit"]
+from src.audit.models import AuditEvent

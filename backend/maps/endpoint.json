@@ -645,6 +645,32 @@
         "module_name": "src.api.targets",
         "method_name": "run_all_target_tests"
       }
+    },
+    {
+      "namespace": "qtp",
+      "operation_name": "list_audit",
+      "model_name": "Empty",
+      "request_method": [
+        "GET"
+      ],
+      "api_url": "/api/audit",
+      "exec_method": {
+        "module_name": "src.api.audit",
+        "method_name": "list_audit"
+      }
+    },
+    {
+      "namespace": "qtp",
+      "operation_name": "entity_audit",
+      "model_name": "Empty",
+      "request_method": [
+        "GET"
+      ],
+      "api_url": "/api/audit/<entity_type>/<entity_id>",
+      "exec_method": {
+        "module_name": "src.api.audit",
+        "method_name": "entity_audit"
+      }
     }
   ]
 }

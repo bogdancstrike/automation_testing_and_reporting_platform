@@ -12,13 +12,10 @@ def _iso(d: datetime | None) -> str | None:
 def serialize_audit_event(e: AuditEvent) -> dict[str, Any]:
     return {
         "id": e.id,
-        "actor_user_id": e.actor_user_id,
-        "actor_keycloak_subject": e.actor_keycloak_subject,
-        "actor_username": e.actor_username,
+        "actor": e.actor,
         "action": e.action,
         "entity_type": e.entity_type,
         "entity_id": e.entity_id,
-        "ticket_id": e.ticket_id,
         "old_value": e.old_value,
         "new_value": e.new_value,
         "metadata": e.audit_metadata,
