@@ -75,7 +75,7 @@ function getAuditDescription(record: AuditEventDto, nav: ReturnType<typeof useNa
   try { newObj = typeof new_value === 'string' ? JSON.parse(new_value) : (new_value || {}) } catch (e) {}
   try { oldObj = typeof old_value === 'string' ? JSON.parse(old_value) : (old_value || {}) } catch (e) {}
 
-  const actorName = actor ? (actor === 'system' ? 'System' : `User (${actor})`) : 'System'
+  const actorName = (!actor || actor === '-' || actor === 'system') ? 'System' : `User (${actor})`
 
   if (entity_type === 'test_runs') {
     if (action === 'CREATED') {
@@ -164,7 +164,7 @@ export function AuditTable({ baseFilters, onRowClick }: { baseFilters?: Partial<
       title: 'Actor',
       dataIndex: 'actor',
       width: 180,
-      render: (v) => v || 'System',
+      render: (v) => (!v || v === '-') ? 'System' : v,
       sorter: { multiple: 0 },
       filterDropdown: textFilterDropdown('Search actor'),
       filteredValue: params.actor ? [params.actor] : null,

@@ -1,4 +1,4 @@
-import { Table, Typography, Space, Switch, Tag, Button, App } from "antd";
+import { Table, Typography, Space, Switch, Tag, Button, App, Dropdown } from "antd";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -72,6 +72,16 @@ export default function RunsPage() {
     mutationFn: () => qtp.deleteAllRuns(),
     onSuccess: (data: any) => {
       message.success(`Deleted ${data.count} runs`);
+      qc.invalidateQueries({ queryKey: ["runsPage"] });
+      qc.invalidateQueries({ queryKey: ["overview"] });
+    },
+    onError: (e: any) => message.error(e.message),
+  });
+
+  const rerunRun = useMutation({
+    mutationFn: (id: string) => qtp.rerunRun(id),
+    onSuccess: () => {
+      message.success("Run restarted");
       qc.invalidateQueries({ queryKey: ["runsPage"] });
       qc.invalidateQueries({ queryKey: ["overview"] });
     },
@@ -213,12 +223,37 @@ export default function RunsPage() {
           { title: "Category", dataIndex: "error_category", sorter: true, sortOrder: antSortOrder(params, "error_category"), ...textFilter("error_category", params, "Search category"), render: (v) => v || "—" },
           { title: "Queued", dataIndex: "queued_at", sorter: true, sortOrder: antSortOrder(params, "queued_at"), ...textFilter("queued_at", params, "YYYY-MM-DD"), render: (v) => formatLocalTime(v) },
           { 
-            title: "Action", 
-            key: "action", 
+            title: "Actions", 
+            key: "actions", 
             render: (_, r) => (
-              <Button size="small" danger onClick={(e) => confirmDeleteRun(e, r.id)} loading={deleteRun.variables === r.id && deleteRun.isPending}>
-                Delete
-              </Button>
+              <Dropdown
+                menu={{
+                  items: [
+                    {
+                      key: 'run',
+                      label: 'Run',
+                      onClick: (e) => {
+                        e.domEvent.stopPropagation();
+                        rerunRun.mutate(r.id);
+                      }
+                    },
+                    {
+                      key: 'delete',
+                      danger: true,
+                      label: 'Delete',
+                      onClick: (e) => {
+                        e.domEvent.stopPropagation();
+                        confirmDeleteRun(e.domEvent as any, r.id);
+                      }
+                    }
+                  ]
+                }}
+                trigger={['click']}
+              >
+                <Button size="small" type="text" onClick={(e) => e.stopPropagation()} style={{ padding: '0 8px' }}>
+                  <Typography.Text style={{ fontSize: 18, lineHeight: 1 }}>⋯</Typography.Text>
+                </Button>
+              </Dropdown>
             )
           },
         ]}
