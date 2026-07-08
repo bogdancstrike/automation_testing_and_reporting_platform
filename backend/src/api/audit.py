@@ -24,6 +24,7 @@ def list_audit(app, operation, request, principal=None, **kwargs):
             action=flask_request.args.get("action"),
             entity_type=flask_request.args.get("entity_type"),
             entity_id=flask_request.args.get("entity_id"),
+            related_to=flask_request.args.get("related_to"),
             correlation_id=flask_request.args.get("correlation_id"),
             created_after=flask_request.args.get("created_after"),
             created_before=flask_request.args.get("created_before"),

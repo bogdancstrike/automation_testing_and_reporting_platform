@@ -37,6 +37,7 @@ load_dotenv()
 from src.config import Config  # noqa: E402
 from framework.app import FrameworkApp, FrameworkSettings  # noqa: E402
 from framework.commons.logger import logger as log  # noqa: E402
+import src.models_all  # noqa: E402, F401 - Register models and db_events
 
 
 def _build_app():

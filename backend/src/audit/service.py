@@ -29,6 +29,7 @@ def record(
     action: str,
     entity_type: str,
     entity_id: str | None = None,
+    related_to: str | None = None,
     old_value: dict[str, Any] | None = None,
     new_value: dict[str, Any] | None = None,
     metadata: dict[str, Any] | None = None,
@@ -58,6 +59,7 @@ def list_(
     action: str | None = None,
     entity_type: str | None = None,
     entity_id: str | None = None,
+    related_to: str | None = None,
     correlation_id: str | None = None,
     created_after: str | None = None,
     created_before: str | None = None,
@@ -78,6 +80,17 @@ def list_(
         stmt = stmt.where(AuditEvent.entity_type == entity_type)
     if entity_id:
         stmt = stmt.where(AuditEvent.entity_id == entity_id)
+    if related_to:
+        from sqlalchemy import or_, text
+        # If it's Postgres, we can do new_value->>'test_definition_id' == related_to
+        # For simplicity and cross-db compatibility in SQLAlchemy, we can cast new_value to string 
+        # or just use postgres json operators since QTP uses Postgres.
+        stmt = stmt.where(
+            or_(
+                AuditEvent.entity_id == related_to,
+                text("new_value->>'test_definition_id' = :related_to").bindparams(related_to=related_to)
+            )
+        )
     if correlation_id:
         stmt = stmt.where(AuditEvent.correlation_id == correlation_id)
     if created_after:

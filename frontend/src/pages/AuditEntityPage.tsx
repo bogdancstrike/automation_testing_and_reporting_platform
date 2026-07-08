@@ -11,9 +11,12 @@ export default function AuditEntityPage() {
   
   const { data: auditEvents = [], isLoading } = useQuery({
     queryKey: ['audit-entity', id],
-    queryFn: () => qtp.listAudit({ entity_id: id, limit: 1000 }).then(r => r.items),
+    queryFn: () => qtp.listAudit({ related_to: id, limit: 1000 }).then(r => r.items),
     enabled: !!id,
   })
+
+  // Deduce the entity type from the first event that actually targets this ID natively
+  const entityType = auditEvents.find(e => e.entity_id === id)?.entity_type || 'Unknown Entity'
 
   return (
     <div>
@@ -21,7 +24,9 @@ export default function AuditEntityPage() {
         <Breadcrumb.Item>
           <a onClick={() => nav('/audit')}>Audit Ledger</a>
         </Breadcrumb.Item>
-        <Breadcrumb.Item>Entity {id}</Breadcrumb.Item>
+        <Breadcrumb.Item>
+          {entityType.replace('_', ' ')} <Typography.Text code>{id}</Typography.Text>
+        </Breadcrumb.Item>
       </Breadcrumb>
 
       <Space style={{ marginBottom: 24 }}>
@@ -33,7 +38,7 @@ export default function AuditEntityPage() {
 
       <Card>
         <Typography.Paragraph type="secondary">
-          Displaying all recorded events for entity ID <Typography.Text code>{id}</Typography.Text>
+          Displaying all recorded events for {entityType.replace('_', ' ')} <Typography.Text code>{id}</Typography.Text> and its related branches.
         </Typography.Paragraph>
         
         <div style={{ marginTop: 24 }}>
