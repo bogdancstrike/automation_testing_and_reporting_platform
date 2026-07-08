@@ -122,6 +122,17 @@ body {
 .qtp-sider .ant-menu-item { transition: background 0.15s ease; }
 
 /* ── Header ───────────────────────────────────────────────────────────── */
+.qtp-header-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  flex: 1;
+}
+.qtp-nav-toggle {
+  font-size: 18px;
+  flex-shrink: 0;
+}
 .qtp-user-menu {
   display: inline-flex;
   align-items: center;
@@ -132,6 +143,30 @@ body {
   transition: background 0.15s ease;
 }
 .qtp-user-menu:hover { background: rgba(148, 163, 184, 0.12); }
+.qtp-user-menu .ant-typography { max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ── Mobile navigation drawer ─────────────────────────────────────────── */
+.qtp-sider.qtp-sider--mobile {
+  position: fixed !important;
+  top: 0;
+  left: 0;
+  height: 100vh;
+  max-width: 82vw !important;
+  z-index: 1001;
+  transform: translateX(-100%);
+  transition: transform 0.25s ease;
+  box-shadow: 0 12px 40px rgba(2, 6, 23, 0.45);
+}
+.qtp-sider.qtp-sider--mobile.qtp-sider--open { transform: translateX(0); }
+.qtp-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(2, 6, 23, 0.5);
+  backdrop-filter: blur(1px);
+  animation: qtp-scrim-in 0.2s ease;
+}
+@keyframes qtp-scrim-in { from { opacity: 0; } to { opacity: 1; } }
 
 /* ── Surfaces / cards ─────────────────────────────────────────────────── */
 .qtp-page-heading {
@@ -226,9 +261,42 @@ body {
 }
 .qtp-content::-webkit-scrollbar-thumb:hover { background: rgba(100, 116, 139, 0.75); background-clip: content-box; }
 
-@media (max-width: 720px) {
-  .qtp-header-title { display: none; }
+/* ── Responsive: laptop / tablet / mobile ─────────────────────────────── */
+/* Tablet & small laptop */
+@media (max-width: 991px) {
+  .qtp-content { padding: 16px; }
+}
+
+/* Tablet portrait & phones */
+@media (max-width: 767px) {
+  .qtp-header { padding-inline: 12px; }
   .qtp-content { padding: 14px; }
+
+  /* Page-level toolbars and inline groups wrap instead of overflowing */
+  .qtp-content .ant-space-horizontal { flex-wrap: wrap; }
+
+  /* Tables scroll horizontally rather than crushing their columns */
+  .ant-table-wrapper .ant-table-content { overflow-x: auto; }
+  .ant-table-wrapper .ant-table-content > table { min-width: 520px; }
+
+  /* Request Builder: stack the horizontal split vertically */
+  .qtp-builder .ant-splitter-horizontal { flex-direction: column; }
+  .qtp-builder .ant-splitter-horizontal > .ant-splitter-bar { display: none; }
+  .qtp-builder .ant-splitter-horizontal > .ant-splitter-panel {
+    max-width: none !important;
+    min-width: 0 !important;
+  }
+}
+
+/* Phones */
+@media (max-width: 575px) {
+  .qtp-header-title { display: none; }
+  .qtp-header { padding-inline: 10px; }
+  .qtp-content { padding: 12px; }
+
+  /* Keep the header compact: show the avatar, hide the username label */
+  .qtp-user-menu .ant-typography { display: none; }
+  .qtp-user-menu .ant-avatar { margin-right: 0 !important; }
 }
 
 .qtp-docs-page {

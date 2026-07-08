@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import { App as AntApp, Avatar, Button, ConfigProvider, Dropdown, Layout, Menu, Space, Tooltip, Typography, theme } from "antd";
+import { App as AntApp, Avatar, Button, ConfigProvider, Dropdown, Grid, Layout, Menu, Space, Tooltip, Typography, theme } from "antd";
 import type { MenuProps } from "antd";
 import {
   DashboardOutlined, ExperimentOutlined, SendOutlined, PlayCircleOutlined,
   ClockCircleOutlined, AimOutlined, ClusterOutlined, BookOutlined,
-  UserOutlined, LogoutOutlined, MoonOutlined, SunOutlined,
+  UserOutlined, LogoutOutlined, MoonOutlined, SunOutlined, MenuOutlined,
 } from "@ant-design/icons";
 import { Routes, Route, useNavigate, useLocation, Navigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -87,29 +87,50 @@ function storedTheme(): ThemeMode {
 
 function AppShell({ mode, setMode }: { mode: ThemeMode; setMode: (mode: ThemeMode) => void }) {
   const [collapsed, setCollapsed] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const { token } = theme.useToken();
+  const screens = Grid.useBreakpoint();
+  // Below the `lg` (992px) breakpoint the sidebar becomes an off-canvas drawer.
+  const isMobile = screens.lg === false;
   const { data: me } = useQuery({ queryKey: ["me"], queryFn: qtp.me });
+
+  const goTo = (key: string) => {
+    navigate(key);
+    setMobileNavOpen(false);
+  };
 
   const selectedKey =
     NAV.map((n) => n.key)
       .filter((k) => location.pathname.startsWith(k))
       .sort((a, b) => b.length - a.length)[0] || "/overview";
   const darkMode = mode === "dark";
+  const showNavLabels = isMobile || !collapsed;
   const menuItems: MenuProps["items"] = NAV_GROUPS.map((group) => ({
     type: "group",
     key: group.key,
-    label: collapsed ? "" : group.label,
+    label: showNavLabels ? group.label : "",
     children: group.children,
   }));
 
   return (
     <Layout className="qtp-shell" data-theme={mode}>
-      <Sider className="qtp-sider" collapsible collapsed={collapsed} onCollapse={setCollapsed} theme="dark" width={248}>
+      {isMobile && mobileNavOpen && (
+        <div className="qtp-scrim" onClick={() => setMobileNavOpen(false)} aria-hidden="true" />
+      )}
+      <Sider
+        className={`qtp-sider${isMobile ? " qtp-sider--mobile" : ""}${isMobile && mobileNavOpen ? " qtp-sider--open" : ""}`}
+        collapsible={!isMobile}
+        collapsed={!isMobile && collapsed}
+        onCollapse={setCollapsed}
+        theme="dark"
+        width={248}
+        collapsedWidth={isMobile ? 0 : 80}
+      >
         <div className="qtp-logo">
           <span className="qtp-logo-mark">Q</span>
-          {!collapsed && (
+          {(isMobile || !collapsed) && (
             <span>
               <strong>Quality</strong>
               <small>Testing Platform</small>
@@ -121,18 +142,29 @@ function AppShell({ mode, setMode }: { mode: ThemeMode; setMode: (mode: ThemeMod
           mode="inline"
           selectedKeys={[selectedKey]}
           items={menuItems}
-          onClick={(e) => navigate(e.key)}
+          onClick={(e) => goTo(e.key)}
         />
       </Sider>
       <Layout>
         <Header className="qtp-header" style={{ background: token.colorBgContainer }}>
-          <div className="qtp-header-title">
-            <Typography.Text strong style={{ fontSize: 16 }}>
-              {NAV.find((n) => n.key === selectedKey)?.label || "Overview"}
-            </Typography.Text>
-            <Typography.Text type="secondary" style={{ fontSize: 12.5 }}>
-              {PAGE_META[selectedKey] || "Automation testing control plane"}
-            </Typography.Text>
+          <div className="qtp-header-left">
+            {isMobile && (
+              <Button
+                type="text"
+                className="qtp-nav-toggle"
+                aria-label="Open navigation"
+                icon={<MenuOutlined />}
+                onClick={() => setMobileNavOpen(true)}
+              />
+            )}
+            <div className="qtp-header-title">
+              <Typography.Text strong style={{ fontSize: 16 }}>
+                {NAV.find((n) => n.key === selectedKey)?.label || "Overview"}
+              </Typography.Text>
+              <Typography.Text type="secondary" style={{ fontSize: 12.5 }}>
+                {PAGE_META[selectedKey] || "Automation testing control plane"}
+              </Typography.Text>
+            </div>
           </div>
           <Space size={10}>
             <Tooltip title={darkMode ? "Switch to light mode" : "Switch to dark mode"}>

@@ -164,7 +164,7 @@ export default function TestDetailPage() {
       </Typography.Title>
 
       <Card size="small" style={{ marginBottom: 16 }}>
-        <Descriptions column={3} size="small">
+        <Descriptions column={{ xs: 1, sm: 2, md: 3 }} size="small">
           <Descriptions.Item label="Key"><Typography.Text code>{t.key}</Typography.Text></Descriptions.Item>
           <Descriptions.Item label="Source">{t.source === "code" ? "Python (framework)" : "UI request builder"}</Descriptions.Item>
           <Descriptions.Item label="Last result"><StatusTag status={t.last_run_status} /></Descriptions.Item>

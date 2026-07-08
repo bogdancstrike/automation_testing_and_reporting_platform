@@ -83,7 +83,7 @@ export default function RunDetailPage() {
       </Typography.Title>
 
       <Card size="small" style={{ marginBottom: 16 }}>
-        <Descriptions column={3} size="small">
+        <Descriptions column={{ xs: 1, sm: 2, md: 3 }} size="small">
           <Descriptions.Item label="Trigger">{run.trigger}</Descriptions.Item>
           <Descriptions.Item label="Target">{run.target_key || "—"}</Descriptions.Item>
           <Descriptions.Item label="Worker">{run.worker_name || "—"}</Descriptions.Item>
@@ -141,8 +141,8 @@ export default function RunDetailPage() {
               const step = resp.steps[selectedResponseStepIdx] || resp.steps[0] || {};
               const sResp = step.response || {};
               return (
-                <Row gutter={16}>
-                  <Col span={6} style={{ borderRight: "1px solid var(--qtp-surface-border)" }}>
+                <Row gutter={[16, 16]}>
+                  <Col xs={24} md={6} style={{ borderRight: "1px solid var(--qtp-surface-border)" }}>
                     <List
                       size="small"
                       dataSource={resp.steps}
@@ -165,18 +165,18 @@ export default function RunDetailPage() {
                       )}
                     />
                   </Col>
-                  <Col span={18}>
+                  <Col xs={24} md={18}>
                     <div style={{ marginBottom: 12 }}>
                       <Typography.Title level={5} style={{ margin: 0 }}>
                         {step.name} <Tag>{step.method}</Tag>
                       </Typography.Title>
                       <Typography.Text code style={{ fontSize: 11 }}>{step.url}</Typography.Text>
                     </div>
-                    <Row gutter={16}>
-                      <Col span={16}>
+                    <Row gutter={[16, 16]}>
+                      <Col xs={24} lg={16}>
                         <CodeSnippet language="json" code={sResp.body_text || "(no body captured)"} maxHeight={320} />
                       </Col>
-                      <Col span={8}>
+                      <Col xs={24} lg={8}>
                         <Descriptions column={1} size="small" bordered>
                           <Descriptions.Item label="Status">{sResp.status_code ?? "—"}</Descriptions.Item>
                           <Descriptions.Item label="Time">{sResp.elapsed_ms ?? "—"} ms</Descriptions.Item>
@@ -202,9 +202,9 @@ export default function RunDetailPage() {
               );
             }
             return (
-              <Row gutter={16}>
-                <Col span={16}><CodeSnippet language="json" code={resp.body_text || "(no body captured)"} maxHeight={400} /></Col>
-                <Col span={8}>
+              <Row gutter={[16, 16]}>
+                <Col xs={24} lg={16}><CodeSnippet language="json" code={resp.body_text || "(no body captured)"} maxHeight={400} /></Col>
+                <Col xs={24} lg={8}>
                   <Descriptions column={1} size="small" bordered>
                     <Descriptions.Item label="Status">{resp.status_code ?? "—"}</Descriptions.Item>
                     <Descriptions.Item label="Time">{resp.elapsed_ms ?? "—"} ms</Descriptions.Item>

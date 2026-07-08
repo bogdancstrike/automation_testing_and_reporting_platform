@@ -181,7 +181,7 @@ export default function DocsPage() {
               </p>
             </div>
 
-            <Cards className="qtp-docs-cards" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '3rem' }}>
+            <Cards className="qtp-docs-cards" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px', marginBottom: '3rem' }}>
               <FumaCard icon={<CodeOutlined />} title="Author Anywhere" description="Write scenarios in Python, use the UI Request Builder, or bring Playwright/CLI tests." />
               <FumaCard icon={<CloudServerOutlined />} title="Environment Agnostic" description="Run the same scenario against local, staging, or production seamlessly." />
               <FumaCard icon={<BugOutlined />} title="Deep Diagnostics" description="Inspect step-by-step executions, exact assertions, full response bodies, and logs." />

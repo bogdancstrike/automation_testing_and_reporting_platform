@@ -112,7 +112,7 @@ export default function TargetDetailPage() {
         </Space>
       </Space>
       <Card size="small" style={{ marginTop: 12, marginBottom: 16 }}>
-        <Descriptions column={2} size="small">
+        <Descriptions column={{ xs: 1, sm: 2 }} size="small">
           <Descriptions.Item label="Base URL"><Typography.Text code>{target.base_url}</Typography.Text></Descriptions.Item>
           <Descriptions.Item label="Health URL">{target.health_url ? <Typography.Text code>{target.health_url}</Typography.Text> : "—"}</Descriptions.Item>
           <Descriptions.Item label="Environment">{target.environment}</Descriptions.Item>

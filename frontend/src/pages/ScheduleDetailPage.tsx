@@ -101,7 +101,7 @@ export default function ScheduleDetailPage() {
       </Typography.Title>
       
       <Card size="small" style={{ marginBottom: 16 }}>
-        <Descriptions column={3} size="small">
+        <Descriptions column={{ xs: 1, sm: 2, md: 3 }} size="small">
           <Descriptions.Item label="Toggle">
             <Switch size="small" checked={s.is_enabled} onChange={() => toggle.mutate()} />
           </Descriptions.Item>

@@ -376,7 +376,7 @@ export default function RequestBuilderPage() {
   };
 
   return (
-    <Layout style={{ height: "calc(100vh - 64px)", background: "transparent" }}>
+    <Layout className="qtp-builder" style={{ height: "calc(100vh - 64px)", background: "transparent" }}>
       <Splitter style={{ flex: 1, width: "100%", height: "100%" }}>
         <Splitter.Panel defaultSize={280} min={220} max={500}>
           <div style={{ width: "100%", height: "100%", borderRight: `1px solid var(--qtp-surface-border)`, background: sidebarBg, display: "flex", flexDirection: "column" }}>
@@ -758,15 +758,15 @@ function ResponseView({ result }: { result: SendResult }) {
                {stepRespData.status_code != null && <Tag color={stepRespData.status_code >= 400 ? "error" : "success"}>Status: {stepRespData.status_code}</Tag>}
                {stepRespData.elapsed_ms != null && <Tag>Time: {stepRespData.elapsed_ms} ms</Tag>}
              </Space>
-             <Row gutter={24}>
-               <Col span={14}>
+             <Row gutter={[24, 16]}>
+               <Col xs={24} lg={14}>
                  <Tabs items={[
                     { key: "body", label: "Body", children: <pre style={{ background: panelBg, padding: 12, borderRadius: 6, border: `1px solid var(--qtp-surface-border)`, marginTop: 0, overflowX: "auto" }}>{(stepRespData.body_text || "").slice(0, 5000) || "(empty)"}</pre> },
                     { key: "headers", label: "Headers", children: <Empty description="Headers not implemented in preview" image={Empty.PRESENTED_IMAGE_SIMPLE} /> },
                     { key: "captures", label: "Captures", children: renderCaptures(stepRespData.captures) }
                   ]} />
                </Col>
-               <Col span={10}>
+               <Col xs={24} lg={10}>
                  <Typography.Text strong>Assertions</Typography.Text>
                  <Table rowKey={(_, i) => String(i)} size="small" pagination={false} dataSource={stepAssertions} style={{ marginTop: 8 }}
                    columns={[
@@ -799,15 +799,15 @@ function ResponseView({ result }: { result: SendResult }) {
 
       <div style={{ flex: 1, padding: 16, overflowY: "auto" }}>
         {result.error_message && <Alert type="error" message={result.error_message} style={{ marginBottom: 16 }} />}
-        <Row gutter={24}>
-          <Col span={14}>
+        <Row gutter={[24, 16]}>
+          <Col xs={24} lg={14}>
             <Tabs items={[
               { key: "body", label: "Body", children: <pre style={{ background: panelBg, padding: 12, borderRadius: 6, border: `1px solid var(--qtp-surface-border)`, marginTop: 0, overflowX: "auto" }}>{(r.body_text || "").slice(0, 5000) || "(empty)"}</pre> },
               { key: "headers", label: "Headers", children: <Empty description="Headers not implemented in preview" image={Empty.PRESENTED_IMAGE_SIMPLE} /> },
               { key: "captures", label: "Captures", children: renderCaptures(r.captures) }
             ]} />
           </Col>
-          <Col span={10}>
+          <Col xs={24} lg={10}>
             <Typography.Text strong style={{ display: "inline-block", marginBottom: 12 }}>Test Results</Typography.Text>
             <Table rowKey={(_, i) => String(i)} size="small" pagination={false} dataSource={result.assertions}
               columns={[
