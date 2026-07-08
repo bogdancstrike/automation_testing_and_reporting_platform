@@ -163,7 +163,7 @@ class SelfTestsCatalogPagination(HttpTest):
     metadata = _meta("self.tests_catalog_pagination", "QTP · test catalog pagination", ["tests"])
 
     def test(self, ctx):
-        response = ctx.http.get("/api/tests?page=1&page_size=5", auth=TOKEN)
+        response = ctx.http.get("/api/scenarios?page=1&page_size=5", auth=TOKEN)
         response.should.have_status(200)
         response.json.should.have_field("items").with_length_at_least(1)
         response.json.should.have_field("page_size").equal_to(5)
@@ -173,7 +173,7 @@ class SelfTestsCatalogSearchHealth(HttpTest):
     metadata = _meta("self.tests_search_health", "QTP · test catalog search health", ["tests"])
 
     def test(self, ctx):
-        response = ctx.http.get("/api/tests?q=health", auth=TOKEN)
+        response = ctx.http.get("/api/scenarios?q=health", auth=TOKEN)
         response.should.have_status(200)
         response.json.should.have_field("items").with_length_at_least(1)
 
@@ -182,7 +182,7 @@ class SelfTestsFilterSourceCode(HttpTest):
     metadata = _meta("self.tests_filter_source_code", "QTP · code test filter", ["tests"])
 
     def test(self, ctx):
-        response = ctx.http.get("/api/tests?source=code&page_size=10", auth=TOKEN)
+        response = ctx.http.get("/api/scenarios?source=code&page_size=10", auth=TOKEN)
         response.should.have_status(200)
         response.json.should.have_field("items").with_length_at_least(1)
         response.json.should.have_field("items[0].source").equal_to("code")
@@ -193,7 +193,7 @@ class SelfTestsFilterTargetSelf(HttpTest):
     metadata = _meta("self.tests_filter_target_self", "QTP · self target test filter", ["tests"])
 
     def test(self, ctx):
-        response = ctx.http.get("/api/tests?target=qtp_self&page_size=10", auth=TOKEN)
+        response = ctx.http.get("/api/scenarios?target=qtp_self&page_size=10", auth=TOKEN)
         response.should.have_status(200)
         response.json.should.have_field("items").with_length_at_least(1)
         response.json.should.have_field("items[0].target_key").equal_to("qtp_self")
@@ -203,7 +203,7 @@ class SelfTestsFilterTagSelf(HttpTest):
     metadata = _meta("self.tests_filter_tag_self", "QTP · self tag test filter", ["tests", "tags"])
 
     def test(self, ctx):
-        response = ctx.http.get("/api/tests?tag=self&page_size=10", auth=TOKEN)
+        response = ctx.http.get("/api/scenarios?tag=self&page_size=10", auth=TOKEN)
         response.should.have_status(200)
         response.json.should.have_field("items").with_length_at_least(1)
 
@@ -213,12 +213,12 @@ class SelfTestDetailFromCatalog(HttpTest):
 
     def test(self, ctx):
         with ctx.step("Find a code test"):
-            response = ctx.http.get("/api/tests?source=code&page_size=1", auth=TOKEN)
+            response = ctx.http.get("/api/scenarios?source=code&page_size=1", auth=TOKEN)
             response.should.have_status(200)
             scenario_id = response.json.get("items[0].id")
 
         with ctx.step("Read test detail"):
-            response = ctx.http.get(f"/api/tests/{scenario_id}", auth=TOKEN)
+            response = ctx.http.get(f"/api/scenarios/{scenario_id}", auth=TOKEN)
             response.should.have_status(200)
             response.json.should.have_field("id").equal_to(scenario_id)
             response.json.should.have_field("revisions").with_length_at_least(1)
@@ -320,7 +320,7 @@ class SelfInvalidTestReturns404(HttpTest):
     metadata = _meta("self.invalid_test_404", "QTP · invalid test returns 404", ["negative"])
 
     def test(self, ctx):
-        response = ctx.http.get(f"/api/tests/{ZERO_ID}", auth=TOKEN)
+        response = ctx.http.get(f"/api/scenarios/{ZERO_ID}", auth=TOKEN)
         response.should.have_status(404)
 
 
@@ -400,7 +400,7 @@ class SelfRequestTestLifecycle(HttpTest):
             ctx.set_var("scenario_id", scenario_id)
 
         with ctx.step("Read created request test"):
-            response = ctx.http.get(f"/api/tests/{scenario_id}", auth=TOKEN)
+            response = ctx.http.get(f"/api/scenarios/{scenario_id}", auth=TOKEN)
             response.should.have_status(200)
             response.json.should.have_field("key").equal_to(key)
 

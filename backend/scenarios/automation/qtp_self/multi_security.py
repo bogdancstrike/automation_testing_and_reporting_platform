@@ -18,7 +18,7 @@ class SelfMultiStepSecurityScan(HttpTest):
 
     def test(self, ctx):
         self.assert_rejects_anonymous(ctx, "GET", "/api/targets")
-        self.assert_rejects_anonymous(ctx, "GET", "/api/tests")
+        self.assert_rejects_anonymous(ctx, "GET", "/api/scenarios")
         self.assert_rejects_anonymous(ctx, "GET", "/api/runs")
         self.assert_rejects_anonymous(ctx, "POST", "/api/request-tests", json_body={})
 

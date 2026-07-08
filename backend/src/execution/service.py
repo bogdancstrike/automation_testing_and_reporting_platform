@@ -134,7 +134,7 @@ def restart_run(db: Session, run_id: str) -> dict:
 
 
 def restart_all_failed(db: Session) -> dict:
-    runs = db.scalars(select(TestRun).where(TestRun.status.in_(("error", "failed", "timeout")))).all()
+    runs = db.scalars(select(TestRun).where(TestRun.status.in_(("error", "failed", "timeout")), TestRun.stats_reset_at.is_(None))).all()
     count = 0
     for r in runs:
         restart_run(db, r.id)

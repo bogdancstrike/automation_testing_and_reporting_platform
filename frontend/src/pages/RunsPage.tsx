@@ -79,7 +79,7 @@ export default function RunsPage() {
   });
 
   const rerunRun = useMutation({
-    mutationFn: (id: string) => qtp.rerunRun(id),
+    mutationFn: (id: string) => qtp.restartRun(id),
     onSuccess: () => {
       message.success("Run restarted");
       qc.invalidateQueries({ queryKey: ["runsPage"] });

@@ -30,14 +30,14 @@ class SelfRequestTestsCrud(HttpTest):
             ctx.set_var("scenario_id", scenario_id)
 
         with ctx.step("Get Test"):
-            ctx.http.get(f"/api/tests/{scenario_id}", auth=TOKEN).should.have_status(200)
+            ctx.http.get(f"/api/scenarios/{scenario_id}", auth=TOKEN).should.have_status(200)
 
         with ctx.step("Update Test"):
             ctx.http.patch(f"/api/request-tests/{scenario_id}", auth=TOKEN,
                            json={"name": f"Scenario Auto Test {test_suffix} (renamed)"}).should.have_status(200)
 
         with ctx.step("Run Test"):
-            ctx.http.post(f"/api/tests/{scenario_id}/run", auth=TOKEN).should.have_status(202)
+            ctx.http.post(f"/api/scenarios/{scenario_id}/run", auth=TOKEN).should.have_status(202)
 
         with ctx.step("Delete Test"):
             import time
