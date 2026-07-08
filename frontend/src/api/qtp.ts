@@ -1,7 +1,7 @@
 import { api } from "./client";
 import type {
   CommentItem, Failures, Me, Overview, Page, QueryParams, RunDetail, RunSummary,
-  Schedule, SendResult, Target, TargetDetail, TargetStats, TestDef, TestDetail, WorkerInfo,
+  Schedule, SendResult, Target, TargetDetail, TargetStats, Scenario, TestDetail, WorkerInfo,
   TargetStatsReset, AuditEventDto
 } from "./types";
 
@@ -29,7 +29,7 @@ export const qtp = {
   targets: () => api.get<Page<Target>>(`/api/targets${qs({ page_size: 100, sort: "name", order: "asc" })}`).then(list<Target>()),
   targetDetail: (id: string) => api.get<TargetDetail>(`/api/targets/${id}`),
   targetStats: (id: string, hours = 168) => api.get<TargetStats>(`/api/targets/${id}/stats${qs({ hours })}`),
-  targetTests: (id: string, params: QueryParams = {}) => api.get<Page<TestDef>>(`/api/targets/${id}/tests${qs(params)}`),
+  targetTests: (id: string, params: QueryParams = {}) => api.get<Page<Scenario>>(`/api/targets/${id}/tests${qs(params)}`),
   targetRuns: (id: string, params: QueryParams = {}) => api.get<Page<RunSummary>>(`/api/targets/${id}/runs${qs(params)}`),
   resetTargetStats: (id: string) => api.post<TargetStatsReset>(`/api/targets/${id}/reset-stats`),
   createTarget: (b: Partial<Target>) => api.post<Target>("/api/targets", b),
@@ -37,8 +37,8 @@ export const qtp = {
   deleteTarget: (id: string) => api.del<any>(`/api/targets/${id}`),
   runAllTargetTests: (id: string, environment = "default", sync = false) => api.post<any>(`/api/targets/${id}/run-all${sync ? "?sync=true" : ""}`, { environment }),
 
-  testsPage: (params: QueryParams = {}) => api.get<Page<TestDef>>(`/api/tests${qs(params)}`),
-  tests: (query = "") => api.get<Page<TestDef>>(`/api/tests${qs({ page_size: 100, ...fromLegacyQuery(query) })}`).then(list<TestDef>()),
+  testsPage: (params: QueryParams = {}) => api.get<Page<Scenario>>(`/api/tests${qs(params)}`),
+  tests: (query = "") => api.get<Page<Scenario>>(`/api/tests${qs({ page_size: 100, ...fromLegacyQuery(query) })}`).then(list<Scenario>()),
   test: (id: string) => api.get<TestDetail>(`/api/tests/${id}`),
   updateTestTags: (id: string, tags: string[]) => api.put<{ id: string; tags: string[] }>(`/api/tests/${id}/tags`, { tags }),
   testComments: (id: string) => api.get<{ items: CommentItem[] }>(`/api/tests/${id}/comments`).then(list<CommentItem>()),

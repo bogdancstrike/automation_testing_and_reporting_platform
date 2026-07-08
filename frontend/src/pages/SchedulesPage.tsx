@@ -107,7 +107,7 @@ export default function SchedulesPage() {
 
       <Modal title="New schedule" open={open} onCancel={() => setOpen(false)} onOk={() => form.validateFields().then((v) => create.mutate(v))} confirmLoading={create.isPending}>
         <Form form={form} layout="vertical" initialValues={{ recurrence_type: "interval", interval_seconds: 300, is_enabled: true, timezone: "UTC" }}>
-          <Form.Item name="test_definition_ids" label="Scenarios (Explicit)" rules={[{ required: false }]} tooltip="Explicitly select scenarios to include"><Select mode="multiple" showSearch optionFilterProp="label" options={tests.map((t) => ({ value: t.id, label: `${t.name} (${t.key})` }))} allowClear /></Form.Item>
+          <Form.Item name="scenario_ids" label="Scenarios (Explicit)" rules={[{ required: false }]} tooltip="Explicitly select scenarios to include"><Select mode="multiple" showSearch optionFilterProp="label" options={tests.map((t) => ({ value: t.id, label: `${t.name} (${t.key})` }))} allowClear /></Form.Item>
           <Form.Item name="target_tags" label="Scenarios by Tags" rules={[{ required: false }]} tooltip="Automatically include all scenarios matching ANY of these tags"><Select mode="tags" placeholder="e.g. #60mins, nightly" allowClear options={allTags.map((tag: string) => ({ value: tag, label: tag }))} /></Form.Item>
           <Form.Item name="name" label="Name"><Input placeholder="optional" /></Form.Item>
           <Form.Item name="recurrence_type" label="Recurrence"><Select options={["interval", "cron", "once"].map((value) => ({ value }))} /></Form.Item>

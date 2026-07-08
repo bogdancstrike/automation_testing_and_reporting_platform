@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 from sqlalchemy import Float, String, cast, func, or_, select
 from sqlalchemy.orm import Session
 
-from src.catalog.models import Target, TestDefinition
+from src.catalog.models import Target, Scenario
 from src.config import Config
 from src.core.clock import utcnow
 from src.execution.models import FailureSignature, TestRun, Worker
@@ -160,26 +160,26 @@ def failures(db: Session, *, hours: int = 168, start: datetime | None = None,
 
     latest_subq = (
         select(TestRun.id)
-        .distinct(TestRun.test_definition_id)
+        .distinct(TestRun.scenario_id)
         .where(
             TestRun.stats_reset_at.is_(None),
             TestRun.queued_at >= since,
             TestRun.queued_at <= end,
         )
-        .order_by(TestRun.test_definition_id, TestRun.queued_at.desc())
+        .order_by(TestRun.scenario_id, TestRun.queued_at.desc())
     ).subquery()
 
     recent_stmt = (
         select(TestRun)
         .join(latest_subq, TestRun.id == latest_subq.c.id)
-        .outerjoin(TestDefinition, TestRun.test_definition_id == TestDefinition.id)
+        .outerjoin(Scenario, TestRun.scenario_id == Scenario.id)
         .where(
             TestRun.status.in_(["failed", "error", "timeout"]),
         )
     )
     if filters.get("recent_failed_q"):
         like = f"%{filters['recent_failed_q']}%"
-        recent_stmt = recent_stmt.where(or_(TestDefinition.name.ilike(like), TestDefinition.key.ilike(like)))
+        recent_stmt = recent_stmt.where(or_(Scenario.name.ilike(like), Scenario.key.ilike(like)))
     if filters.get("recent_failed_status"):
         recent_stmt = recent_stmt.where(TestRun.status == filters["recent_failed_status"])
     if filters.get("recent_failed_error_category"):
@@ -192,7 +192,7 @@ def failures(db: Session, *, hours: int = 168, start: datetime | None = None,
     recent_sort = filters.get("recent_failed_sort") or "finished_at"
     recent_order = str(filters.get("recent_failed_order") or "desc").lower()
     recent_sorters = {
-        "test_name": TestDefinition.name,
+        "test_name": Scenario.name,
         "status": TestRun.status,
         "error_category": TestRun.error_category,
         "defect_type": TestRun.defect_type,
@@ -201,9 +201,9 @@ def failures(db: Session, *, hours: int = 168, start: datetime | None = None,
     recent_column = recent_sorters.get(recent_sort, TestRun.finished_at)
     recent_stmt = recent_stmt.order_by(recent_column.desc() if recent_order == "desc" else recent_column.asc()).limit(50)
     recent = db.scalars(recent_stmt).all()
-    defs = {d.id: d.name for d in db.scalars(select(TestDefinition)).all()}
+    defs = {d.id: d.name for d in db.scalars(select(Scenario)).all()}
     recent_failed = [{
-        "id": r.id, "test_definition_id": r.test_definition_id, "test_name": defs.get(r.test_definition_id),
+        "id": r.id, "scenario_id": r.scenario_id, "test_name": defs.get(r.scenario_id),
         "status": r.status, "error_category": r.error_category,
         "defect_type": r.defect_type, "finished_at": _iso(r.finished_at),
     } for r in recent]

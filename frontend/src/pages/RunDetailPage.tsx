@@ -30,9 +30,9 @@ export default function RunDetailPage() {
   });
   
   const { data: testDefinition } = useQuery({
-    queryKey: ["test", run?.test_definition_id],
-    queryFn: () => qtp.test(run!.test_definition_id),
-    enabled: !!run?.test_definition_id
+    queryKey: ["test", run?.scenario_id],
+    queryFn: () => qtp.test(run!.scenario_id),
+    enabled: !!run?.scenario_id
   });
 
   const { data: logs = [] } = useQuery({ queryKey: ["runlogs", id, run?.status], queryFn: () => qtp.runLogs(id) });
@@ -77,7 +77,7 @@ export default function RunDetailPage() {
     <div>
       <Space style={{ marginBottom: 12 }}>
         <Button icon={<ArrowLeftOutlined />} onClick={() => nav("/runs")}>Runs</Button>
-        <Button icon={<ExperimentOutlined />} onClick={() => nav(`/scenarios/${run.test_definition_id}`)}>Open scenario</Button>
+        <Button icon={<ExperimentOutlined />} onClick={() => nav(`/scenarios/${run.scenario_id}`)}>Open scenario</Button>
         {active(run.status) && <Button danger icon={<StopOutlined />} loading={cancel.isPending} onClick={() => cancel.mutate()}>Cancel</Button>}
         {run.status !== "passed" && !active(run.status) && <Button type="primary" icon={<PlayCircleOutlined />} loading={rerun.isPending} onClick={() => rerun.mutate()}>Re-run</Button>}
       </Space>

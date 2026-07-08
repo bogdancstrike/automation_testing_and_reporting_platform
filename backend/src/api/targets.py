@@ -4,7 +4,7 @@ from __future__ import annotations
 from sqlalchemy import select
 from src.api._helpers import json_body, query_args
 from src.catalog import service
-from src.catalog.models import Target, TestDefinition
+from src.catalog.models import Target, Scenario
 from src.core.db import session_scope
 from src.execution import service as exec_service
 from src.iam.decorators import require_authenticated, require_role
@@ -82,16 +82,16 @@ def run_all_target_tests(app, operation, request, target_id=None, principal=None
     sync_mode = query_args(request).get("sync", "").lower() == "true"
     actor = getattr(principal, "username", None) or getattr(principal, "subject", None)
     body = json_body(request)
-    test_ids = body.get("test_definition_ids")
+    test_ids = body.get("scenario_ids")
 
     with session_scope() as db:
         target = db.get(Target, target_id)
         if not target:
             return {"error": "target not found"}, 404
             
-        stmt = select(TestDefinition).where(TestDefinition.target_key == target.key, TestDefinition.status != "missing_from_source")
+        stmt = select(Scenario).where(Scenario.target_key == target.key, Scenario.status != "missing_from_source")
         if test_ids is not None:
-            stmt = stmt.where(TestDefinition.id.in_(test_ids))
+            stmt = stmt.where(Scenario.id.in_(test_ids))
         tests = db.scalars(stmt).all()
         
         queued = []
@@ -112,10 +112,10 @@ def run_all_target_tests(app, operation, request, target_id=None, principal=None
             runs = db.scalars(select(TestRun).where(TestRun.id.in_(run_ids))).all()
             all_done = all(r.status not in ("queued", "running") for r in runs)
             if all_done:
-                return {"items": [serializers.run_detail(r, test_name=test_map[r.test_definition_id].name, target_key=target.key, tags=test_map[r.test_definition_id].tags) for r in runs]}, 200
+                return {"items": [serializers.run_detail(r, test_name=test_map[r.scenario_id].name, target_key=target.key, tags=test_map[r.scenario_id].tags) for r in runs]}, 200
         time.sleep(1)
 
     # Timeout reached, return current statuses
     with session_scope() as db:
         runs = db.scalars(select(TestRun).where(TestRun.id.in_(run_ids))).all()
-        return {"items": [serializers.run_detail(r, test_name=test_map[r.test_definition_id].name, target_key=target.key, tags=test_map[r.test_definition_id].tags) for r in runs]}, 207
+        return {"items": [serializers.run_detail(r, test_name=test_map[r.scenario_id].name, target_key=target.key, tags=test_map[r.scenario_id].tags) for r in runs]}, 207

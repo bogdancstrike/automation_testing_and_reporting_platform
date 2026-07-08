@@ -11,7 +11,7 @@ from sqlalchemy import Float, String, cast, func, or_, select
 from sqlalchemy.orm import Session
 
 from src.catalog import serializers
-from src.catalog.models import Project, Target, TestDefinition, TestRevision
+from src.catalog.models import Project, Target, Scenario, TestRevision
 from src.config import Config
 from src.core.clock import utcnow
 from src.core.errors import ConflictError, NotFoundError, ValidationError
@@ -47,7 +47,7 @@ def list_targets(db: Session, project_id: str | None = None) -> list[dict]:
     target_keys = {t.key for t in rows}
     counts = {}
     if target_keys:
-        counts = dict(db.execute(select(TestDefinition.target_key, func.count()).where(TestDefinition.target_key.in_(target_keys)).group_by(TestDefinition.target_key)).all())
+        counts = dict(db.execute(select(Scenario.target_key, func.count()).where(Scenario.target_key.in_(target_keys)).group_by(Scenario.target_key)).all())
     out = []
     for t in rows:
         d = serializers.target(t)
@@ -59,8 +59,8 @@ def list_targets(db: Session, project_id: str | None = None) -> list[dict]:
 def list_targets_page(db: Session, filters: dict[str, Any]) -> dict:
     params = parse_page(filters, default_sort="name", default_order="asc")
     count_subq = (
-        select(TestDefinition.target_key.label("target_key"), func.count().label("test_count"))
-        .group_by(TestDefinition.target_key)
+        select(Scenario.target_key.label("target_key"), func.count().label("test_count"))
+        .group_by(Scenario.target_key)
         .subquery()
     )
     stmt = select(Target).outerjoin(count_subq, Target.key == count_subq.c.target_key)
@@ -87,7 +87,7 @@ def list_targets_page(db: Session, filters: dict[str, Any]) -> dict:
     target_keys = {t.key for t in rows}
     counts = {}
     if target_keys:
-        counts = dict(db.execute(select(TestDefinition.target_key, func.count()).where(TestDefinition.target_key.in_(target_keys)).group_by(TestDefinition.target_key)).all())
+        counts = dict(db.execute(select(Scenario.target_key, func.count()).where(Scenario.target_key.in_(target_keys)).group_by(Scenario.target_key)).all())
     out = []
     for t in rows:
         d = serializers.target(t)
@@ -140,7 +140,7 @@ def _target_or_404(db: Session, target_id: str) -> Target:
 def delete_target(db: Session, target_id: str) -> dict:
     from sqlalchemy import delete as sa_delete
     from src.execution.models import RunLog, RunQueue, TestRun, TestRunAssertion, TestRunStep
-    from src.catalog.models import TestDefinition, TestRevision
+    from src.catalog.models import Scenario, TestRevision
     from src.scheduling.models import Schedule, ScheduleTest
 
     t = db.get(Target, target_id)
@@ -168,31 +168,31 @@ def delete_target(db: Session, target_id: str) -> dict:
     db.execute(sa_delete(TestRun).where(TestRun.target_id == target_id))
 
     ui_test_ids = list(db.scalars(
-        select(TestDefinition.id).where(TestDefinition.target_key == t.key, TestDefinition.source == "ui")
+        select(Scenario.id).where(Scenario.target_key == t.key, Scenario.source == "ui")
     ).all())
     
     if ui_test_ids:
-        ui_run_ids_subq = select(TestRun.id).where(TestRun.test_definition_id.in_(ui_test_ids))
+        ui_run_ids_subq = select(TestRun.id).where(TestRun.scenario_id.in_(ui_test_ids))
         db.execute(sa_delete(RunLog).where(RunLog.test_run_id.in_(ui_run_ids_subq)))
         db.execute(sa_delete(TestRunStep).where(TestRunStep.test_run_id.in_(ui_run_ids_subq)))
         db.execute(sa_delete(TestRunAssertion).where(TestRunAssertion.test_run_id.in_(ui_run_ids_subq)))
         db.execute(sa_delete(RunQueue).where(RunQueue.test_run_id.in_(ui_run_ids_subq)))
-        db.execute(sa_delete(TestRun).where(TestRun.test_definition_id.in_(ui_test_ids)))
+        db.execute(sa_delete(TestRun).where(TestRun.scenario_id.in_(ui_test_ids)))
 
-        schedule_ids = list(db.scalars(select(ScheduleTest.schedule_id).where(ScheduleTest.test_definition_id.in_(ui_test_ids))).all())
-        db.execute(sa_delete(ScheduleTest).where(ScheduleTest.test_definition_id.in_(ui_test_ids)))
+        schedule_ids = list(db.scalars(select(ScheduleTest.schedule_id).where(ScheduleTest.scenario_id.in_(ui_test_ids))).all())
+        db.execute(sa_delete(ScheduleTest).where(ScheduleTest.scenario_id.in_(ui_test_ids)))
         for schedule_id in schedule_ids:
             schedule = db.get(Schedule, schedule_id)
             if not schedule:
                 continue
             replacement = db.scalars(select(ScheduleTest).where(ScheduleTest.schedule_id == schedule_id).order_by(ScheduleTest.created_at)).first()
             if replacement:
-                schedule.test_definition_id = replacement.test_definition_id
+                schedule.scenario_id = replacement.scenario_id
             else:
                 db.delete(schedule)
 
-        db.execute(sa_delete(TestRevision).where(TestRevision.test_definition_id.in_(ui_test_ids)))
-        db.execute(sa_delete(TestDefinition).where(TestDefinition.id.in_(ui_test_ids)))
+        db.execute(sa_delete(TestRevision).where(TestRevision.scenario_id.in_(ui_test_ids)))
+        db.execute(sa_delete(Scenario).where(Scenario.id.in_(ui_test_ids)))
 
     db.execute(sa_delete(Target).where(Target.id == target_id))
     return {"deleted": target_id}
@@ -272,48 +272,48 @@ def list_tests(db: Session, filters: dict[str, Any]) -> dict:
 
 def _list_tests(db: Session, filters: dict[str, Any]) -> dict:
     params = parse_page(filters, default_sort="name", default_order="asc")
-    stmt = select(TestDefinition)
+    stmt = select(Scenario)
     if filters.get("type"):
-        stmt = stmt.where(TestDefinition.type == filters["type"])
+        stmt = stmt.where(Scenario.type == filters["type"])
     if filters.get("status"):
-        stmt = stmt.where(TestDefinition.status == filters["status"])
+        stmt = stmt.where(Scenario.status == filters["status"])
     if filters.get("source"):
-        stmt = stmt.where(TestDefinition.source == filters["source"])
+        stmt = stmt.where(Scenario.source == filters["source"])
     if filters.get("target"):
-        stmt = stmt.where(TestDefinition.target_key == filters["target"])
+        stmt = stmt.where(Scenario.target_key == filters["target"])
     if filters.get("name"):
-        stmt = stmt.where(TestDefinition.name.ilike(f"%{filters['name']}%"))
+        stmt = stmt.where(Scenario.name.ilike(f"%{filters['name']}%"))
     if filters.get("key"):
-        stmt = stmt.where(TestDefinition.key.ilike(f"%{filters['key']}%"))
+        stmt = stmt.where(Scenario.key.ilike(f"%{filters['key']}%"))
     if filters.get("owner"):
-        stmt = stmt.where(TestDefinition.owner.ilike(f"%{filters['owner']}%"))
+        stmt = stmt.where(Scenario.owner.ilike(f"%{filters['owner']}%"))
     if filters.get("last_run_status"):
-        stmt = stmt.where(TestDefinition.last_run_status == filters["last_run_status"])
+        stmt = stmt.where(Scenario.last_run_status == filters["last_run_status"])
     if filters.get("created_at"):
-        stmt = stmt.where(cast(TestDefinition.created_at, String).ilike(f"%{filters['created_at']}%"))
+        stmt = stmt.where(cast(Scenario.created_at, String).ilike(f"%{filters['created_at']}%"))
     if filters.get("tag"):
-        stmt = stmt.where(TestDefinition.tags.contains([filters["tag"]]))
+        stmt = stmt.where(Scenario.tags.contains([filters["tag"]]))
     if filters.get("tags"):
         tags = [t.strip() for t in str(filters["tags"]).split(",") if t.strip()]
         if tags:
-            stmt = stmt.where(TestDefinition.tags.contains(tags))
+            stmt = stmt.where(Scenario.tags.contains(tags))
     if params.q:
         like = f"%{params.q}%"
         stmt = stmt.where(or_(
-            TestDefinition.name.ilike(like), TestDefinition.key.ilike(like),
-            TestDefinition.owner.ilike(like), TestDefinition.target_key.ilike(like),
+            Scenario.name.ilike(like), Scenario.key.ilike(like),
+            Scenario.owner.ilike(like), Scenario.target_key.ilike(like),
         ))
     stmt = apply_sort(stmt, params, {
-        "name": TestDefinition.name, "key": TestDefinition.key, "type": TestDefinition.type,
-        "source": TestDefinition.source, "target_key": TestDefinition.target_key,
-        "last_run_at": TestDefinition.last_run_at, "last_run_status": TestDefinition.last_run_status,
-        "created_at": TestDefinition.created_at, "updated_at": TestDefinition.updated_at,
-        "owner": TestDefinition.owner, "status": TestDefinition.status,
-        "tags": cast(TestDefinition.tags, String),
+        "name": Scenario.name, "key": Scenario.key, "type": Scenario.type,
+        "source": Scenario.source, "target_key": Scenario.target_key,
+        "last_run_at": Scenario.last_run_at, "last_run_status": Scenario.last_run_status,
+        "created_at": Scenario.created_at, "updated_at": Scenario.updated_at,
+        "owner": Scenario.owner, "status": Scenario.status,
+        "tags": cast(Scenario.tags, String),
     })
     total = int(db.scalar(select(func.count()).select_from(stmt.order_by(None).subquery())) or 0)
     rows = db.scalars(stmt.offset((params.page - 1) * params.page_size).limit(params.page_size)).all()
-    return envelope([serializers.test_definition(d) for d in rows], total, params)
+    return envelope([serializers.scenario(d) for d in rows], total, params)
 
 
 def _source_code(revision) -> str | None:
@@ -331,7 +331,7 @@ def _source_code(revision) -> str | None:
 
 
 def get_test_detail(db: Session, test_id: str) -> dict:
-    d = db.get(TestDefinition, test_id)
+    d = db.get(Scenario, test_id)
     if not d:
         raise NotFoundError("test not found")
     detail = serializers.test_detail(d)
@@ -362,7 +362,7 @@ def delete_test(db: Session, test_id: str) -> dict:
     from src.execution.models import RunLog, RunQueue, TestRun, TestRunAssertion, TestRunStep
     from src.scheduling.models import Schedule, ScheduleTest
 
-    d = db.get(TestDefinition, test_id)
+    d = db.get(Scenario, test_id)
     if not d:
         raise NotFoundError("test not found")
     
@@ -371,7 +371,7 @@ def delete_test(db: Session, test_id: str) -> dict:
         
     active = db.scalars(
         select(TestRun.id).where(
-            TestRun.test_definition_id == test_id,
+            TestRun.scenario_id == test_id,
             TestRun.status.not_in(list(TERMINAL_STATUSES)),
         )
     ).all()
@@ -382,35 +382,35 @@ def delete_test(db: Session, test_id: str) -> dict:
             details={"active_runs": len(active)},
         )
 
-    run_ids_subq = select(TestRun.id).where(TestRun.test_definition_id == test_id)
+    run_ids_subq = select(TestRun.id).where(TestRun.scenario_id == test_id)
     db.execute(sa_delete(RunLog).where(RunLog.test_run_id.in_(run_ids_subq)))
     db.execute(sa_delete(TestRunStep).where(TestRunStep.test_run_id.in_(run_ids_subq)))
     db.execute(sa_delete(TestRunAssertion).where(TestRunAssertion.test_run_id.in_(run_ids_subq)))
     db.execute(sa_delete(RunQueue).where(RunQueue.test_run_id.in_(run_ids_subq)))
-    db.execute(sa_delete(TestRun).where(TestRun.test_definition_id == test_id))
+    db.execute(sa_delete(TestRun).where(TestRun.scenario_id == test_id))
 
-    schedule_ids = list(db.scalars(select(ScheduleTest.schedule_id).where(ScheduleTest.test_definition_id == test_id)).all())
-    db.execute(sa_delete(ScheduleTest).where(ScheduleTest.test_definition_id == test_id))
+    schedule_ids = list(db.scalars(select(ScheduleTest.schedule_id).where(ScheduleTest.scenario_id == test_id)).all())
+    db.execute(sa_delete(ScheduleTest).where(ScheduleTest.scenario_id == test_id))
     for schedule_id in schedule_ids:
         schedule = db.get(Schedule, schedule_id)
         if not schedule:
             continue
         replacement = db.scalars(select(ScheduleTest).where(ScheduleTest.schedule_id == schedule_id).order_by(ScheduleTest.created_at)).first()
         if replacement:
-            schedule.test_definition_id = replacement.test_definition_id
+            schedule.scenario_id = replacement.scenario_id
         else:
             db.delete(schedule)
 
-    db.execute(sa_delete(TestRevision).where(TestRevision.test_definition_id == test_id))
-    db.execute(sa_delete(TestDefinition).where(TestDefinition.id == test_id))
+    db.execute(sa_delete(TestRevision).where(TestRevision.scenario_id == test_id))
+    db.execute(sa_delete(Scenario).where(Scenario.id == test_id))
     db.flush()
     
     return {"deleted": test_id}
 
 
-def _make_revision(db: Session, definition: TestDefinition, *, code_ref=None, config=None) -> TestRevision:
+def _make_revision(db: Session, definition: Scenario, *, code_ref=None, config=None) -> TestRevision:
     n = (max((r.revision_number for r in definition.revisions), default=0)) + 1
-    rev = TestRevision(test_definition_id=definition.id, revision_number=n, code_ref=code_ref, config=config or {})
+    rev = TestRevision(scenario_id=definition.id, revision_number=n, code_ref=code_ref, config=config or {})
     db.add(rev)
     db.flush()
     definition.current_revision_id = rev.id
@@ -443,9 +443,9 @@ def _discover_tests(db: Session, modules: tuple[str, ...] | None = None) -> dict
         seen_keys.add(key)
         meta = cls.metadata
         code_ref = f"{cls.__module__}:{cls.__name__}"
-        d = db.scalars(select(TestDefinition).where(TestDefinition.key == key)).first()
+        d = db.scalars(select(Scenario).where(Scenario.key == key)).first()
         if d is None:
-            d = TestDefinition(
+            d = Scenario(
                 project_id=project.id, key=key, name=meta.name, type=meta.type,
                 source="code", owner=meta.owner, target_key=meta.target,
                 tags=list(meta.tags), status="active",
@@ -468,7 +468,7 @@ def _discover_tests(db: Session, modules: tuple[str, ...] | None = None) -> dict
                 unchanged += 1
 
     missing = 0
-    for d in db.scalars(select(TestDefinition).where(TestDefinition.source == "code")).all():
+    for d in db.scalars(select(Scenario).where(Scenario.source == "code")).all():
         if d.key not in seen_keys and d.status != "missing_from_source":
             d.status = "missing_from_source"
             missing += 1
@@ -485,9 +485,9 @@ def create_request_test(db: Session, payload: dict[str, Any]) -> dict:
         raise ValidationError("name is required")
     project = default_project(db)
     key = payload.get("key") or f"ui.{name.lower().strip().replace(' ', '_')}"
-    if db.scalars(select(TestDefinition).where(TestDefinition.key == key)).first():
+    if db.scalars(select(Scenario).where(Scenario.key == key)).first():
         raise ConflictError(f"a test with key {key!r} already exists")
-    d = TestDefinition(
+    d = Scenario(
         project_id=project.id, key=key, name=name, type=TYPE_HTTP, source="ui",
         owner=payload.get("owner", "admin"), target_key=_config_target_key(config),
         tags=payload.get("tags") or [], status="active",
@@ -499,7 +499,7 @@ def create_request_test(db: Session, payload: dict[str, Any]) -> dict:
 
 
 def update_request_test(db: Session, test_id: str, payload: dict[str, Any]) -> dict:
-    d = db.get(TestDefinition, test_id)
+    d = db.get(Scenario, test_id)
     if not d:
         raise NotFoundError("test not found")
     if d.source != "ui":
@@ -519,7 +519,7 @@ def delete_request_test(db: Session, test_id: str) -> dict:
     from src.execution.models import RunLog, RunQueue, TestRun, TestRunAssertion, TestRunStep
     from src.scheduling.models import Schedule, ScheduleTest
 
-    d = db.get(TestDefinition, test_id)
+    d = db.get(Scenario, test_id)
     if not d:
         raise NotFoundError("test not found")
     if d.source != "ui":
@@ -530,7 +530,7 @@ def delete_request_test(db: Session, test_id: str) -> dict:
     # wait for them to reach a terminal state (or cancel them) first.
     active = db.scalars(
         select(TestRun.id).where(
-            TestRun.test_definition_id == test_id,
+            TestRun.scenario_id == test_id,
             TestRun.status.not_in(list(TERMINAL_STATUSES)),
         )
     ).all()
@@ -541,26 +541,26 @@ def delete_request_test(db: Session, test_id: str) -> dict:
             details={"active_runs": len(active)},
         )
 
-    run_ids = list(db.scalars(select(TestRun.id).where(TestRun.test_definition_id == test_id)).all())
+    run_ids = list(db.scalars(select(TestRun.id).where(TestRun.scenario_id == test_id)).all())
     if run_ids:
         db.execute(sa_delete(RunLog).where(RunLog.test_run_id.in_(run_ids)))
         db.execute(sa_delete(TestRunStep).where(TestRunStep.test_run_id.in_(run_ids)))
         db.execute(sa_delete(TestRunAssertion).where(TestRunAssertion.test_run_id.in_(run_ids)))
         db.execute(sa_delete(RunQueue).where(RunQueue.test_run_id.in_(run_ids)))
         db.execute(sa_delete(TestRun).where(TestRun.id.in_(run_ids)))
-    schedule_ids = list(db.scalars(select(ScheduleTest.schedule_id).where(ScheduleTest.test_definition_id == test_id)).all())
-    db.execute(sa_delete(ScheduleTest).where(ScheduleTest.test_definition_id == test_id))
+    schedule_ids = list(db.scalars(select(ScheduleTest.schedule_id).where(ScheduleTest.scenario_id == test_id)).all())
+    db.execute(sa_delete(ScheduleTest).where(ScheduleTest.scenario_id == test_id))
     for schedule_id in schedule_ids:
         schedule = db.get(Schedule, schedule_id)
         if not schedule:
             continue
         replacement = db.scalars(select(ScheduleTest).where(ScheduleTest.schedule_id == schedule_id).order_by(ScheduleTest.created_at)).first()
         if replacement:
-            schedule.test_definition_id = replacement.test_definition_id
+            schedule.scenario_id = replacement.scenario_id
         else:
             db.delete(schedule)
-    db.execute(sa_delete(TestRevision).where(TestRevision.test_definition_id == test_id))
-    db.execute(sa_delete(TestDefinition).where(TestDefinition.id == test_id))
+    db.execute(sa_delete(TestRevision).where(TestRevision.scenario_id == test_id))
+    db.execute(sa_delete(Scenario).where(Scenario.id == test_id))
     return {"deleted": test_id}
 
 
@@ -576,9 +576,9 @@ def _get_target_detail(db: Session, target_id: str) -> dict:
     from src.scheduling.models import ScheduleTest
 
     target = _target_or_404(db, target_id)
-    tests_stmt = select(TestDefinition.id).where(
-        TestDefinition.project_id == target.project_id,
-        TestDefinition.target_key == target.key,
+    tests_stmt = select(Scenario.id).where(
+        Scenario.project_id == target.project_id,
+        Scenario.target_key == target.key,
     )
     test_ids = list(db.scalars(tests_stmt).all())
     active_run = TestRun.stats_reset_at.is_(None)
@@ -597,7 +597,7 @@ def _get_target_detail(db: Session, target_id: str) -> dict:
     if test_ids:
         scheduled = int(db.scalar(
             select(func.count(func.distinct(ScheduleTest.schedule_id)))
-            .where(ScheduleTest.test_definition_id.in_(test_ids))
+            .where(ScheduleTest.scenario_id.in_(test_ids))
         ) or 0)
     return {
         "target": serializers.target(target),
@@ -666,16 +666,16 @@ def _target_stats(db: Session, target_id: str, *, hours: int = 168) -> dict:
         select(TestRun).where(TestRun.target_id == target.id, TestRun.stats_reset_at.is_(None), TestRun.status.in_(["failed", "error", "timeout"]))
         .order_by(TestRun.queued_at.desc()).limit(10)
     ).all()
-    def_ids = {r.test_definition_id for r in recent}
-    defs = {d.id: d for d in db.scalars(select(TestDefinition).where(TestDefinition.id.in_(def_ids))).all()} if def_ids else {}
+    def_ids = {r.scenario_id for r in recent}
+    defs = {d.id: d for d in db.scalars(select(Scenario).where(Scenario.id.in_(def_ids))).all()} if def_ids else {}
     recent_failed = [{
-        "id": r.id, "test_definition_id": r.test_definition_id,
-        "test_name": defs[r.test_definition_id].name if r.test_definition_id in defs else None,
+        "id": r.id, "scenario_id": r.scenario_id,
+        "test_name": defs[r.scenario_id].name if r.scenario_id in defs else None,
         "status": r.status, "error_category": r.error_category,
         "defect_type": r.defect_type, "finished_at": r.finished_at.isoformat() if r.finished_at else None,
     } for r in recent]
 
-    tests = db.scalars(select(TestDefinition).where(TestDefinition.project_id == target.project_id, TestDefinition.target_key == target.key).order_by(TestDefinition.name)).all()
+    tests = db.scalars(select(Scenario).where(Scenario.project_id == target.project_id, Scenario.target_key == target.key).order_by(Scenario.name)).all()
     latest_per_test = [{
         "id": d.id, "key": d.key, "name": d.name,
         "last_run_status": d.last_run_status, "last_run_at": d.last_run_at.isoformat() if d.last_run_at else None,

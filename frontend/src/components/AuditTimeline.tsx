@@ -15,6 +15,47 @@ function actionLabel(action: string): string {
   return action.split('_').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' ')
 }
 
+function eventTitle(event: AuditEventDto): string {
+  if (event.entity_type === 'test_runs') {
+    if (event.action === 'CREATED') return 'Run created and queued'
+    if (event.action === 'UPDATED') {
+      const oldStatus = event.old_value?.status
+      const newStatus = event.new_value?.status
+      if (oldStatus !== newStatus && newStatus) {
+        if (newStatus === 'running') return 'Run started execution'
+        if (newStatus === 'passed') return 'Run finished (passed)'
+        if (newStatus === 'failed') return 'Run finished (failed)'
+        if (newStatus === 'canceled') return 'Run canceled'
+        return `Run changed state to ${newStatus}`
+      }
+      return 'Run updated'
+    }
+    if (event.action === 'DELETED') return 'Run deleted'
+  }
+  
+  if (event.entity_type === 'scenarios') {
+    if (event.action === 'CREATED') return 'Scenario created'
+    if (event.action === 'UPDATED') return 'Scenario updated'
+    if (event.action === 'DELETED') return 'Scenario deleted'
+  }
+  
+  if (event.entity_type === 'schedules') {
+    if (event.action === 'CREATED') return 'Schedule created'
+    if (event.action === 'UPDATED') {
+      const oldStatus = event.old_value?.status
+      const newStatus = event.new_value?.status
+      if (oldStatus !== newStatus && newStatus) {
+         if (newStatus === 'paused') return 'Schedule paused'
+         if (newStatus === 'active') return 'Schedule activated'
+      }
+      return 'Schedule updated'
+    }
+    if (event.action === 'DELETED') return 'Schedule deleted'
+  }
+
+  return actionLabel(event.action)
+}
+
 function valueDiff(old?: Record<string, unknown> | null, next?: Record<string, unknown> | null) {
   if (!old && !next) return null
   if (!old && next) {
@@ -72,7 +113,12 @@ function AuditCard({ event, expanded, onToggle }: { event: AuditEventDto; expand
       <Space style={{ width: '100%', justifyContent: 'space-between' }} align="start">
         <Space direction="vertical" size={4} style={{ flex: 1 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Tag color={ACTION_COLORS[event.action] || 'default'}>{actionLabel(event.action)}</Tag>
+            <Space>
+              <Tag color={ACTION_COLORS[event.action] || 'default'} style={{ margin: 0 }}>
+                {actionLabel(event.action)}
+              </Tag>
+              <Typography.Text strong>{eventTitle(event)}</Typography.Text>
+            </Space>
             <Tooltip title={dayjs(event.created_at).format('YYYY-MM-DD HH:mm:ss')}>
               <Typography.Text type="secondary" style={{ fontSize: 12 }}>
                 {dayjs(event.created_at).fromNow()}

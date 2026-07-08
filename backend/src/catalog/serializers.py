@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from src.catalog.models import Project, Target, TestDefinition, TestRevision
+from src.catalog.models import Project, Target, Scenario, TestRevision
 
 
 def _iso(dt) -> str | None:
@@ -32,7 +32,7 @@ def revision(r: TestRevision) -> dict[str, Any]:
     }
 
 
-def test_definition(d: TestDefinition) -> dict[str, Any]:
+def scenario(d: Scenario) -> dict[str, Any]:
     return {
         "id": d.id, "project_id": d.project_id, "key": d.key, "name": d.name,
         "type": d.type, "source": d.source, "owner": d.owner, "target_key": d.target_key,
@@ -43,7 +43,7 @@ def test_definition(d: TestDefinition) -> dict[str, Any]:
     }
 
 
-def test_detail(d: TestDefinition) -> dict[str, Any]:
-    out = test_definition(d)
+def test_detail(d: Scenario) -> dict[str, Any]:
+    out = scenario(d)
     out["revisions"] = [revision(r) for r in d.revisions]
     return out

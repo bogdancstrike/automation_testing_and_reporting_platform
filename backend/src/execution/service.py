@@ -6,7 +6,7 @@ from typing import Any
 from sqlalchemy import String, cast, func, or_, select
 from sqlalchemy.orm import Session
 
-from src.catalog.models import Target, TestDefinition
+from src.catalog.models import Target, Scenario
 from src.catalog.service import resolve_target
 from src.core.correlation import get_correlation_id
 from src.core.clock import utcnow
@@ -30,13 +30,13 @@ def capability_for(test_type: str) -> str:
     return _CAPABILITY.get(test_type, "http")
 
 
-def enqueue_run(db: Session, definition: TestDefinition, *, trigger: str = "manual",
+def enqueue_run(db: Session, definition: Scenario, *, trigger: str = "manual",
                 environment: str = "default", schedule_id: str | None = None,
                 triggered_by: str | None = None) -> TestRun:
     target = resolve_target(db, definition.project_id, definition.target_key)
     run = TestRun(
         project_id=definition.project_id,
-        test_definition_id=definition.id,
+        scenario_id=definition.id,
         revision_id=definition.current_revision_id,
         target_id=target.id if target else None,
         schedule_id=schedule_id,
@@ -58,7 +58,7 @@ def enqueue_run(db: Session, definition: TestDefinition, *, trigger: str = "manu
 
 
 def run_now(db: Session, test_id: str, *, environment: str = "default", triggered_by: str | None = None) -> dict:
-    d = db.get(TestDefinition, test_id)
+    d = db.get(Scenario, test_id)
     if not d:
         raise NotFoundError("test not found")
     if d.status == "missing_from_source":
@@ -124,7 +124,7 @@ def restart_run(db: Session, run_id: str) -> dict:
         q.claimed_at = None
         capability = q.capability
     else:
-        d = db.get(TestDefinition, r.test_definition_id)
+        d = db.get(Scenario, r.scenario_id)
         capability = capability_for(d.type) if d else "http"
         db.add(RunQueue(test_run_id=r.id, capability=capability))
         
@@ -143,9 +143,9 @@ def restart_all_failed(db: Session) -> dict:
 
 
 def _names(db: Session, runs: list[TestRun]) -> tuple[dict, dict]:
-    def_ids = {r.test_definition_id for r in runs}
+    def_ids = {r.scenario_id for r in runs}
     tgt_ids = {r.target_id for r in runs if r.target_id}
-    defs = {d.id: d for d in db.scalars(select(TestDefinition).where(TestDefinition.id.in_(def_ids))).all()} if def_ids else {}
+    defs = {d.id: d for d in db.scalars(select(Scenario).where(Scenario.id.in_(def_ids))).all()} if def_ids else {}
     tgts = {t.id: t for t in db.scalars(select(Target).where(Target.id.in_(tgt_ids))).all()} if tgt_ids else {}
     return defs, tgts
 
@@ -163,14 +163,14 @@ def _list_runs(db: Session, filters: dict[str, Any]) -> dict:
     params = parse_page(filters, default_sort="queued_at", default_order="desc", max_page_size=100)
     stmt = (
         select(TestRun)
-        .outerjoin(TestDefinition, TestRun.test_definition_id == TestDefinition.id)
+        .outerjoin(Scenario, TestRun.scenario_id == Scenario.id)
         .outerjoin(Target, TestRun.target_id == Target.id)
         .where(TestRun.stats_reset_at.is_(None))
     )
     if filters.get("status"):
         stmt = stmt.where(TestRun.status == filters["status"])
-    if filters.get("test_definition_id"):
-        stmt = stmt.where(TestRun.test_definition_id == filters["test_definition_id"])
+    if filters.get("scenario_id"):
+        stmt = stmt.where(TestRun.scenario_id == filters["scenario_id"])
     if filters.get("target_id"):
         stmt = stmt.where(TestRun.target_id == filters["target_id"])
     if filters.get("schedule_id"):
@@ -187,7 +187,7 @@ def _list_runs(db: Session, filters: dict[str, Any]) -> dict:
         stmt = stmt.where(Target.key == filters["target"])
     if filters.get("test"):
         like = f"%{filters['test']}%"
-        stmt = stmt.where(or_(TestDefinition.name.ilike(like), TestDefinition.key.ilike(like)))
+        stmt = stmt.where(or_(Scenario.name.ilike(like), Scenario.key.ilike(like)))
     if filters.get("worker_name"):
         stmt = stmt.where(TestRun.worker_name.ilike(f"%{filters['worker_name']}%"))
     if filters.get("duration_ms"):
@@ -207,12 +207,12 @@ def _list_runs(db: Session, filters: dict[str, Any]) -> dict:
     if filters.get("tags"):
         tags = [t.strip() for t in filters["tags"].split(",") if t.strip()]
         if tags:
-            stmt = stmt.where(TestDefinition.tags.contains(tags))
+            stmt = stmt.where(Scenario.tags.contains(tags))
     if params.q:
         like = f"%{params.q}%"
         stmt = stmt.where(or_(
-            TestDefinition.name.ilike(like),
-            TestDefinition.key.ilike(like),
+            Scenario.name.ilike(like),
+            Scenario.key.ilike(like),
             Target.name.ilike(like),
             Target.key.ilike(like),
             Target.base_url.ilike(like),
@@ -224,8 +224,8 @@ def _list_runs(db: Session, filters: dict[str, Any]) -> dict:
         "finished_at": TestRun.finished_at, "duration_ms": TestRun.duration_ms,
         "status": TestRun.status, "trigger": TestRun.trigger,
         "worker_name": TestRun.worker_name, "defect_type": TestRun.defect_type,
-        "error_category": TestRun.error_category, "test_name": TestDefinition.name,
-        "target_key": Target.key, "tags": cast(TestDefinition.tags, String),
+        "error_category": TestRun.error_category, "test_name": Scenario.name,
+        "target_key": Target.key, "tags": cast(Scenario.tags, String),
         "cleanup_failed": TestRun.cleanup_failed,
     })
     total = int(db.scalar(select(func.count()).select_from(stmt.order_by(None).subquery())) or 0)
@@ -234,9 +234,9 @@ def _list_runs(db: Session, filters: dict[str, Any]) -> dict:
     items = [
         serializers.run_summary(
             r,
-            test_name=defs[r.test_definition_id].name if r.test_definition_id in defs else None,
+            test_name=defs[r.scenario_id].name if r.scenario_id in defs else None,
             target_key=tgts[r.target_id].key if r.target_id in tgts else None,
-            tags=defs[r.test_definition_id].tags if r.test_definition_id in defs else [],
+            tags=defs[r.scenario_id].tags if r.scenario_id in defs else [],
         )
         for r in runs
     ]
@@ -247,7 +247,7 @@ def get_run_detail(db: Session, run_id: str) -> dict:
     r = db.get(TestRun, run_id)
     if not r or r.stats_reset_at is not None:
         raise NotFoundError("run not found")
-    d = db.get(TestDefinition, r.test_definition_id)
+    d = db.get(Scenario, r.scenario_id)
     t = db.get(Target, r.target_id) if r.target_id else None
     return serializers.run_detail(r, test_name=d.name if d else None, target_key=t.key if t else None, tags=d.tags if d else [])
 
@@ -301,7 +301,7 @@ def delete_all_runs(db: Session) -> dict:
     res = db.execute(delete(TestRun))
     
     # Also reset test definitions last run stats
-    for test in db.scalars(select(TestDefinition)).all():
+    for test in db.scalars(select(Scenario)).all():
         test.last_run_status = None
         test.last_run_at = None
         
@@ -337,8 +337,8 @@ def reset_target_stats(db: Session, target_id: str, *, actor: str, reason: str =
             item.status = "done"
 
     tests = db.scalars(
-        select(TestDefinition)
-        .where(TestDefinition.project_id == target.project_id, TestDefinition.target_key == target.key)
+        select(Scenario)
+        .where(Scenario.project_id == target.project_id, Scenario.target_key == target.key)
     ).all()
     for definition in tests:
         definition.last_run_status = None

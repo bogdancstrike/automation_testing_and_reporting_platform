@@ -25,7 +25,7 @@ from sqlalchemy import select, text  # noqa: E402
 from src.config import Config  # noqa: E402
 from src.core.db import Base, get_engine, session_scope  # noqa: E402
 import src.models_all  # noqa: E402,F401  (populates Base.metadata)
-from src.catalog.models import Project, Target, TestDefinition  # noqa: E402
+from src.catalog.models import Project, Target, Scenario  # noqa: E402
 from src.catalog import service as catalog  # noqa: E402
 from src.execution.service import enqueue_run  # noqa: E402
 from src.scheduling.models import Schedule  # noqa: E402
@@ -90,11 +90,11 @@ def main() -> int:
 
     # A schedule + one immediate run so there is data on first load.
     with session_scope() as db:
-        hc = db.scalars(select(TestDefinition).where(TestDefinition.key == "api.target_healthcheck")).first()
+        hc = db.scalars(select(Scenario).where(Scenario.key == "api.target_healthcheck")).first()
         if hc:
-            if not db.scalars(select(Schedule).where(Schedule.test_definition_id == hc.id)).first():
+            if not db.scalars(select(Schedule).where(Schedule.scenario_id == hc.id)).first():
                 create_schedule(db, {
-                    "test_definition_id": hc.id, "name": "Healthcheck every 3 min",
+                    "scenario_id": hc.id, "name": "Healthcheck every 3 min",
                     "recurrence_type": "interval", "interval_seconds": 180, "is_enabled": True,
                 })
                 log.info("seeded schedule for healthcheck")
@@ -118,39 +118,39 @@ def ensure_schema_compatibility() -> None:
         CREATE TABLE IF NOT EXISTS schedule_tests (
             id UUID PRIMARY KEY,
             schedule_id UUID NOT NULL REFERENCES schedules(id) ON DELETE CASCADE,
-            test_definition_id UUID NOT NULL REFERENCES test_definitions(id),
+            scenario_id UUID NOT NULL REFERENCES scenarios(id),
             created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
         )
         """,
-        "CREATE UNIQUE INDEX IF NOT EXISTS uq_schedule_tests_schedule_test ON schedule_tests (schedule_id, test_definition_id)",
+        "CREATE UNIQUE INDEX IF NOT EXISTS uq_schedule_tests_schedule_test ON schedule_tests (schedule_id, scenario_id)",
         "CREATE INDEX IF NOT EXISTS ix_schedule_tests_schedule_id ON schedule_tests (schedule_id)",
-        "CREATE INDEX IF NOT EXISTS ix_schedule_tests_test_definition_id ON schedule_tests (test_definition_id)",
+        "CREATE INDEX IF NOT EXISTS ix_schedule_tests_scenario_id ON schedule_tests (scenario_id)",
     ]
     with get_engine().begin() as conn:
         for statement in statements:
             conn.execute(text(statement))
         rows = conn.execute(text("""
-            SELECT s.id, s.test_definition_id
+            SELECT s.id, s.scenario_id
             FROM schedules s
-            WHERE s.test_definition_id IS NOT NULL
+            WHERE s.scenario_id IS NOT NULL
               AND NOT EXISTS (
                   SELECT 1
                   FROM schedule_tests st
                   WHERE st.schedule_id = s.id
-                    AND st.test_definition_id = s.test_definition_id
+                    AND st.scenario_id = s.scenario_id
               )
         """)).mappings().all()
         for row in rows:
             conn.execute(
                 text("""
-                    INSERT INTO schedule_tests (id, schedule_id, test_definition_id)
-                    VALUES (:id, :schedule_id, :test_definition_id)
+                    INSERT INTO schedule_tests (id, schedule_id, scenario_id)
+                    VALUES (:id, :schedule_id, :scenario_id)
                     ON CONFLICT DO NOTHING
                 """),
                 {
                     "id": str(uuid.uuid4()),
                     "schedule_id": row["id"],
-                    "test_definition_id": row["test_definition_id"],
+                    "scenario_id": row["scenario_id"],
                 },
             )
 

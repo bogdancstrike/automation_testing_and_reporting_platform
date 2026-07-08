@@ -68,7 +68,7 @@ def execute_run_message(message: dict, consumer_name: str, metadatas: dict):
                 span.set_attribute("run.skipped", "active:running")
                 log.info(f"run {run_id} is already running; skipping (redelivery)")
                 return None
-            span.set_attribute("test.definition_id", run.test_definition_id)
+            span.set_attribute("test.definition_id", run.scenario_id)
             mark_run_running(db, run, instance)
             queue.heartbeat(db, instance, status="busy", current_run_id=run.id)
 

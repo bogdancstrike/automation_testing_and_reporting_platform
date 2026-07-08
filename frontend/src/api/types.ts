@@ -27,7 +27,7 @@ export interface Target {
   tags: string[];
 }
 
-export interface TestDef {
+export interface Scenario {
   id: string;
   key: string;
   name: string;
@@ -52,7 +52,7 @@ export interface Revision {
   source_code?: string;
 }
 
-export interface TestDetail extends TestDef {
+export interface TestDetail extends Scenario {
   revisions: Revision[];
   config?: Record<string, any>;
   method?: string;
@@ -77,7 +77,7 @@ export interface AssertionResult {
 
 export interface RunSummary {
   id: string;
-  test_definition_id: string;
+  scenario_id: string;
   revision_id?: string;
   test_name?: string;
   target_id?: string;
@@ -110,8 +110,8 @@ export interface RunDetail extends RunSummary {
 
 export interface Schedule {
   id: string;
-  test_definition_id: string;
-  test_definition_ids?: string[];
+  scenario_id: string;
+  scenario_ids?: string[];
   tests?: {
     id: string;
     key: string;
@@ -170,7 +170,7 @@ export interface Failures {
   defect_distribution: Record<string, number>;
   recent_failed: {
     id: string;
-    test_definition_id?: string;
+    scenario_id?: string;
     test_name?: string;
     status: string;
     error_category?: string;
@@ -231,7 +231,7 @@ export interface TargetStats {
   defect_distribution: Record<string, number>;
   recent_failed: {
     id: string;
-    test_definition_id?: string;
+    scenario_id?: string;
     test_name?: string;
     status: string;
     error_category?: string;

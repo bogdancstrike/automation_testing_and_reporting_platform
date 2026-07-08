@@ -4,7 +4,7 @@ from sqlalchemy.orm import sessionmaker
 
 from src.core.db import Base
 import src.models_all  # noqa: F401
-from src.catalog.models import Project, Target, TestDefinition
+from src.catalog.models import Project, Target, Scenario
 from src.execution.models import RunQueue, TestRun
 from src.catalog import service as catalog_service
 from src.execution import service as execution_service
@@ -45,7 +45,7 @@ def test_enqueue_and_claim(db_session):
     })
     
     # 2. Create test definition
-    test_def = catalog_service.create_request_test(db, {
+    scenario = catalog_service.create_request_test(db, {
         "key": "ui.test",
         "name": "UI Test",
         "config": {
@@ -57,7 +57,7 @@ def test_enqueue_and_claim(db_session):
     })
     
     # 3. Enqueue run
-    run = execution_service.enqueue_run(db, db.get(TestDefinition, test_def["id"]))
+    run = execution_service.enqueue_run(db, db.get(Scenario, scenario["id"]))
     assert run.status == "queued"
     
     # 4. Claim run (worker with matching capabilities)
@@ -80,7 +80,7 @@ def test_mark_run_running_is_visible_before_final_result(db_session):
         "name": "Test Target",
         "base_url": "http://example.com"
     })
-    test_def = catalog_service.create_request_test(db, {
+    scenario = catalog_service.create_request_test(db, {
         "key": "ui.running",
         "name": "Running Visibility Test",
         "config": {
@@ -89,7 +89,7 @@ def test_mark_run_running_is_visible_before_final_result(db_session):
             "url": "/get",
         }
     })
-    run = execution_service.enqueue_run(db, db.get(TestDefinition, test_def["id"]))
+    run = execution_service.enqueue_run(db, db.get(Scenario, scenario["id"]))
     db.commit()
 
     Session = sessionmaker(bind=db.get_bind(), expire_on_commit=False)
@@ -112,7 +112,7 @@ def test_cancel_queued_run(db_session):
         "name": "Test Target",
         "base_url": "http://example.com"
     })
-    test_def = catalog_service.create_request_test(db, {
+    scenario = catalog_service.create_request_test(db, {
         "key": "ui.test",
         "name": "UI Test",
         "config": {
@@ -121,7 +121,7 @@ def test_cancel_queued_run(db_session):
             "url": "/get",
         }
     })
-    run = execution_service.enqueue_run(db, db.get(TestDefinition, test_def["id"]))
+    run = execution_service.enqueue_run(db, db.get(Scenario, scenario["id"]))
     
     # Cancel while queued
     res = execution_service.cancel_run(db, run.id)
@@ -140,7 +140,7 @@ def test_cancel_running_run_cooperative(db_session):
         "name": "Test Target",
         "base_url": "http://example.com"
     })
-    test_def = catalog_service.create_request_test(db, {
+    scenario = catalog_service.create_request_test(db, {
         "key": "ui.test2",
         "name": "UI Test 2",
         "config": {
@@ -151,7 +151,7 @@ def test_cancel_running_run_cooperative(db_session):
             ]
         }
     })
-    run = execution_service.enqueue_run(db, db.get(TestDefinition, test_def["id"]))
+    run = execution_service.enqueue_run(db, db.get(Scenario, scenario["id"]))
     
     # Claim run
     claimed = execution_queue.claim_next(db, "worker-1", ("http",))
@@ -195,26 +195,26 @@ def test_delete_request_test_refuses_active_runs(db_session):
     db = db_session
     catalog_service.create_target(db, {
         "key": "test_target", "name": "Test Target", "base_url": "http://example.com"})
-    test_def = catalog_service.create_request_test(db, {
+    scenario = catalog_service.create_request_test(db, {
         "key": "ui.del", "name": "UI Del",
         "config": {"target": "test_target", "method": "GET", "url": "/get"}})
-    test_id = test_def["id"]
+    test_id = scenario["id"]
 
     # A queued (non-terminal) run must block deletion with a 409 ConflictError.
-    run = execution_service.enqueue_run(db, db.get(TestDefinition, test_id))
+    run = execution_service.enqueue_run(db, db.get(Scenario, test_id))
     assert run.status == "queued"
     with pytest.raises(ConflictError) as ei:
         catalog_service.delete_request_test(db, test_id)
     assert ei.value.status_code == 409
     assert ei.value.details.get("active_runs") == 1
-    assert db.get(TestDefinition, test_id) is not None  # nothing deleted
+    assert db.get(Scenario, test_id) is not None  # nothing deleted
 
     # Once the run reaches a terminal state, deletion succeeds.
     execution_service.cancel_run(db, run.id)
     assert run.status == CANCELED
     result = catalog_service.delete_request_test(db, test_id)
     assert result == {"deleted": test_id}
-    assert db.get(TestDefinition, test_id) is None
+    assert db.get(Scenario, test_id) is None
 
 
 def test_audit_logging(db_session):

@@ -6,7 +6,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from src.catalog.models import TestDefinition
+from src.catalog.models import Scenario
 from src.comments import serializers
 from src.comments.models import EntityComment
 from src.core.errors import NotFoundError, ValidationError
@@ -32,7 +32,7 @@ def _clean_tags(tags: list[Any] | None) -> list[str]:
 
 def _entity_project(db: Session, entity_type: str, entity_id: str) -> str:
     if entity_type == "test":
-        test = db.get(TestDefinition, entity_id)
+        test = db.get(Scenario, entity_id)
         if not test:
             raise NotFoundError("test not found")
         return test.project_id
@@ -98,7 +98,7 @@ def update_test_tags(db: Session, test_id: str, tags: list[Any]) -> dict[str, An
 
 
 def _update_test_tags(db: Session, test_id: str, tags: list[Any]) -> dict[str, Any]:
-    test = db.get(TestDefinition, test_id)
+    test = db.get(Scenario, test_id)
     if not test:
         raise NotFoundError("test not found")
     test.tags = _clean_tags(tags)
@@ -117,7 +117,7 @@ def list_tags(db: Session, q: str = "") -> list[str]:
 def _list_tags(db: Session, q: str = "") -> list[str]:
     needle = q.strip().lower()
     values: dict[str, str] = {}
-    for tags in db.scalars(select(TestDefinition.tags)).all():
+    for tags in db.scalars(select(Scenario.tags)).all():
         for tag in tags or []:
             clean = str(tag).strip()
             if clean:

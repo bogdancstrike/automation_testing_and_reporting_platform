@@ -6,7 +6,7 @@ from typing import Any
 from sqlalchemy import String, cast, delete as sa_delete, func, or_, select
 from sqlalchemy.orm import Session
 
-from src.catalog.models import TestDefinition
+from src.catalog.models import Scenario
 from src.catalog.service import default_project
 from src.core.clock import utcnow
 from src.core.errors import NotFoundError, ValidationError
@@ -17,7 +17,7 @@ from src.scheduling.models import Schedule, ScheduleTest
 from src.scheduling.recurrence import compute_next
 
 
-def _scenario_summary(d: TestDefinition) -> dict[str, Any]:
+def _scenario_summary(d: Scenario) -> dict[str, Any]:
     return {
         "id": d.id,
         "key": d.key,
@@ -28,10 +28,10 @@ def _scenario_summary(d: TestDefinition) -> dict[str, Any]:
     }
 
 
-def _load_definitions(db: Session, test_ids: list[str]) -> list[TestDefinition]:
+def _load_definitions(db: Session, test_ids: list[str]) -> list[Scenario]:
     if not test_ids:
         return []
-    defs = {d.id: d for d in db.scalars(select(TestDefinition).where(TestDefinition.id.in_(test_ids))).all()}
+    defs = {d.id: d for d in db.scalars(select(Scenario).where(Scenario.id.in_(test_ids))).all()}
     missing = [test_id for test_id in test_ids if test_id not in defs]
     if missing:
         raise ValidationError(f"unknown scenario id(s): {', '.join(missing)}")
@@ -39,9 +39,9 @@ def _load_definitions(db: Session, test_ids: list[str]) -> list[TestDefinition]:
 
 
 def _payload_test_ids(payload: dict[str, Any]) -> list[str]:
-    raw = payload.get("test_definition_ids")
+    raw = payload.get("scenario_ids")
     if raw is None:
-        raw = payload.get("test_definition_id")
+        raw = payload.get("scenario_id")
     if not raw and payload.get("target_tags"):
         return []
     if raw is None:
@@ -57,14 +57,14 @@ def _payload_test_ids(payload: dict[str, Any]) -> list[str]:
     return out
 
 
-def _sync_schedule_tests(db: Session, schedule: Schedule, defs: list[TestDefinition]) -> None:
+def _sync_schedule_tests(db: Session, schedule: Schedule, defs: list[Scenario]) -> None:
     if defs:
-        schedule.test_definition_id = defs[0].id
+        schedule.scenario_id = defs[0].id
     else:
-        schedule.test_definition_id = None
+        schedule.scenario_id = None
     db.execute(sa_delete(ScheduleTest).where(ScheduleTest.schedule_id == schedule.id))
     for definition in defs:
-        db.add(ScheduleTest(schedule_id=schedule.id, test_definition_id=definition.id))
+        db.add(ScheduleTest(schedule_id=schedule.id, scenario_id=definition.id))
 
 
 def _tests_by_schedule(db: Session, schedules: list[Schedule]) -> dict[str, list[dict[str, Any]]]:
@@ -72,22 +72,22 @@ def _tests_by_schedule(db: Session, schedules: list[Schedule]) -> dict[str, list
     out: dict[str, list[dict[str, Any]]] = {s.id: [] for s in schedules}
     if schedule_ids:
         rows = db.execute(
-            select(ScheduleTest.schedule_id, TestDefinition)
-            .join(TestDefinition, ScheduleTest.test_definition_id == TestDefinition.id)
+            select(ScheduleTest.schedule_id, Scenario)
+            .join(Scenario, ScheduleTest.scenario_id == Scenario.id)
             .where(ScheduleTest.schedule_id.in_(schedule_ids))
-            .order_by(ScheduleTest.created_at, TestDefinition.name)
+            .order_by(ScheduleTest.created_at, Scenario.name)
         ).all()
         for schedule_id, definition in rows:
             out.setdefault(schedule_id, []).append(_scenario_summary(definition))
 
     for s in schedules:
         if s.target_tags:
-            conditions = [TestDefinition.tags.contains([t]) for t in s.target_tags]
+            conditions = [Scenario.tags.contains([t]) for t in s.target_tags]
             if conditions:
                 matched_defs = db.scalars(
-                    select(TestDefinition)
-                    .where(TestDefinition.project_id == s.project_id)
-                    .where(TestDefinition.status != "archived")
+                    select(Scenario)
+                    .where(Scenario.project_id == s.project_id)
+                    .where(Scenario.status != "archived")
                     .where(or_(*conditions))
                 ).all()
                 existing_ids = {t["id"] for t in out.setdefault(s.id, [])}
@@ -99,13 +99,13 @@ def _tests_by_schedule(db: Session, schedules: list[Schedule]) -> dict[str, list
                         existing_ids.add(md.id)
 
     # Legacy fallback for databases that have not backfilled schedule_tests yet.
-    missing = [s for s in schedules if not out.get(s.id) and s.test_definition_id]
+    missing = [s for s in schedules if not out.get(s.id) and s.scenario_id]
     if missing:
         defs = {d.id: d for d in db.scalars(
-            select(TestDefinition).where(TestDefinition.id.in_([s.test_definition_id for s in missing]))
+            select(Scenario).where(Scenario.id.in_([s.scenario_id for s in missing]))
         ).all()}
         for schedule in missing:
-            definition = defs.get(schedule.test_definition_id)
+            definition = defs.get(schedule.scenario_id)
             if definition:
                 out[schedule.id] = [_scenario_summary(definition)]
     return out
@@ -130,14 +130,14 @@ def list_schedules(db: Session, filters: dict[str, Any] | None = None) -> dict:
         like = f"%{filters['scenario']}%"
         stmt = stmt.where(Schedule.id.in_(
             select(ScheduleTest.schedule_id)
-            .join(TestDefinition, ScheduleTest.test_definition_id == TestDefinition.id)
-            .where(or_(TestDefinition.name.ilike(like), TestDefinition.key.ilike(like)))
+            .join(Scenario, ScheduleTest.scenario_id == Scenario.id)
+            .where(or_(Scenario.name.ilike(like), Scenario.key.ilike(like)))
         ))
     if filters.get("target"):
         stmt = stmt.where(Schedule.id.in_(
             select(ScheduleTest.schedule_id)
-            .join(TestDefinition, ScheduleTest.test_definition_id == TestDefinition.id)
-            .where(TestDefinition.target_key == filters["target"])
+            .join(Scenario, ScheduleTest.scenario_id == Scenario.id)
+            .where(Scenario.target_key == filters["target"])
         ))
     if filters.get("next_run_at"):
         stmt = stmt.where(cast(Schedule.next_run_at, String).ilike(f"%{filters['next_run_at']}%"))
@@ -145,8 +145,8 @@ def list_schedules(db: Session, filters: dict[str, Any] | None = None) -> dict:
         like = f"%{params.q}%"
         matching_schedules = (
             select(ScheduleTest.schedule_id)
-            .join(TestDefinition, ScheduleTest.test_definition_id == TestDefinition.id)
-            .where(or_(TestDefinition.name.ilike(like), TestDefinition.key.ilike(like), TestDefinition.target_key.ilike(like)))
+            .join(Scenario, ScheduleTest.scenario_id == Scenario.id)
+            .where(or_(Scenario.name.ilike(like), Scenario.key.ilike(like), Scenario.target_key.ilike(like)))
         )
         stmt = stmt.where(or_(Schedule.name.ilike(like), Schedule.id.in_(matching_schedules)))
     stmt = apply_sort(stmt, params, {
@@ -229,7 +229,7 @@ def create_schedule(db: Session, payload: dict[str, Any]) -> dict:
 
     s = Schedule(
         project_id=project.id,
-        test_definition_id=defs[0].id if defs else None,
+        scenario_id=defs[0].id if defs else None,
         name=name,
         target_tags=target_tags,
         recurrence_type=payload.get("recurrence_type", "interval"),
@@ -257,8 +257,8 @@ def update_schedule(db: Session, schedule_id: str, payload: dict[str, Any]) -> d
     s = db.get(Schedule, schedule_id)
     if not s:
         raise NotFoundError("schedule not found")
-    defs: list[TestDefinition] | None = None
-    if "test_definition_ids" in payload or "test_definition_id" in payload:
+    defs: list[Scenario] | None = None
+    if "scenario_ids" in payload or "scenario_id" in payload:
         defs = _load_definitions(db, _payload_test_ids(payload))
     for f in ("name", "recurrence_type", "interval_seconds", "cron_expression", "timezone", "environment", "is_enabled", "target_tags"):
         if f in payload:

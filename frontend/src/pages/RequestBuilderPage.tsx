@@ -264,7 +264,7 @@ export default function RequestBuilderPage() {
   });
 
   const schedule = useMutation({
-    mutationFn: (v: any) => qtp.createSchedule({ test_definition_id: editingId!, ...v }),
+    mutationFn: (v: any) => qtp.createSchedule({ scenario_id: editingId!, ...v }),
     onSuccess: () => {
       message.success("Scheduled");
       setSchedOpen(false);

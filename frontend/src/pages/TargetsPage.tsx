@@ -141,7 +141,7 @@ export default function TargetsPage() {
   -H "Content-Type: application/json" \\
   -d '{
     "environment": "default",
-    "test_definition_ids": ["optional-scenario-id-1", "optional-scenario-id-2"]
+    "scenario_ids": ["optional-scenario-id-1", "optional-scenario-id-2"]
   }'`} />
             </div>
           </div>
@@ -154,7 +154,7 @@ export default function TargetsPage() {
   -H "Content-Type: application/json" \\
   -d '{
     "environment": "default",
-    "test_definition_ids": ["optional-scenario-id-1", "optional-scenario-id-2"]
+    "scenario_ids": ["optional-scenario-id-1", "optional-scenario-id-2"]
   }'`} />
             </div>
           </div>

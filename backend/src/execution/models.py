@@ -20,8 +20,8 @@ class TestRun(Base):
     __tablename__ = "test_runs"
     id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True, default=_uuid)
     project_id: Mapped[str] = mapped_column(UUID(as_uuid=False), index=True)
-    test_definition_id: Mapped[str] = mapped_column(
-        UUID(as_uuid=False), ForeignKey("test_definitions.id"), index=True)
+    scenario_id: Mapped[str] = mapped_column(
+        UUID(as_uuid=False), ForeignKey("scenarios.id"), index=True)
     revision_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False), nullable=True)
     target_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False), nullable=True, index=True)
     schedule_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False), nullable=True, index=True)

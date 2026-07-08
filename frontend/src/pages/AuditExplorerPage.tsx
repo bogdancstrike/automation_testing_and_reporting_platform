@@ -52,7 +52,7 @@ const ACTION_FILTERS = [
 ].map((v) => ({ text: v, value: v }))
 
 const ENTITY_TYPES = [
-  'targets', 'test_definitions', 'schedules', 'test_runs',
+  'targets', 'scenarios', 'schedules', 'test_runs',
 ]
 
 interface AuditFilterState {

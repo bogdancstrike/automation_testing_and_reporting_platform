@@ -35,7 +35,7 @@ export default function TestDetailPage() {
   const [editingTags, setEditingTags] = useState<string[]>([]);
 
   const { data: t } = useQuery({ queryKey: ["test", id], queryFn: () => qtp.test(id) });
-  const { data: runs = [] } = useQuery({ queryKey: ["runs", "byTest", id], queryFn: () => qtp.runs(`?test_definition_id=${id}`) });
+  const { data: runs = [] } = useQuery({ queryKey: ["runs", "byTest", id], queryFn: () => qtp.runs(`?scenario_id=${id}`) });
   const { data: allTags = [] } = useQuery({ queryKey: ["allTags"], queryFn: () => qtp.tags("") });
   const { data: comments = [] } = useQuery({ queryKey: ["testComments", id], queryFn: () => qtp.testComments(id) });
 

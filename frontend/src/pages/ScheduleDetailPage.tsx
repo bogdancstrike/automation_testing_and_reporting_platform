@@ -55,7 +55,7 @@ export default function ScheduleDetailPage() {
       cron_expression: s.cron_expression,
       timezone: s.timezone,
       is_enabled: s.is_enabled,
-      test_definition_ids: (s.tests || []).filter((t: any) => !t.is_dynamic).map((t: any) => t.id),
+      scenario_ids: (s.tests || []).filter((t: any) => !t.is_dynamic).map((t: any) => t.id),
       target_tags: s.target_tags || []
     });
     setOpenEdit(true);
@@ -66,7 +66,7 @@ export default function ScheduleDetailPage() {
   const runs = runsPage || [];
   const chartData = runs.slice().reverse();
   const runChartOptions = {
-    tooltip: { trigger: 'axis', formatter: (params: any) => { const p = params[0]; const data = chartData[p.dataIndex]; return `Scenario: ${data.test_name || data.test_definition_id}<br/>${formatLocalTime(data.queued_at)}<br/>Status: ${data.status}<br/>Duration: ${data.duration_ms || 0} ms`; } },
+    tooltip: { trigger: 'axis', formatter: (params: any) => { const p = params[0]; const data = chartData[p.dataIndex]; return `Scenario: ${data.test_name || data.scenario_id}<br/>${formatLocalTime(data.queued_at)}<br/>Status: ${data.status}<br/>Duration: ${data.duration_ms || 0} ms`; } },
     xAxis: { type: 'category', data: chartData.map((r: any) => ""), show: false },
     yAxis: { type: 'value', splitLine: { lineStyle: { type: 'dashed', color: '#f0f0f0' } } },
     series: [{
@@ -177,7 +177,7 @@ export default function ScheduleDetailPage() {
               rowKey="id"
               size="small"
               pagination={false}
-              dataSource={s.tests?.length ? s.tests : [{ id: s.test_definition_id, name: s.test_name, key: s.test_definition_id, target_key: s.target_key }]}
+              dataSource={s.tests?.length ? s.tests : [{ id: s.scenario_id, name: s.test_name, key: s.scenario_id, target_key: s.target_key }]}
               onRow={(scenario: any) => ({ onClick: () => nav(`/scenarios/${scenario.id}`), style: { cursor: "pointer" } })}
               columns={[
                 { title: "Name", dataIndex: "name", render: (value, scenario: any) => <a>{value || scenario.id}</a>, ...textFilterLocal("name", "Search name") },
@@ -207,7 +207,7 @@ export default function ScheduleDetailPage() {
                 ))}
                 onRow={(r: any) => ({ onClick: () => nav(`/runs/${r.id}`), style: { cursor: "pointer" } })}
                 columns={[
-                  { title: "Scenario", dataIndex: "test_name", render: (n, r: any) => n || r.test_definition_id, sorter: true, sortOrder: antSortOrder(tableRunsParams, "test_name"), ...textFilter("test_name", tableRunsParams, "Search scenario") },
+                  { title: "Scenario", dataIndex: "test_name", render: (n, r: any) => n || r.scenario_id, sorter: true, sortOrder: antSortOrder(tableRunsParams, "test_name"), ...textFilter("test_name", tableRunsParams, "Search scenario") },
                   { title: "Status", dataIndex: "status", render: (st) => <StatusTag status={st} />, ...menuFilter("status", tableRunsParams, ["queued", "running", "passed", "failed", "error", "timeout", "canceled"].map(s => ({ text: s, value: s }))) },
                   { title: "Duration", dataIndex: "duration_ms", render: (ms) => ms != null ? `${ms} ms` : "—", sorter: true, sortOrder: antSortOrder(tableRunsParams, "duration_ms") },
                   { title: "Defect", dataIndex: "defect_type", render: (d) => d || "—", ...menuFilter("defect_type", tableRunsParams, ["timeout", "validation_failed", "target_unavailable", "script_error", "infrastructure_error"].map(s => ({ text: s, value: s }))) },
@@ -221,7 +221,7 @@ export default function ScheduleDetailPage() {
 
       <Modal title="Edit schedule" open={openEdit} onCancel={() => setOpenEdit(false)} onOk={() => form.validateFields().then((v) => update.mutate(v))} confirmLoading={update.isPending}>
         <Form form={form} layout="vertical">
-          <Form.Item name="test_definition_ids" label="Scenarios (Explicit)" rules={[{ required: false }]} tooltip="Explicitly select scenarios to include"><Select mode="multiple" showSearch optionFilterProp="label" options={testsOptions.map((t) => ({ value: t.id, label: `${t.name} (${t.key})` }))} allowClear /></Form.Item>
+          <Form.Item name="scenario_ids" label="Scenarios (Explicit)" rules={[{ required: false }]} tooltip="Explicitly select scenarios to include"><Select mode="multiple" showSearch optionFilterProp="label" options={testsOptions.map((t) => ({ value: t.id, label: `${t.name} (${t.key})` }))} allowClear /></Form.Item>
           <Form.Item name="target_tags" label="Scenarios by Tags" rules={[{ required: false }]} tooltip="Automatically include all scenarios matching ANY of these tags"><Select mode="tags" placeholder="e.g. #60mins, nightly" allowClear options={allTags.map((tag: string) => ({ value: tag, label: tag }))} /></Form.Item>
           <Form.Item name="name" label="Name"><Input placeholder="optional" /></Form.Item>
           <Form.Item name="recurrence_type" label="Recurrence"><Select options={["interval", "cron", "once"].map((value) => ({ value }))} /></Form.Item>

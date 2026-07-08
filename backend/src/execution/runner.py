@@ -6,7 +6,7 @@ import time
 
 from sqlalchemy.orm import Session
 
-from src.catalog.models import Target, TestDefinition, TestRevision
+from src.catalog.models import Target, Scenario, TestRevision
 from src.config import Config
 from src.core.clock import utcnow
 from framework.tracing import get_tracer
@@ -34,7 +34,7 @@ def mark_run_running(db: Session, run: TestRun, worker_name: str) -> None:
     db.flush()
 
 
-def _build_context(db: Session, run: TestRun, definition: TestDefinition,
+def _build_context(db: Session, run: TestRun, definition: Scenario,
                    target: Target | None) -> TestContext:
     ctx = TestContext(correlation_id=run.correlation_id)
     ctx.secrets = get_secrets_for_project(db, run.project_id)
@@ -85,9 +85,9 @@ def execute_run(db: Session, run: TestRun, worker_name: str) -> None:
     """Execute a claimed run and persist its outcome. Commits are the caller's."""
     with tracer.start_as_current_span("execution.run") as span:
         span.set_attribute("run.id", run.id)
-        span.set_attribute("run.test_definition_id", run.test_definition_id)
+        span.set_attribute("run.scenario_id", run.scenario_id)
         span.set_attribute("worker.name", worker_name)
-        definition = db.get(TestDefinition, run.test_definition_id)
+        definition = db.get(Scenario, run.scenario_id)
         revision = db.get(TestRevision, run.revision_id) if run.revision_id else None
         target = db.get(Target, run.target_id) if run.target_id else None
         if definition:
@@ -128,7 +128,7 @@ def execute_run(db: Session, run: TestRun, worker_name: str) -> None:
             span.set_attribute("run.error", result.error_message)
         _persist(db, run, definition, ctx, result)
 
-def _persist(db: Session, run: TestRun, definition: TestDefinition,
+def _persist(db: Session, run: TestRun, definition: Scenario,
              ctx: TestContext, result: TestResult) -> None:
     status = result.status if result.status in TERMINAL_STATUSES else ERROR
     run.status = status

@@ -38,8 +38,8 @@ class Target(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
-class TestDefinition(Base):
-    __tablename__ = "test_definitions"
+class Scenario(Base):
+    __tablename__ = "scenarios"
     id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True, default=_uuid)
     project_id: Mapped[str] = mapped_column(UUID(as_uuid=False), ForeignKey("projects.id"), index=True)
     key: Mapped[str] = mapped_column(String(200), unique=True, index=True)
@@ -65,14 +65,14 @@ class TestDefinition(Base):
 class TestRevision(Base):
     __tablename__ = "test_revisions"
     id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True, default=_uuid)
-    test_definition_id: Mapped[str] = mapped_column(
-        UUID(as_uuid=False), ForeignKey("test_definitions.id"), index=True)
+    scenario_id: Mapped[str] = mapped_column(
+        UUID(as_uuid=False), ForeignKey("scenarios.id"), index=True)
     revision_number: Mapped[int] = mapped_column(Integer, default=1)
     code_ref: Mapped[str | None] = mapped_column(Text, nullable=True)  # module:Class for code tests
     config: Mapped[dict] = mapped_column(JSONB, default=dict)          # request config for ui tests
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
-    definition: Mapped[TestDefinition] = relationship(back_populates="revisions")
+    definition: Mapped[Scenario] = relationship(back_populates="revisions")
 
 
 class Secret(Base):

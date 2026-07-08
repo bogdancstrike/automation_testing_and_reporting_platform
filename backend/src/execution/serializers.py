@@ -12,7 +12,7 @@ def _iso(dt) -> str | None:
 
 def run_summary(r: TestRun, *, test_name: str | None = None, target_key: str | None = None, tags: list[str] | None = None) -> dict[str, Any]:
     return {
-        "id": r.id, "project_id": r.project_id, "test_definition_id": r.test_definition_id,
+        "id": r.id, "project_id": r.project_id, "scenario_id": r.scenario_id,
         "revision_id": r.revision_id,
         "test_name": test_name, "target_id": r.target_id, "target_key": target_key,
         "tags": tags or [],

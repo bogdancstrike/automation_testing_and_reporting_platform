@@ -34,7 +34,7 @@ def signature_hash(definition_id: str, category: str | None, message: str | None
 
 def record_failure(db: Session, run: TestRun) -> tuple[str, str | None]:
     """Compute+persist the failure signature; return (hash, suggested_defect_type)."""
-    sig = signature_hash(run.test_definition_id, run.error_category, run.error_message)
+    sig = signature_hash(run.scenario_id, run.error_category, run.error_message)
     existing = db.scalars(
         select(FailureSignature).where(FailureSignature.signature_hash == sig)
     ).first()

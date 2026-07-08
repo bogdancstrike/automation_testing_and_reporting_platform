@@ -82,13 +82,13 @@ def list_(
         stmt = stmt.where(AuditEvent.entity_id == entity_id)
     if related_to:
         from sqlalchemy import or_, text
-        # If it's Postgres, we can do new_value->>'test_definition_id' == related_to
+        # If it's Postgres, we can do new_value->>'scenario_id' == related_to
         # For simplicity and cross-db compatibility in SQLAlchemy, we can cast new_value to string 
         # or just use postgres json operators since QTP uses Postgres.
         stmt = stmt.where(
             or_(
                 AuditEvent.entity_id == related_to,
-                text("new_value->>'test_definition_id' = :related_to").bindparams(related_to=related_to)
+                text("(new_value->>'scenario_id' = :related_to OR old_value->>'scenario_id' = :related_to)").bindparams(related_to=related_to)
             )
         )
     if correlation_id:
