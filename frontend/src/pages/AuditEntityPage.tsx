@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { Button, Card, Typography, Space, Breadcrumb } from 'antd'
 import { ArrowLeftOutlined } from '@ant-design/icons'
 import { qtp } from '../api/qtp'
-import { AuditTimeline } from '../components/AuditTimeline'
+import { AuditTable } from '../components/AuditTable'
 
 function getEntityUrl(type: string, id: string): string | null {
   if (type === 'scenarios') return `/scenarios/${id}`
@@ -20,7 +20,7 @@ export default function AuditEntityPage() {
   
   const { data: auditEvents = [], isLoading } = useQuery({
     queryKey: ['audit-entity', id],
-    queryFn: () => qtp.listAudit({ related_to: id, limit: 1000 }).then(r => r.items),
+    queryFn: () => qtp.listAudit({ related_to: id, limit: 1 }).then(r => r.items),
     enabled: !!id,
   })
 
@@ -60,7 +60,7 @@ export default function AuditEntityPage() {
         </Typography.Paragraph>
         
         <div style={{ marginTop: 24 }}>
-          <AuditTimeline events={auditEvents} loading={isLoading} />
+          <AuditTable baseFilters={{ related_to: id }} />
         </div>
       </Card>
     </div>

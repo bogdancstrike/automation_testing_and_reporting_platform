@@ -1,0 +1,239 @@
+import { useMemo, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import dayjs from 'dayjs'
+import {
+  Button, Flex, Form, Input, Select, Space, Table, Tag, Typography,
+  DatePicker,
+} from 'antd'
+import type { ColumnsType, TablePaginationConfig } from 'antd/es/table'
+import type { FilterValue, SorterResult, FilterDropdownProps } from 'antd/es/table/interface'
+import { SearchOutlined } from '@ant-design/icons'
+import { useNavigate } from 'react-router-dom'
+import { qtp } from '../api/qtp'
+import type { AuditEventDto } from '../api/types'
+
+const { RangePicker } = DatePicker
+
+function fmt(value?: string | null) {
+  return value ? dayjs(value).format('YYYY-MM-DD HH:mm:ss') : '-'
+}
+
+function textFilterDropdown(placeholder: string) {
+  return ({ setSelectedKeys, selectedKeys, confirm, clearFilters }: FilterDropdownProps) => (
+    <div style={{ padding: 8 }} onKeyDown={(e) => e.stopPropagation()}>
+      <Input
+        autoFocus
+        placeholder={placeholder}
+        value={selectedKeys[0] as string}
+        onChange={(e) => setSelectedKeys(e.target.value ? [e.target.value] : [])}
+        onPressEnter={() => confirm()}
+        style={{ width: 200, marginBottom: 8, display: 'block' }}
+        allowClear
+      />
+      <Space>
+        <Button type="primary" size="small" onClick={() => confirm()} icon={<SearchOutlined />}>Search</Button>
+        <Button size="small" onClick={() => { clearFilters?.(); confirm() }}>Reset</Button>
+      </Space>
+    </div>
+  )
+}
+
+const ACTION_FILTERS = [
+  'CREATED', 'UPDATED', 'DELETED',
+].map((v) => ({ text: v, value: v }))
+
+export interface AuditFilterState {
+  action?: string
+  actor?: string
+  entity_type?: string
+  entity_id?: string
+  correlation_id?: string
+  created_after?: string
+  created_before?: string
+  sort_by?: string
+  sort_dir?: 'asc' | 'desc'
+  page?: number
+  page_size?: number
+  q?: string
+  related_to?: string
+}
+
+export function AuditTable({ baseFilters }: { baseFilters?: Partial<AuditFilterState> }) {
+  const nav = useNavigate()
+  const [params, setParams] = useState<AuditFilterState>({ sort_by: 'created_at', sort_dir: 'desc', page: 1, page_size: 20, ...baseFilters })
+  const audit = useQuery({
+    queryKey: ['audit', params],
+    queryFn: () => qtp.listAudit({ ...params }),
+  })
+
+  const columns: ColumnsType<AuditEventDto> = useMemo(() => [
+    {
+      title: 'Time',
+      dataIndex: 'created_at',
+      width: 190,
+      render: fmt,
+      sorter: { multiple: 0 },
+      defaultSortOrder: 'descend' as const,
+    },
+    {
+      title: 'Action',
+      dataIndex: 'action',
+      width: 130,
+      render: (v) => <Tag color={v === 'DELETED' ? 'red' : v === 'UPDATED' ? 'blue' : 'green'}>{v}</Tag>,
+      sorter: { multiple: 0 },
+      filters: ACTION_FILTERS,
+      filteredValue: params.action ? [params.action] : null,
+      filterMultiple: false,
+      filterSearch: true,
+    },
+    {
+      title: 'Actor',
+      dataIndex: 'actor',
+      width: 180,
+      render: (v) => v || '-',
+      sorter: { multiple: 0 },
+      filterDropdown: textFilterDropdown('Search actor'),
+      filteredValue: params.actor ? [params.actor] : null,
+    },
+    {
+      title: 'Entity',
+      width: 200,
+      render: (_, row) => (
+        <Space size={4} wrap>
+          {row.entity_type && (
+            <Tag
+              color="geekblue"
+              style={{ cursor: 'pointer', fontSize: 11 }}
+              onClick={(e) => { e.stopPropagation(); setParams((p) => ({ ...p, entity_type: row.entity_type })) }}
+            >
+              {row.entity_type}
+            </Tag>
+          )}
+          <Typography.Text
+            ellipsis
+            style={{ fontSize: 12, maxWidth: 110, cursor: row.entity_id ? 'pointer' : 'default' }}
+            onClick={(e) => { if (row.entity_id) { e.stopPropagation(); setParams((p) => ({ ...p, entity_id: row.entity_id! })) } }}
+          >
+            {row.entity_id || '-'}
+          </Typography.Text>
+        </Space>
+      ),
+      filterDropdown: textFilterDropdown('Entity ID (UUID)'),
+      filteredValue: params.entity_id ? [params.entity_id] : null,
+    },
+    {
+      title: 'Correlation ID',
+      dataIndex: 'correlation_id',
+      width: 240,
+      ellipsis: true,
+      filterDropdown: textFilterDropdown('Correlation ID'),
+      filteredValue: params.correlation_id ? [params.correlation_id] : null,
+    },
+  ], [params])
+
+  const handleTableChange = (
+    _pagination: TablePaginationConfig,
+    filters: Record<string, FilterValue | null>,
+    sorter: SorterResult<AuditEventDto> | SorterResult<AuditEventDto>[]
+  ) => {
+    const s = Array.isArray(sorter) ? sorter[0] : sorter
+    setParams((prev) => {
+      const next: AuditFilterState = { ...prev, page: _pagination.current, page_size: _pagination.pageSize }
+      if (s && s.field) {
+        next.sort_by = s.field as string
+        next.sort_dir = s.order === 'ascend' ? 'asc' : s.order === 'descend' ? 'desc' : undefined
+      }
+      
+      const actFilters = filters['action'] || []
+      if (actFilters.length) next.action = actFilters[0] as string
+      else delete next.action
+
+      const actorFilters = filters['actor'] || []
+      if (actorFilters.length) next.actor = actorFilters[0] as string
+      else delete next.actor
+
+      const entityFilters = filters['Entity'] || []
+      if (entityFilters.length) next.entity_id = entityFilters[0] as string
+      else if (!next.entity_type) delete next.entity_id
+
+      const correlationFilters = filters['correlation_id'] || []
+      if (correlationFilters.length) next.correlation_id = correlationFilters[0] as string
+      else delete next.correlation_id
+
+      return next
+    })
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <Flex justify="space-between">
+        <Space>
+          <Input.Search
+            placeholder="Search action or actor..."
+            allowClear
+            onSearch={(val) => setParams(p => ({ ...p, q: val, page: 1 }))}
+            style={{ width: 250 }}
+          />
+        </Space>
+        <Space>
+            <RangePicker
+              showTime
+              onChange={(dates) => {
+                setParams((p) => {
+                  const next = { ...p }
+                  if (dates && dates[0] && dates[1]) {
+                    next.created_after = dates[0].toISOString()
+                    next.created_before = dates[1].toISOString()
+                  } else {
+                    delete next.created_after
+                    delete next.created_before
+                  }
+                  return next
+                })
+              }}
+            />
+        </Space>
+      </Flex>
+      <Table
+        dataSource={audit.data?.items || []}
+        rowKey="id"
+        columns={columns}
+        loading={audit.isLoading}
+        size="small"
+        pagination={{
+          current: audit.data?.page || 1,
+          pageSize: audit.data?.page_size || 20,
+          total: audit.data?.total || 0,
+          showSizeChanger: true,
+        }}
+        onChange={handleTableChange}
+        expandable={{
+          expandedRowRender: (record) => (
+             <div style={{ padding: 16, backgroundColor: '#fafafa', borderRadius: 8 }}>
+                {record.old_value && (
+                  <div style={{ marginBottom: 8 }}>
+                    <Typography.Text strong>Old Value:</Typography.Text>
+                    <pre style={{ margin: 0, fontSize: 12 }}>{JSON.stringify(record.old_value, null, 2)}</pre>
+                  </div>
+                )}
+                {record.new_value && (
+                  <div>
+                    <Typography.Text strong>New Value:</Typography.Text>
+                    <pre style={{ margin: 0, fontSize: 12 }}>{JSON.stringify(record.new_value, null, 2)}</pre>
+                  </div>
+                )}
+             </div>
+          )
+        }}
+        onRow={(record) => ({
+          onClick: () => {
+            if (record.entity_id) {
+              nav(`/audit/${record.entity_id}`)
+            }
+          },
+          style: { cursor: record.entity_id ? 'pointer' : 'default' }
+        })}
+      />
+    </div>
+  )
+}

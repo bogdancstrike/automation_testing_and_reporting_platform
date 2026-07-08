@@ -1,6 +1,8 @@
 """Audit explorer endpoints."""
 from flask import request as flask_request
 
+from src.api._helpers import query_args
+
 from src.core.db import session_scope
 from src.iam.decorators import require_authenticated
 from src.audit.serializers import serialize_audit_event
@@ -18,21 +20,7 @@ def _limit() -> int:
 def list_audit(app, operation, request, principal=None, **kwargs):
     actor_username = getattr(principal, "username", None) or getattr(principal, "subject", None)
     with session_scope() as db:
-        events = audit_service.list_(
-            db,
-            actor=actor_username,
-            action=flask_request.args.get("action"),
-            entity_type=flask_request.args.get("entity_type"),
-            entity_id=flask_request.args.get("entity_id"),
-            related_to=flask_request.args.get("related_to"),
-            correlation_id=flask_request.args.get("correlation_id"),
-            created_after=flask_request.args.get("created_after"),
-            created_before=flask_request.args.get("created_before"),
-            sort_by=flask_request.args.get("sort_by", "created_at"),
-            sort_dir=flask_request.args.get("sort_dir", "desc"),
-            limit=_limit(),
-        )
-        return ({"items": [serialize_audit_event(e) for e in events]}, 200)
+        return audit_service.list_(db, actor=actor_username, filters=query_args(flask_request)), 200
 
 
 @require_authenticated
