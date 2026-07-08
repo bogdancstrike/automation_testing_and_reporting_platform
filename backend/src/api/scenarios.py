@@ -16,9 +16,9 @@ def list_tests(app, operation, request, principal=None, **kwargs):
 
 
 @require_authenticated
-def get_test(app, operation, request, test_id=None, principal=None, **kwargs):
+def get_test(app, operation, request, scenario_id=None, principal=None, **kwargs):
     with session_scope() as db:
-        return service.get_test_detail(db, test_id), 200
+        return service.get_test_detail(db, scenario_id), 200
 
 
 @require_role(ROLE_TEST_AUTHOR)
@@ -28,13 +28,13 @@ def discover_tests(app, operation, request, principal=None, **kwargs):
 
 
 @require_role(ROLE_OPERATOR)
-def run_test(app, operation, request, test_id=None, principal=None, **kwargs):
+def run_test(app, operation, request, scenario_id=None, principal=None, **kwargs):
     body = json_body(request)
     actor = getattr(principal, "username", None) or getattr(principal, "subject", None)
     with session_scope() as db:
-        return execution.run_now(db, test_id, environment=body.get("environment", "default"), triggered_by=actor), 202
+        return execution.run_now(db, scenario_id, environment=body.get("environment", "default"), triggered_by=actor), 202
 
 @require_role(ROLE_TEST_AUTHOR)
-def delete_test(app, operation, request, test_id=None, principal=None, **kwargs):
+def delete_test(app, operation, request, scenario_id=None, principal=None, **kwargs):
     with session_scope() as db:
-        return service.delete_test(db, test_id), 200
+        return service.delete_test(db, scenario_id), 200

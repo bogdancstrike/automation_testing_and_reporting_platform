@@ -133,9 +133,9 @@
       "request_method": [
         "GET"
       ],
-      "api_url": "/api/tests",
+      "api_url": "/api/scenarios",
       "exec_method": {
-        "module_name": "src.api.tests",
+        "module_name": "src.api.scenarios",
         "method_name": "list_tests"
       }
     },
@@ -146,9 +146,9 @@
       "request_method": [
         "POST"
       ],
-      "api_url": "/api/tests/discover",
+      "api_url": "/api/scenarios/discover",
       "exec_method": {
-        "module_name": "src.api.tests",
+        "module_name": "src.api.scenarios",
         "method_name": "discover_tests"
       }
     },
@@ -159,9 +159,9 @@
       "request_method": [
         "GET"
       ],
-      "api_url": "/api/tests/<test_id>",
+      "api_url": "/api/scenarios/<scenario_id>",
       "exec_method": {
-        "module_name": "src.api.tests",
+        "module_name": "src.api.scenarios",
         "method_name": "get_test"
       }
     },
@@ -172,9 +172,9 @@
       "request_method": [
         "POST"
       ],
-      "api_url": "/api/tests/<test_id>/run",
+      "api_url": "/api/scenarios/<scenario_id>/run",
       "exec_method": {
-        "module_name": "src.api.tests",
+        "module_name": "src.api.scenarios",
         "method_name": "run_test"
       }
     },
@@ -185,9 +185,9 @@
       "request_method": [
         "DELETE"
       ],
-      "api_url": "/api/tests/<test_id>",
+      "api_url": "/api/scenarios/<scenario_id>",
       "exec_method": {
-        "module_name": "src.api.tests",
+        "module_name": "src.api.scenarios",
         "method_name": "delete_test"
       }
     },
@@ -224,7 +224,7 @@
       "request_method": [
         "PATCH"
       ],
-      "api_url": "/api/request-tests/<test_id>",
+      "api_url": "/api/request-tests/<scenario_id>",
       "exec_method": {
         "module_name": "src.api.request_tests",
         "method_name": "update_request_test"
@@ -237,7 +237,7 @@
       "request_method": [
         "DELETE"
       ],
-      "api_url": "/api/request-tests/<test_id>",
+      "api_url": "/api/request-tests/<scenario_id>",
       "exec_method": {
         "module_name": "src.api.request_tests",
         "method_name": "delete_request_test"
@@ -575,7 +575,7 @@
       "request_method": [
         "PUT"
       ],
-      "api_url": "/api/tests/<test_id>/tags",
+      "api_url": "/api/scenarios/<scenario_id>/tags",
       "exec_method": {
         "module_name": "src.api.tags",
         "method_name": "update_test_tags"
@@ -588,7 +588,7 @@
       "request_method": [
         "GET"
       ],
-      "api_url": "/api/tests/<test_id>/comments",
+      "api_url": "/api/scenarios/<scenario_id>/comments",
       "exec_method": {
         "module_name": "src.api.comments",
         "method_name": "list_test_comments"
@@ -601,7 +601,7 @@
       "request_method": [
         "POST"
       ],
-      "api_url": "/api/tests/<test_id>/comments",
+      "api_url": "/api/scenarios/<scenario_id>/comments",
       "exec_method": {
         "module_name": "src.api.comments",
         "method_name": "create_test_comment"
