@@ -167,32 +167,6 @@ def delete_target(db: Session, target_id: str) -> dict:
     db.execute(sa_delete(RunQueue).where(RunQueue.test_run_id.in_(run_ids_subq)))
     db.execute(sa_delete(TestRun).where(TestRun.target_id == target_id))
 
-    ui_scenario_ids = list(db.scalars(
-        select(Scenario.id).where(Scenario.target_key == t.key, Scenario.source == "ui")
-    ).all())
-    
-    if ui_scenario_ids:
-        ui_run_ids_subq = select(TestRun.id).where(TestRun.scenario_id.in_(ui_scenario_ids))
-        db.execute(sa_delete(RunLog).where(RunLog.test_run_id.in_(ui_run_ids_subq)))
-        db.execute(sa_delete(TestRunStep).where(TestRunStep.test_run_id.in_(ui_run_ids_subq)))
-        db.execute(sa_delete(TestRunAssertion).where(TestRunAssertion.test_run_id.in_(ui_run_ids_subq)))
-        db.execute(sa_delete(RunQueue).where(RunQueue.test_run_id.in_(ui_run_ids_subq)))
-        db.execute(sa_delete(TestRun).where(TestRun.scenario_id.in_(ui_scenario_ids)))
-
-        schedule_ids = list(db.scalars(select(ScheduleTest.schedule_id).where(ScheduleTest.scenario_id.in_(ui_scenario_ids))).all())
-        db.execute(sa_delete(ScheduleTest).where(ScheduleTest.scenario_id.in_(ui_scenario_ids)))
-        for schedule_id in schedule_ids:
-            schedule = db.get(Schedule, schedule_id)
-            if not schedule:
-                continue
-            replacement = db.scalars(select(ScheduleTest).where(ScheduleTest.schedule_id == schedule_id).order_by(ScheduleTest.created_at)).first()
-            if replacement:
-                schedule.scenario_id = replacement.scenario_id
-            else:
-                db.delete(schedule)
-
-        db.execute(sa_delete(TestRevision).where(TestRevision.scenario_id.in_(ui_scenario_ids)))
-        db.execute(sa_delete(Scenario).where(Scenario.id.in_(ui_scenario_ids)))
 
     db.execute(sa_delete(Target).where(Target.id == target_id))
     return {"deleted": target_id}
@@ -675,12 +649,15 @@ def _target_stats(db: Session, target_id: str, *, hours: int = 168) -> dict:
     ).all()
     durations = [{"bucket": b.isoformat(), "avg_ms": round(avg, 1) if avg else None} for b, avg in duration_rows]
 
-    defect_distribution = dict(db.execute(
+    raw_defect_distribution = dict(db.execute(
         select(TestRun.defect_type, func.count())
         .where(TestRun.target_id == target.id, TestRun.stats_reset_at.is_(None), TestRun.queued_at >= since, TestRun.status.in_(["failed", "error", "timeout"]))
         .group_by(TestRun.defect_type)
     ).all())
-    defect_distribution = {(k or "untriaged"): v for k, v in defect_distribution.items()}
+    defect_distribution = {}
+    for k, v in raw_defect_distribution.items():
+        key = k or "untriaged"
+        defect_distribution[key] = defect_distribution.get(key, 0) + v
 
     recent = db.scalars(
         select(TestRun).where(TestRun.target_id == target.id, TestRun.stats_reset_at.is_(None), TestRun.status.in_(["failed", "error", "timeout"]))

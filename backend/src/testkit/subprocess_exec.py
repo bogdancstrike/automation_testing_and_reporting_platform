@@ -212,7 +212,7 @@ def _run_lifecycle(code_ref: str, ctx: Any) -> Any:
         return TestResult(status=ERROR, error_category="script_error",
                           error_message=f"could not load {code_ref}: {e}")
 
-    result: Any
+    result: Any = None
     try:
         instance.validate_config(dict(getattr(cls.metadata, "default_config", {})))
         instance.setup(ctx)
@@ -333,6 +333,8 @@ def _run_lifecycle(code_ref: str, ctx: Any) -> Any:
             instance.teardown(ctx)
         except Exception as e:  # noqa: BLE001
             ctx.log("warning", f"teardown() failed: {e}")
+    if result is None:
+        result = TestResult(status=ERROR, error_category="system_error", error_message="worker interrupted")
     return result
 
 

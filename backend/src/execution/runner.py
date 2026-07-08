@@ -58,7 +58,7 @@ def _run_code_test(code_ref: str, ctx: TestContext) -> TestResult:
     module = importlib.import_module(module_name)
     cls = getattr(module, class_name)
     instance = cls()
-    result: TestResult
+    result: TestResult | None = None
     try:
         instance.validate_config(dict(getattr(cls.metadata, "default_config", {})))
         instance.setup(ctx)
@@ -71,13 +71,16 @@ def _run_code_test(code_ref: str, ctx: TestContext) -> TestResult:
         try:
             instance.cleanup(ctx)
         except Exception as e:
-            result.cleanup_failed = True
-            result.cleanup_error = str(e)
+            if result is not None:
+                result.cleanup_failed = True
+                result.cleanup_error = str(e)
             ctx.log("warning", f"cleanup() failed: {e}")
         try:
             instance.teardown(ctx)
         except Exception as e:
             ctx.log("warning", f"teardown() failed: {e}")
+    if result is None:
+        result = TestResult(status=ERROR, error_category="system_error", error_message="worker interrupted")
     return result
 
 

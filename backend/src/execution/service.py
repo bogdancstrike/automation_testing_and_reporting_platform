@@ -97,8 +97,8 @@ def restart_run(db: Session, run_id: str) -> dict:
     r = db.get(TestRun, run_id)
     if not r or r.stats_reset_at is not None:
         raise NotFoundError("run not found")
-    if r.status in ("queued", "running"):
-        raise ValidationError("run is already queued or running")
+    if r.status in ("queued", "claimed", "preparing", "running"):
+        raise ValidationError("run is already queued or active")
     
     r.status = "queued"
     r.worker_name = None
