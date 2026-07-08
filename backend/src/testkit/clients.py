@@ -230,6 +230,19 @@ class BrowserClient:
         options.add_argument("--disable-dev-shm-usage")
         options.set_capability("goog:loggingPrefs", {"performance": "ALL"})
         self._driver = webdriver.Chrome(options=options)
+        
+        try:
+            self._driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {
+                "source": """
+                    window.__visibilityChanges = [];
+                    document.addEventListener('visibilitychange', () => {
+                        window.__visibilityChanges.push({ state: document.visibilityState, time: performance.now() });
+                    });
+                """
+            })
+        except Exception:
+            pass
+            
         return self._driver
 
     def _ensure(self):
@@ -261,6 +274,13 @@ class BrowserClient:
             url = urljoin(base.rstrip("/") + "/", self._ctx.render(path).lstrip("/"))
         self._ctx.log("info", f"browser visit {url}")
         page = self._browser.new_page()
+
+        page.add_init_script("""
+            window.__visibilityChanges = [];
+            document.addEventListener('visibilitychange', () => {
+                window.__visibilityChanges.push({ state: document.visibilityState, time: performance.now() });
+            });
+        """)
 
         def on_request_finished(request):
             try:
@@ -294,18 +314,28 @@ class BrowserClient:
         page.on("requestfinished", on_request_finished)
         
         # Capture console logs and page errors as waterfall events
-        page.on("console", lambda msg: self._ctx.record_event(
-            name=f"Console [{msg.type}]",
-            event_type="console",
-            status="passed" if msg.type != "error" else "failed",
-            details={"text": msg.text}
-        ))
-        page.on("pageerror", lambda exc: self._ctx.record_event(
-            name="Page Error",
-            event_type="console",
-            status="failed",
-            details={"text": str(exc)}
-        ))
+        def handle_console(msg):
+            details = {"text": msg.text, "location": msg.location}
+            self._ctx.record_event(
+                name=f"Console [{msg.type}]",
+                event_type="console",
+                status="passed" if msg.type != "error" else "failed",
+                details=details
+            )
+            
+        def handle_pageerror(exc):
+            details = {"text": str(exc)}
+            if hasattr(exc, "stack"):
+                details["stack"] = exc.stack
+            self._ctx.record_event(
+                name="Page Error",
+                event_type="console",
+                status="failed",
+                details=details
+            )
+            
+        page.on("console", handle_console)
+        page.on("pageerror", handle_pageerror)
 
         # Monkey-patch browser actions to trace them in the timeline
         for action in ["click", "fill", "type", "select_option", "check", "uncheck", "wait_for_selector", "hover"]:
@@ -327,7 +357,9 @@ class BrowserClient:
             perf_script = """JSON.stringify({
                 navs: window.performance.getEntriesByType('navigation'),
                 resources: window.performance.getEntriesByType('resource'),
-                paints: window.performance.getEntriesByType('paint')
+                paints: window.performance.getEntriesByType('paint'),
+                interactions: typeof window.PerformanceEventTiming !== 'undefined' ? window.performance.getEntriesByType('event').filter(e => e.interactionId > 0 || ['click', 'keydown', 'pointerdown'].includes(e.name)) : [],
+                visibility: window.__visibilityChanges || []
             })"""
             perf_str = page.evaluate(perf_script)
             if perf_str:
@@ -361,6 +393,22 @@ class BrowserClient:
                                 "url": res.get("name", "")
                             }
                         )
+
+                for interaction in perf.get("interactions", []):
+                    dur = interaction.get("duration", 0)
+                    self._ctx.record_event(
+                        f"Interaction Delay: {interaction.get('name')}",
+                        "warning" if dur > 200 else "event",
+                        status="failed" if dur > 200 else "passed",
+                        details={"duration_ms": dur, "offset_ms": interaction.get("startTime", 0)}
+                    )
+
+                for vis in perf.get("visibility", []):
+                    self._ctx.record_event(
+                        f"Visibility Change: {vis.get('state')}",
+                        "marker",
+                        details={"offset_ms": vis.get("time", 0)}
+                    )
         except Exception:
             pass
             

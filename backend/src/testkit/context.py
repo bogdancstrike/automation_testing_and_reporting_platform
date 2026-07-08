@@ -139,7 +139,30 @@ class TestContext:
             self._current_step = prev
 
     def record_network_call(self, method: str, url: str, status_code: int, duration_ms: int, dns: int=0, ttfb: int=0, download: int=0, content_type: str="", content_length: int=0, payload: dict | None = None) -> None:
+        import time
         from src.testkit.result import PASSED, FAILED, StepResult
+        
+        # N+1 / Duplicate Call Detection
+        call_key = f"{method} {url}"
+        now = time.monotonic()
+        history = self._network_history.setdefault(call_key, [])
+        
+        # If the exact same request was made within the last 1.5 seconds, flag it
+        # Exclude OPTIONS (preflights) which are naturally duplicated before varying methods
+        if history and (now - history[-1]) < 1.5 and method != "OPTIONS":
+            # Avoid flagging static assets typically requested by browsers
+            if not any(url.endswith(ext) for ext in (".png", ".jpg", ".jpeg", ".gif", ".css", ".js", ".woff2", ".ico")):
+                self.record_event(
+                    name=f"N+1 Duplicate: {method}",
+                    event_type="warning",
+                    status="failed",
+                    details={
+                        "message": f"Identical request made within 1.5s of the previous call. Count: {len(history) + 1}",
+                        "url": url
+                    }
+                )
+        history.append(now)
+
         st = PASSED if 200 <= status_code < 400 else FAILED
         self._steps.append(StepResult(
             name=f"{method} {url}",
@@ -196,8 +219,9 @@ class TestContext:
     def _begin_scenario(self) -> None:
         self._steps = []
         self._assertions = []
-        self._current_step = None
-        self._last_response = None
+        self._current_step: StepResult | None = None
+        self._last_response: Any = None
+        self._network_history: dict[str, list[float]] = {}
 
     def _redact(self, text: str) -> str:
         for secret in self.secret_values():

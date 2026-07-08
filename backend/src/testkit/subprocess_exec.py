@@ -217,7 +217,9 @@ def _run_lifecycle(code_ref: str, ctx: Any) -> Any:
                 perf_script = """return JSON.stringify({
                     navs: window.performance.getEntriesByType('navigation'),
                     resources: window.performance.getEntriesByType('resource'),
-                    paints: window.performance.getEntriesByType('paint')
+                    paints: window.performance.getEntriesByType('paint'),
+                    interactions: typeof window.PerformanceEventTiming !== 'undefined' ? window.performance.getEntriesByType('event').filter(e => e.interactionId > 0 || ['click', 'keydown', 'pointerdown'].includes(e.name)) : [],
+                    visibility: window.__visibilityChanges || []
                 });"""
                 perf_str = driver.execute_script(perf_script)
                 if perf_str:
@@ -249,6 +251,33 @@ def _run_lifecycle(code_ref: str, ctx: Any) -> Any:
                                     "url": res.get("name", "")
                                 }
                             )
+                    for interaction in perf.get("interactions", []):
+                        dur = interaction.get("duration", 0)
+                        ctx.record_event(
+                            f"Interaction Delay: {interaction.get('name')}",
+                            "warning" if dur > 200 else "event",
+                            status="failed" if dur > 200 else "passed",
+                            details={"duration_ms": dur, "offset_ms": interaction.get("startTime", 0)}
+                        )
+                    for vis in perf.get("visibility", []):
+                        ctx.record_event(
+                            f"Visibility Change: {vis.get('state')}",
+                            "marker",
+                            details={"offset_ms": vis.get("time", 0)}
+                        )
+            except Exception:
+                pass
+
+            try:
+                browser_logs = driver.get_log("browser")
+                for entry in browser_logs:
+                    if entry.get("level") in ("SEVERE", "ERROR"):
+                        ctx.record_event(
+                            "Console [error]",
+                            "console",
+                            status="failed",
+                            details={"text": entry.get("message", ""), "timestamp": entry.get("timestamp")}
+                        )
             except Exception:
                 pass
 
