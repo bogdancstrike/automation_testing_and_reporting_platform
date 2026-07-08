@@ -201,14 +201,6 @@ class QtpSelfPythonTest5(PythonTest):
             timeout=10
         )
 
-        response_body = response.json()
-
-        ctx.log('info', json.dumps(response_body, indent=2, ensure_ascii=False))
-
-        slideshow_title = response_body.get('slideshow', {}).get('title')
-
-        ctx.log('info', f'HTTPBin slideshow title: {slideshow_title}')
-
         ctx.assert_that(
             'status_code',
             'equals',
@@ -217,6 +209,18 @@ class QtpSelfPythonTest5(PythonTest):
             True,
             message='HTTPBin JSON endpoint should return 200'
         )
+
+        try:
+            response_body = response.json()
+        except Exception as e:
+            ctx.log('error', f'JSON decode failed: {e}. Raw response: {response.text[:200]}')
+            response_body = {}
+
+        ctx.log('info', json.dumps(response_body, indent=2, ensure_ascii=False))
+
+        slideshow_title = response_body.get('slideshow', {}).get('title')
+
+        ctx.log('info', f'HTTPBin slideshow title: {slideshow_title}')
 
         ctx.assert_that(
             'slideshow_title_present',

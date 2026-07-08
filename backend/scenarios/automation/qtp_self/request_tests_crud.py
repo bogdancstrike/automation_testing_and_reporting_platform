@@ -18,9 +18,11 @@ class SelfRequestTestsCrud(HttpTest):
     )
 
     def test(self, ctx):
+        import uuid
+        test_suffix = str(uuid.uuid4())[:8]
         with ctx.step("Create Test"):
             response = ctx.http.post("/api/request-tests", auth=TOKEN, json={
-                "name": "Scenario Auto Test",
+                "name": f"Scenario Auto Test {test_suffix}",
                 "config": {"method": "GET", "url": "http://example.com"},
             })
             response.should.have_status(201)
@@ -32,7 +34,7 @@ class SelfRequestTestsCrud(HttpTest):
 
         with ctx.step("Update Test"):
             ctx.http.patch(f"/api/request-tests/{test_id}", auth=TOKEN,
-                           json={"name": "Scenario Auto Test (renamed)"}).should.have_status(200)
+                           json={"name": f"Scenario Auto Test {test_suffix} (renamed)"}).should.have_status(200)
 
         with ctx.step("Run Test"):
             ctx.http.post(f"/api/tests/{test_id}/run", auth=TOKEN).should.have_status(202)
