@@ -65,6 +65,8 @@ const apiEndpoints = [
   ["POST", "/api/tests/{id}/run", "Queue a scenario run immediately."],
   ["GET", "/api/runs", "Search execution history, filtered and sorted on the backend."],
   ["GET", "/api/runs/{id}", "Read steps, assertions, response, logs, and failure metadata."],
+  ["DELETE", "/api/runs/{id}", "Permanently delete a specific run."],
+  ["DELETE", "/api/runs", "Permanently delete all runs across all targets."],
   ["POST", "/api/runs/{id}/cancel", "Request cancellation for a queued or running execution."],
   ["POST", "/api/schedules", "Create a schedule for one or more scenarios."],
   ["GET", "/api/schedules/{id}", "Read schedule configuration, scenarios, and recent runs."],
@@ -584,10 +586,11 @@ ctx.http.get("/secure-data", headers={"Authorization": f"Bearer {ctx.get_var('au
               When a scenario executes, QTP records every granular detail. Navigate to a Run's detail page to debug:
             </Paragraph>
             <ul>
-              <li><strong>Timeline:</strong> Shows step execution time to spot performance regressions.</li>
-              <li><strong>Assertion View:</strong> A diff view showing exactly what was expected vs. what was received.</li>
-              <li><strong>Raw Request/Response:</strong> Complete HTTP headers and body payloads for deep debugging.</li>
-              <li><strong>Worker Logs:</strong> Standard output from Python or the CLI worker.</li>
+              <li><strong>Assertions View:</strong> A diff view showing exactly what was expected vs. what was received.</li>
+              <li><strong>Response:</strong> Complete HTTP headers and body payloads for deep debugging.</li>
+              <li><strong>Logs:</strong> Standard output from Python or the CLI worker.</li>
+              <li><strong>Waterfall:</strong> A rich Chrome DevTools-style network waterfall chart. Playwright/Selenium scenarios automatically inject CDP/Performance API scripts to trace <strong>DNS, TTFB, Content Download</strong>, <strong>User Interaction Delay</strong> (>200ms freezes), <strong>Page Visibility State changes</strong>, and catch <strong>N+1 Duplicate API Calls</strong>.</li>
+              <li><strong>Steps Flow & Steps Table:</strong> Logical grouped breakdown of test execution phases.</li>
             </ul>
             <Paragraph>
               <strong>Status Lifecycle:</strong>
@@ -596,6 +599,9 @@ ctx.http.get("/secure-data", headers={"Authorization": f"Bearer {ctx.get_var('au
             </Paragraph>
             <Paragraph>
               To help with metrics, developers can categorize failures (e.g., tagging a failure as a <code>product_bug</code> vs <code>automation_bug</code>), which feeds directly into the QTP Dashboards.
+            </Paragraph>
+            <Paragraph>
+              <strong>Run Management:</strong> You can completely purge run history to maintain a clean database using the <strong>Delete All Runs</strong> button or deleting individual runs directly from the Runs page.
             </Paragraph>
 
             <H2 id="ci" icon={<DeploymentUnitOutlined />}>CI/CD Integration</H2>

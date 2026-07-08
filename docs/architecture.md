@@ -27,6 +27,8 @@ application-under-test by URL:
    and defines assertions on the **response body and metadata — not only the
    status code**. These can be sent on demand or scheduled to recur.
 
+In addition to test management and reports, QTP boasts a high-performance **Waterfall view** and **Rich Telemetry Engine** that captures advanced execution signals natively from Playwright and Selenium CDP hooks, including DNS lookups, N+1 Duplicate API detection, User Interaction Delays, and Source-Mapped Error Traces.
+
 QTP is built as a Python/Flask/QF backend with PostgreSQL persistence and a
 React/Vite/Ant Design frontend.
 
@@ -778,8 +780,9 @@ Core endpoints:
 | `PATCH /api/request-tests/{id}` | Create a new revision of a request test. |
 | `GET /api/suites`, `POST /api/suites`, `POST /api/suites/{id}/run` | Manage and run suites. |
 | `GET /api/runs` | Search runs by project, test, target, status, trigger, date. |
-| `GET /api/runs/{id}` | Run summary, attempts, steps, assertions, error, artifacts. |
-| `GET /api/runs/{id}/logs` | Paginated structured logs. |
+| `GET` / `DELETE` | `/api/runs/{id}` | Read run metadata, or permanently delete the run. |
+| `DELETE`| `/api/runs` | Permanently delete all runs across all targets. |
+| `GET`  | `/api/runs/{id}/logs` | Paginated structured logs. |
 | `POST /api/runs/{id}/cancel` | Cancel queued or running run. |
 | `PUT /api/runs/{id}/defect` | Set/confirm the defect type for a failed run. |
 | `POST /api/imports` | Ingest externally-produced results (JUnit/JSON). |

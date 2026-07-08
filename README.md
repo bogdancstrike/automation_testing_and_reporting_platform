@@ -19,6 +19,11 @@ QTP combines two concepts that usually live in two separate tools:
 1. **Testkube-style execution** — a control plane that owns test definitions, schedules, a durable PostgreSQL run queue, and horizontal workers that execute tests.
 2. **ReportPortal-style reporting** — a centralized store of every run with history, dashboards, failure grouping (signatures), and defect-type triage.
 
+**Key Highlights:**
+- **Rich Telemetry & Waterfall:** Out-of-the-box Waterfall charts capturing DNS, TTFB, Content Download, User Interaction Delay (>200ms freezes), N+1 Duplicate API Call detection, and Page Visibility state tracking.
+- **Run Management:** Keep your database clean with single-run deletion or cascading full-system purges.
+- **Source-Mapped Errors:** Precise stack traces for UI errors and unhandled exceptions.
+
 ---
 
 ## 📖 Table of Contents
@@ -442,6 +447,8 @@ Everything you can do in the QTP UI can be done via the REST API using a Bearer 
 | `POST` | `/api/tests/discover` | Discover code-backed scenarios from the backend |
 | `POST` | `/api/tests/{id}/run` | Queue a scenario run immediately |
 | `GET`  | `/api/runs/{id}` | Read steps, assertions, response, and logs of a run |
+| `DELETE`| `/api/runs/{id}` | Permanently delete a specific run |
+| `DELETE`| `/api/runs` | Permanently delete all runs across all targets |
 | `GET`  | `/api/dashboards/overview` | Fetch operational metrics over a time window |
 
 ### Ports
