@@ -22,6 +22,7 @@ import ScheduleDetailPage from "./pages/ScheduleDetailPage";
 import TargetsPage from "./pages/TargetsPage";
 import TargetDetailPage from "./pages/TargetDetailPage";
 import WorkersPage from "./pages/WorkersPage";
+import WorkerDetailPage from "./pages/WorkerDetailPage";
 import DocsPage from "./pages/DocsPage";
 import ProfilePage from "./pages/ProfilePage";
 
@@ -176,6 +177,7 @@ function AppShell({ mode, setMode }: { mode: ThemeMode; setMode: (mode: ThemeMod
             <Route path="/targets" element={<TargetsPage />} />
             <Route path="/targets/:id" element={<TargetDetailPage />} />
             <Route path="/workers" element={<WorkersPage />} />
+            <Route path="/workers/:id" element={<WorkerDetailPage />} />
             <Route path="/docs" element={<DocsPage />} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="*" element={<Navigate to="/overview" replace />} />

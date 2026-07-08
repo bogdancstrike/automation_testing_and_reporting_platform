@@ -45,7 +45,9 @@ export default function WorkersPage() {
                   title={
                     <Space>
                       <DesktopOutlined style={{ color: isOffline ? "#ccc" : "#1677ff" }} />
-                      <Typography.Text strong>{w.name}</Typography.Text>
+                      <Link to={`/workers/${w.name}`}>
+                        <Typography.Text strong style={{ color: '#1677ff', textDecoration: 'underline' }}>{w.name}</Typography.Text>
+                      </Link>
                     </Space>
                   }
                   extra={

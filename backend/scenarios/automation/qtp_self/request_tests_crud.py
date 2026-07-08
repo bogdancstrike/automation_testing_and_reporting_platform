@@ -38,7 +38,15 @@ class SelfRequestTestsCrud(HttpTest):
             ctx.http.post(f"/api/tests/{test_id}/run", auth=TOKEN).should.have_status(202)
 
         with ctx.step("Delete Test"):
-            ctx.http.delete(f"/api/request-tests/{test_id}", auth=TOKEN).should.have_status(200)
+            import time
+            for attempt in range(5):
+                response = ctx.http.delete(f"/api/request-tests/{test_id}", auth=TOKEN)
+                if response.status_code == 409:
+                    if attempt < 4:
+                        time.sleep(5)
+                        continue
+                response.should.have_status(200)
+                break
             ctx.set_var("test_id", "")  # deleted cleanly; nothing for cleanup to do
 
     def cleanup(self, ctx):

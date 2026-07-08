@@ -335,7 +335,11 @@ def _child_main() -> int:
         sys.path.insert(0, backend_dir)
 
     result_path = sys.argv[1] if len(sys.argv) > 1 else None
-    job = json.loads(sys.stdin.read())
+    raw_job = sys.stdin.read().strip()
+    try:
+        job = json.loads(raw_job)
+    except json.JSONDecodeError:
+        job, _ = json.JSONDecoder().raw_decode(raw_job)
 
     from src.testkit.context import ResolvedTarget, TestContext
 
