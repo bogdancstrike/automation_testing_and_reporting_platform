@@ -63,6 +63,19 @@ const NAV_GROUPS = [
 ];
 
 const NAV = NAV_GROUPS.flatMap((group) => group.children);
+
+const PAGE_META: Record<string, string> = {
+  "/overview": "Operational metrics and recent activity",
+  "/runs": "Execution history across every scenario",
+  "/schedules": "Automated run triggers and cadences",
+  "/scenarios": "Test definitions, revisions, and discovery",
+  "/request-builder": "No-code, multi-step HTTP scenario builder",
+  "/targets": "Systems under test and their environments",
+  "/workers": "Execution workers, capabilities, and health",
+  "/docs": "Developer documentation and integration guides",
+  "/profile": "Your account and access",
+};
+
 const THEME_STORAGE_KEY = "qtp-theme-mode";
 
 type ThemeMode = "light" | "dark";
@@ -113,8 +126,12 @@ function AppShell({ mode, setMode }: { mode: ThemeMode; setMode: (mode: ThemeMod
       <Layout>
         <Header className="qtp-header" style={{ background: token.colorBgContainer }}>
           <div className="qtp-header-title">
-            <Typography.Text strong>Scenarios - Automation Testing Control Plane</Typography.Text>
-            <Typography.Text type="secondary">Scenarios, targets, schedules, and execution history</Typography.Text>
+            <Typography.Text strong style={{ fontSize: 16 }}>
+              {NAV.find((n) => n.key === selectedKey)?.label || "Overview"}
+            </Typography.Text>
+            <Typography.Text type="secondary" style={{ fontSize: 12.5 }}>
+              {PAGE_META[selectedKey] || "Automation testing control plane"}
+            </Typography.Text>
           </div>
           <Space size={10}>
             <Tooltip title={darkMode ? "Switch to light mode" : "Switch to dark mode"}>
@@ -184,25 +201,72 @@ export default function QtpApp() {
     document.documentElement.dataset.theme = mode;
   }, [mode]);
 
-  const appTheme = useMemo(() => ({
-    algorithm: mode === "dark" ? theme.darkAlgorithm : theme.defaultAlgorithm,
-    token: {
-      colorPrimary: "#2563eb",
-      borderRadius: 6,
-      fontFamily: "Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
-    },
-    components: {
-      Layout: {
-        headerHeight: 64,
+  const appTheme = useMemo(() => {
+    const dark = mode === "dark";
+    return {
+      algorithm: dark ? theme.darkAlgorithm : theme.defaultAlgorithm,
+      token: {
+        colorPrimary: "#2563eb",
+        colorInfo: "#2563eb",
+        colorSuccess: "#16a34a",
+        colorError: "#dc2626",
+        colorWarning: "#d97706",
+        borderRadius: 8,
+        borderRadiusLG: 12,
+        borderRadiusSM: 6,
+        wireframe: false,
+        fontFamily: "Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+        fontSize: 14,
+        controlHeight: 36,
+        colorBgLayout: dark ? "#0b1220" : "#f5f7fb",
+        boxShadowSecondary: dark
+          ? "0 6px 20px rgba(0, 0, 0, 0.45)"
+          : "0 6px 20px rgba(15, 23, 42, 0.06)",
       },
-      Menu: {
-        itemBorderRadius: 6,
+      components: {
+        Layout: {
+          headerHeight: 64,
+          headerPadding: "0 20px",
+          headerBg: dark ? "#0f172a" : "#ffffff",
+          bodyBg: "transparent",
+        },
+        Menu: {
+          itemBorderRadius: 8,
+          itemMarginInline: 8,
+          itemHeight: 40,
+          darkItemBg: "transparent",
+          darkSubMenuItemBg: "transparent",
+          darkItemSelectedBg: "rgba(37, 99, 235, 0.20)",
+          darkItemHoverBg: "rgba(148, 163, 184, 0.10)",
+          darkItemColor: "rgba(226, 232, 240, 0.72)",
+          darkItemSelectedColor: "#ffffff",
+        },
+        Card: {
+          borderRadiusLG: 12,
+          paddingLG: 20,
+        },
+        Table: {
+          headerBg: dark ? "#111827" : "#f8fafc",
+          headerColor: dark ? "#94a3b8" : "#475569",
+          headerSplitColor: "transparent",
+          rowHoverBg: dark ? "rgba(37, 99, 235, 0.10)" : "rgba(37, 99, 235, 0.04)",
+          cellPaddingBlock: 12,
+          borderColor: dark ? "#1f2937" : "#eef2f7",
+        },
+        Button: {
+          fontWeight: 500,
+          primaryShadow: "none",
+          defaultShadow: "none",
+        },
+        Segmented: {
+          trackBg: dark ? "#1e293b" : "#eef2f7",
+        },
+        Statistic: {
+          titleFontSize: 13,
+        },
       },
-      Card: {
-        borderRadiusLG: 8,
-      },
-    },
-  }), [mode]);
+    };
+  }, [mode]);
 
   return (
     <ConfigProvider theme={appTheme}>

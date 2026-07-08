@@ -156,6 +156,34 @@ def test_encrypted_secrets(db_session):
     all_secrets = get_secrets_for_project(db, project_id)
     assert all_secrets == {"my_token": "super_secret_value_123"}
 
+def test_delete_request_test_refuses_active_runs(db_session):
+    from src.core.errors import ConflictError
+
+    db = db_session
+    catalog_service.create_target(db, {
+        "key": "demo", "name": "Demo Target", "base_url": "http://example.com"})
+    test_def = catalog_service.create_request_test(db, {
+        "key": "ui.del", "name": "UI Del",
+        "config": {"target": "demo", "method": "GET", "url": "/get"}})
+    test_id = test_def["id"]
+
+    # A queued (non-terminal) run must block deletion with a 409 ConflictError.
+    run = execution_service.enqueue_run(db, db.get(TestDefinition, test_id))
+    assert run.status == "queued"
+    with pytest.raises(ConflictError) as ei:
+        catalog_service.delete_request_test(db, test_id)
+    assert ei.value.status_code == 409
+    assert ei.value.details.get("active_runs") == 1
+    assert db.get(TestDefinition, test_id) is not None  # nothing deleted
+
+    # Once the run reaches a terminal state, deletion succeeds.
+    execution_service.cancel_run(db, run.id)
+    assert run.status == CANCELED
+    result = catalog_service.delete_request_test(db, test_id)
+    assert result == {"deleted": test_id}
+    assert db.get(TestDefinition, test_id) is None
+
+
 def test_audit_logging(db_session):
     from src.audit.service import log_audit
     from src.audit.models import AuditEvent

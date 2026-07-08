@@ -18,6 +18,7 @@ from src.core.errors import ConflictError, NotFoundError, ValidationError
 from src.core.pagination import apply_sort, envelope, parse_page
 from framework.tracing import get_tracer
 from src.testkit.base import SUPPORTED_TYPES, TYPE_HTTP
+from src.testkit.result import TERMINAL_STATUSES
 from src.testkit.registry import discover_classes, discover_from_path
 
 tracer = get_tracer()
@@ -411,6 +412,22 @@ def delete_request_test(db: Session, test_id: str) -> dict:
         raise NotFoundError("test not found")
     if d.source != "ui":
         raise ValidationError("only UI request tests can be deleted")
+
+    # Refuse while runs are still in flight: deleting their rows mid-execution
+    # races the worker's open transaction (FK/lock error -> 500). Make the caller
+    # wait for them to reach a terminal state (or cancel them) first.
+    active = db.scalars(
+        select(TestRun.id).where(
+            TestRun.test_definition_id == test_id,
+            TestRun.status.not_in(list(TERMINAL_STATUSES)),
+        )
+    ).all()
+    if active:
+        raise ConflictError(
+            f"cannot delete test: {len(active)} run(s) still active (queued/running); "
+            "wait for them to finish or cancel them first",
+            details={"active_runs": len(active)},
+        )
 
     run_ids = list(db.scalars(select(TestRun.id).where(TestRun.test_definition_id == test_id)).all())
     if run_ids:

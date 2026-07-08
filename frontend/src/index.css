@@ -1,27 +1,35 @@
 html, body, #root { height: 100%; margin: 0; }
 body {
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  background: #eef2f7;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  background: #f5f7fb;
 }
 
 :root {
-  --qtp-content-bg: #eef2f7;
-  --qtp-surface-bg: rgba(255, 255, 255, 0.92);
-  --qtp-surface-border: rgba(148, 163, 184, 0.28);
+  --qtp-content-bg: #f5f7fb;
+  --qtp-surface-bg: #ffffff;
+  --qtp-surface-border: rgba(148, 163, 184, 0.24);
+  --qtp-surface-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 4px 16px rgba(15, 23, 42, 0.05);
+  --qtp-surface-shadow-hover: 0 2px 6px rgba(15, 23, 42, 0.08), 0 12px 28px rgba(15, 23, 42, 0.10);
   --qtp-code-bg: #f8fafc;
   --qtp-code-border: #dbe3ee;
-  --qtp-sidebar-bg: #111827;
-  --qtp-header-border: rgba(148, 163, 184, 0.24);
+  --qtp-sidebar-bg: #0f172a;
+  --qtp-header-border: rgba(148, 163, 184, 0.22);
+  --qtp-scroll-thumb: rgba(148, 163, 184, 0.5);
 }
 
 :root[data-theme="dark"] {
-  --qtp-content-bg: #0f172a;
-  --qtp-surface-bg: rgba(15, 23, 42, 0.92);
-  --qtp-surface-border: rgba(71, 85, 105, 0.62);
+  --qtp-content-bg: #0b1220;
+  --qtp-surface-bg: #0f172a;
+  --qtp-surface-border: rgba(71, 85, 105, 0.55);
+  --qtp-surface-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 4px 16px rgba(0, 0, 0, 0.35);
+  --qtp-surface-shadow-hover: 0 2px 8px rgba(0, 0, 0, 0.4), 0 14px 30px rgba(0, 0, 0, 0.5);
   --qtp-code-bg: #111827;
   --qtp-code-border: #334155;
-  --qtp-sidebar-bg: #020617;
-  --qtp-header-border: rgba(71, 85, 105, 0.7);
+  --qtp-sidebar-bg: #060b16;
+  --qtp-header-border: rgba(71, 85, 105, 0.6);
+  --qtp-scroll-thumb: rgba(100, 116, 139, 0.55);
 }
 
 .qtp-shell { height: 100vh; overflow: hidden; }
@@ -32,7 +40,7 @@ body {
   left: 0;
   overflow: hidden;
   background: var(--qtp-sidebar-bg) !important;
-  border-right: 1px solid rgba(148, 163, 184, 0.18);
+  border-right: 1px solid rgba(148, 163, 184, 0.12);
 }
 .qtp-shell > .ant-layout { min-width: 0; height: 100vh; overflow: hidden; }
 .qtp-header {
@@ -46,64 +54,93 @@ body {
   display: flex;
   flex-direction: column;
   min-width: 0;
-  line-height: 1.25;
+  line-height: 1.3;
 }
 .qtp-content {
   height: calc(100vh - 64px);
   overflow: auto;
-  padding: 22px;
-  background:
-    radial-gradient(circle at top left, rgba(37, 99, 235, 0.08), transparent 28rem),
-    var(--qtp-content-bg);
+  padding: 24px;
+  background: var(--qtp-content-bg);
 }
+
+/* ── Sidebar branding ─────────────────────────────────────────────────── */
 .qtp-logo {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 11px;
   min-height: 64px;
-  padding: 14px 16px;
+  padding: 16px 18px;
   color: #fff;
   font-size: 15px;
-  letter-spacing: 0;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.10);
+  margin-bottom: 6px;
 }
+.qtp-logo strong { font-weight: 700; letter-spacing: -0.01em; }
 .qtp-logo small {
   display: block;
-  color: rgba(226, 232, 240, 0.68);
+  color: rgba(226, 232, 240, 0.55);
   font-size: 11px;
   font-weight: 500;
-  margin-top: 2px;
+  margin-top: 1px;
 }
 .qtp-logo-mark {
   display: inline-grid;
   place-items: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  background: #2563eb;
-  box-shadow: 0 8px 24px rgba(37, 99, 235, 0.35);
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  box-shadow: 0 6px 18px rgba(37, 99, 235, 0.45);
   font-weight: 800;
+  font-size: 17px;
+  flex-shrink: 0;
 }
 .qtp-sider .ant-menu {
   background: transparent;
   padding-inline: 8px;
+  border-inline-end: none;
 }
 .qtp-sider .ant-menu-item-group-title {
-  color: rgba(226, 232, 240, 0.48);
-  font-size: 11px;
+  color: rgba(148, 163, 184, 0.65);
+  font-size: 10.5px;
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.09em;
   text-transform: uppercase;
+  padding-block: 10px 6px;
 }
+/* Active item accent bar */
+.qtp-sider .ant-menu-item-selected::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: #3b82f6;
+}
+.qtp-sider .ant-menu-item { transition: background 0.15s ease; }
+
+/* ── Header ───────────────────────────────────────────────────────────── */
 .qtp-user-menu {
   display: inline-flex;
   align-items: center;
   min-height: 36px;
+  padding: 0 8px;
+  border-radius: 8px;
   cursor: pointer;
+  transition: background 0.15s ease;
 }
+.qtp-user-menu:hover { background: rgba(148, 163, 184, 0.12); }
+
+/* ── Surfaces / cards ─────────────────────────────────────────────────── */
 .qtp-page-heading {
   justify-content: space-between;
   width: 100%;
   margin-bottom: 16px;
+}
+.ant-card {
+  box-shadow: var(--qtp-surface-shadow);
 }
 .qtp-surface.ant-card {
   background: var(--qtp-surface-bg);
@@ -112,7 +149,7 @@ body {
 .qtp-code {
   background: var(--qtp-code-bg);
   border: 1px solid var(--qtp-code-border);
-  border-radius: 6px;
+  border-radius: 8px;
   padding: 12px 14px;
   overflow-x: auto;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -120,7 +157,74 @@ body {
   line-height: 1.5;
   white-space: pre;
 }
+
+/* ── KPI / stat cards ─────────────────────────────────────────────────── */
 .qtp-kpi .ant-statistic-title { font-size: 12px; }
+.qtp-statcard.ant-card { transition: box-shadow 0.18s ease, transform 0.18s ease; }
+.qtp-statcard.ant-card:hover {
+  box-shadow: var(--qtp-surface-shadow-hover);
+  transform: translateY(-1px);
+}
+.qtp-statcard-row { display: flex; align-items: center; gap: 14px; }
+.qtp-statcard-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 11px;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+.qtp-statcard-main { min-width: 0; }
+.qtp-statcard-label {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--ant-color-text-secondary, #64748b);
+  margin-bottom: 2px;
+  text-transform: uppercase;
+}
+.qtp-statcard-hint { font-size: 12px; color: #94a3b8; margin-top: 2px; }
+
+/* ── Status / defect / type pills ─────────────────────────────────────── */
+.qtp-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 1px 10px 1px 9px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 20px;
+  white-space: nowrap;
+  color: var(--pill, #64748b);
+  background: color-mix(in srgb, var(--pill, #64748b) 13%, transparent);
+}
+.qtp-pill--plain { padding-inline: 10px; }
+.qtp-pill-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--pill, #64748b);
+  flex-shrink: 0;
+}
+.qtp-pill--live .qtp-pill-dot { animation: qtp-pulse 1.4s ease-in-out infinite; }
+@keyframes qtp-pulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 color-mix(in srgb, var(--pill) 45%, transparent); }
+  50% { opacity: 0.7; box-shadow: 0 0 0 4px color-mix(in srgb, var(--pill) 0%, transparent); }
+}
+
+/* ── Scrollbars ───────────────────────────────────────────────────────── */
+.qtp-content::-webkit-scrollbar,
+.qtp-sider .ant-menu::-webkit-scrollbar { width: 10px; height: 10px; }
+.qtp-content::-webkit-scrollbar-thumb,
+.qtp-sider .ant-menu::-webkit-scrollbar-thumb {
+  background: var(--qtp-scroll-thumb);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+.qtp-content::-webkit-scrollbar-thumb:hover { background: rgba(100, 116, 139, 0.75); background-clip: content-box; }
 
 @media (max-width: 720px) {
   .qtp-header-title { display: none; }

@@ -1,10 +1,15 @@
 import { useState } from "react";
-import { Row, Col, Card, Statistic, Typography, Table, Empty, Progress, Radio, DatePicker, Space } from "antd";
+import { Row, Col, Card, Typography, Table, Empty, Progress, Radio, DatePicker, Space } from "antd";
+import {
+  PlayCircleOutlined, CheckCircleOutlined, InboxOutlined, ClusterOutlined,
+  CloseCircleOutlined, WarningOutlined, FieldTimeOutlined, ThunderboltOutlined,
+} from "@ant-design/icons";
 import { useQuery } from "@tanstack/react-query";
 import ReactECharts from "echarts-for-react";
 import dayjs from "dayjs";
 import { qtp } from "../api/qtp";
 import { StatusTag, DefectTag, formatDurationMs } from "../components/tags";
+import { StatCard } from "../components/StatCard";
 import { apiSortOrder, menuFilter, textFilter } from "../components/remoteTable";
 import type { QueryParams } from "../api/types";
 import { useNavigate } from "react-router-dom";
@@ -123,14 +128,14 @@ export default function OverviewPage() {
       </Space>
 
       <Row gutter={[16, 16]}>
-        <Col xs={12} md={6}><Card className="qtp-kpi"><Statistic title="Total runs" value={totals.total_runs || 0} /></Card></Col>
-        <Col xs={12} md={6}><Card className="qtp-kpi"><Statistic title="Pass rate" value={ov?.pass_rate != null ? ov.pass_rate * 100 : 0} precision={1} suffix="%" valueStyle={{ color: "#52c41a" }} /></Card></Col>
-        <Col xs={12} md={6}><Card className="qtp-kpi"><Statistic title="Queue backlog" value={ov?.queue_backlog || 0} /></Card></Col>
-        <Col xs={12} md={6}><Card className="qtp-kpi"><Statistic title="Active workers" value={ov?.active_workers || 0} /></Card></Col>
-        <Col xs={12} md={6}><Card className="qtp-kpi"><Statistic title="Failed" value={totals.failed || 0} valueStyle={{ color: "#ff4d4f" }} /></Card></Col>
-        <Col xs={12} md={6}><Card className="qtp-kpi"><Statistic title="Errors" value={totals.error || 0} valueStyle={{ color: "#fa541c" }} /></Card></Col>
-        <Col xs={12} md={6}><Card className="qtp-kpi"><Statistic title="p50 duration" value={ov?.duration_ms?.p50 || 0} formatter={(v) => formatDurationMs(Number(v))} /></Card></Col>
-        <Col xs={12} md={6}><Card className="qtp-kpi"><Statistic title="p95 duration" value={ov?.duration_ms?.p95 || 0} formatter={(v) => formatDurationMs(Number(v))} /></Card></Col>
+        <Col xs={12} md={6}><StatCard label="Total runs" value={totals.total_runs || 0} icon={<PlayCircleOutlined />} accent="#2563eb" /></Col>
+        <Col xs={12} md={6}><StatCard label="Pass rate" value={ov?.pass_rate != null ? ov.pass_rate * 100 : 0} precision={1} suffix="%" icon={<CheckCircleOutlined />} accent="#16a34a" tintValue /></Col>
+        <Col xs={12} md={6}><StatCard label="Queue backlog" value={ov?.queue_backlog || 0} icon={<InboxOutlined />} accent="#0891b2" /></Col>
+        <Col xs={12} md={6}><StatCard label="Active workers" value={ov?.active_workers || 0} icon={<ClusterOutlined />} accent="#7c3aed" /></Col>
+        <Col xs={12} md={6}><StatCard label="Failed" value={totals.failed || 0} icon={<CloseCircleOutlined />} accent="#dc2626" tintValue /></Col>
+        <Col xs={12} md={6}><StatCard label="Errors" value={totals.error || 0} icon={<WarningOutlined />} accent="#ea580c" tintValue /></Col>
+        <Col xs={12} md={6}><StatCard label="p50 duration" value={ov?.duration_ms?.p50 || 0} icon={<FieldTimeOutlined />} accent="#0891b2" formatter={(v) => formatDurationMs(Number(v))} /></Col>
+        <Col xs={12} md={6}><StatCard label="p95 duration" value={ov?.duration_ms?.p95 || 0} icon={<ThunderboltOutlined />} accent="#d97706" formatter={(v) => formatDurationMs(Number(v))} /></Col>
       </Row>
 
       <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
