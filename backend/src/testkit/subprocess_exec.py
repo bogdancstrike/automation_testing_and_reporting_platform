@@ -27,6 +27,7 @@ import signal
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 from pathlib import Path
 from typing import Any
@@ -34,6 +35,24 @@ from typing import Any
 # Browser test types that must run out-of-process. Kept local (not imported from
 # base) so the child can load this module before touching the rest of the app.
 BROWSER_TYPES = frozenset({"playwright", "selenium"})
+
+# Cap concurrent browser subprocesses per worker process. A browser run launches
+# a full chromium; letting all WORKER_MAX_CONCURRENCY slots do so at once thrashes
+# CPU/RAM/shm and stampedes the target (works 1-by-1, fails concurrently). Under
+# gevent the acquire() yields cooperatively, so queued runs don't block the hub.
+_browser_slots: threading.BoundedSemaphore | None = None
+_slots_init_lock = threading.Lock()
+
+
+def _browser_semaphore() -> threading.BoundedSemaphore:
+    global _browser_slots
+    if _browser_slots is None:
+        with _slots_init_lock:
+            if _browser_slots is None:
+                from src.config import Config
+                n = max(1, int(getattr(Config, "BROWSER_MAX_CONCURRENCY", 2)))
+                _browser_slots = threading.BoundedSemaphore(n)
+    return _browser_slots
 
 
 # ── Wire format (shared by parent and child) ───────────────────────────────
@@ -113,6 +132,15 @@ def run_scenario_in_subprocess(code_ref: str, ctx: Any, *, timeout_s: float) -> 
     job = _encode_job(code_ref, ctx)
     fd, result_path = tempfile.mkstemp(prefix="qtp-browser-", suffix=".json")
     os.close(fd)
+
+    # Wait for a browser slot before spawning chromium. The acquire yields under
+    # gevent, so other (e.g. HTTP) runs keep progressing while this one queues.
+    sem = _browser_semaphore()
+    waited = time.monotonic()
+    sem.acquire()
+    queued_ms = int((time.monotonic() - waited) * 1000)
+    if queued_ms > 50:
+        ctx.log("info", f"waited {queued_ms}ms for a browser slot")
     try:
         proc = subprocess.Popen(
             [sys.executable, os.path.abspath(__file__), result_path],
@@ -151,6 +179,7 @@ def run_scenario_in_subprocess(code_ref: str, ctx: Any, *, timeout_s: float) -> 
             ctx.log("debug", f"browser subprocess output: {noise[-1000:]}")
         return _decode_result(payload)
     finally:
+        sem.release()
         try:
             os.unlink(result_path)
         except OSError:  # pragma: no cover

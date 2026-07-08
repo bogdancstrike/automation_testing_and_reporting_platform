@@ -210,6 +210,9 @@ services:
     image: qtp-backend
     networks: [qtpnet]
     working_dir: /app/worker
+    # Browser scenarios launch chromium; the default 64MB /dev/shm is too small
+    # for concurrent instances. (The launch also passes --disable-dev-shm-usage.)
+    shm_size: "512m"
     depends_on:
       postgres: {condition: service_healthy}
       kafka: {condition: service_healthy}

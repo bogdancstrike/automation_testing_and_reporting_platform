@@ -88,6 +88,10 @@ class Config:
     # sync browser APIs don't collide with the worker's gevent hub. This bounds
     # how long that child may run before it is killed and the run marked timeout.
     BROWSER_RUN_TIMEOUT_S = _int("BROWSER_RUN_TIMEOUT_S", 180)
+    # A browser run launches a full chromium (heavy on CPU/RAM/shm). Cap how many
+    # run at once *per worker process* so concurrent runs don't thrash the box or
+    # stampede a target — the rest queue for a slot rather than piling on.
+    BROWSER_MAX_CONCURRENCY = _int("BROWSER_MAX_CONCURRENCY", 2)
     WORKER_POLL_SECONDS  = float(os.getenv("WORKER_POLL_SECONDS", "1.0"))
     WORKER_HEARTBEAT_SECONDS = float(os.getenv("WORKER_HEARTBEAT_SECONDS", "5.0"))
     WORKER_STALE_SECONDS = float(os.getenv("WORKER_STALE_SECONDS", "30.0"))

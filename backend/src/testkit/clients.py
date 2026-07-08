@@ -208,8 +208,13 @@ class BrowserClient:
             ) from e
         
         self._pw = sync_playwright().start()
+        # --disable-dev-shm-usage is essential in containers: the default 64MB
+        # /dev/shm is thrashed by concurrent chromium instances (slow/broken page
+        # loads that only show up under concurrency). --no-sandbox is required
+        # when the worker runs as root. Matches the Selenium scenarios' flags.
         self._browser = self._pw.chromium.launch(
-            headless=True
+            headless=True,
+            args=["--no-sandbox", "--disable-dev-shm-usage", "--disable-gpu"],
         )
 
     def visit(self, path: str = "/") -> "PageResult":
