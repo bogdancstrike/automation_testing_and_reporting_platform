@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { qtp } from "../api/qtp";
 import { antSortOrder, nextTableParams, textFilter } from "../components/remoteTable";
+import CodeSnippet from "../components/CodeSnippet";
 import type { QueryParams } from "../api/types";
 
 export default function TargetsPage() {
@@ -134,26 +135,28 @@ export default function TargetsPage() {
           
           <div style={{ marginTop: 12 }}>
             <Typography.Text strong>Async execution:</Typography.Text>
-            <Typography.Paragraph copyable={{ text: `curl -X POST "$QTP_HOST/api/targets/${runTarget?.id}/run-all" -H "Authorization: Bearer $QTP_TOKEN" -H "Content-Type: application/json" -d '{"environment": "default"}'` }} style={{ padding: '12px', background: '#f5f5f5', borderRadius: '6px', marginTop: 4 }}>
-              <pre style={{ margin: 0, whiteSpace: 'pre-wrap', fontFamily: 'monospace', fontSize: '12px' }}>
-{`curl -X POST "$QTP_HOST/api/targets/${runTarget?.id}/run-all" \\
+            <div style={{ marginTop: 8 }}>
+              <CodeSnippet language="bash" code={`curl -X POST "$QTP_HOST/api/targets/${runTarget?.id}/run-all" \\
   -H "Authorization: Bearer $QTP_TOKEN" \\
   -H "Content-Type: application/json" \\
-  -d '{"environment": "default"}'`}
-              </pre>
-            </Typography.Paragraph>
+  -d '{
+    "environment": "default",
+    "test_definition_ids": ["optional-scenario-id-1", "optional-scenario-id-2"]
+  }'`} />
+            </div>
           </div>
 
           <div style={{ marginTop: 12 }}>
             <Typography.Text strong>Sync execution (waits for results):</Typography.Text>
-            <Typography.Paragraph copyable={{ text: `curl -X POST "$QTP_HOST/api/targets/${runTarget?.id}/run-all?sync=true" -H "Authorization: Bearer $QTP_TOKEN" -H "Content-Type: application/json" -d '{"environment": "default"}'` }} style={{ padding: '12px', background: '#f5f5f5', borderRadius: '6px', marginTop: 4 }}>
-              <pre style={{ margin: 0, whiteSpace: 'pre-wrap', fontFamily: 'monospace', fontSize: '12px' }}>
-{`curl -X POST "$QTP_HOST/api/targets/${runTarget?.id}/run-all?sync=true" \\
+            <div style={{ marginTop: 8 }}>
+              <CodeSnippet language="bash" code={`curl -X POST "$QTP_HOST/api/targets/${runTarget?.id}/run-all?sync=true" \\
   -H "Authorization: Bearer $QTP_TOKEN" \\
   -H "Content-Type: application/json" \\
-  -d '{"environment": "default"}'`}
-              </pre>
-            </Typography.Paragraph>
+  -d '{
+    "environment": "default",
+    "test_definition_ids": ["optional-scenario-id-1", "optional-scenario-id-2"]
+  }'`} />
+            </div>
           </div>
         </div>
       </Modal>

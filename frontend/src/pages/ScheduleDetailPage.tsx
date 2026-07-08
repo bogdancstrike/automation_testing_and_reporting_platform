@@ -23,6 +23,7 @@ export default function ScheduleDetailPage() {
   const { data: s } = useQuery({ queryKey: ["schedule", id], queryFn: () => qtp.schedule(id) });
   const { data: runsPage } = useQuery({ queryKey: ["runs", "bySchedule", id], queryFn: () => qtp.runs(`?schedule_id=${id}`) });
   const { data: testsPage } = useQuery({ queryKey: ["testsOptions"], queryFn: () => qtp.testsPage({ page_size: 100, sort: "name", order: "asc" }) });
+  const { data: allTags = [] } = useQuery({ queryKey: ["allTags"], queryFn: () => qtp.tags("") });
   const testsOptions = testsPage?.items || [];
 
   const [tableRunsParams, setTableRunsParams] = useState<QueryParams>({ page: 1, page_size: 10, sort: "queued_at", order: "desc", schedule_id: id });
@@ -221,7 +222,7 @@ export default function ScheduleDetailPage() {
       <Modal title="Edit schedule" open={openEdit} onCancel={() => setOpenEdit(false)} onOk={() => form.validateFields().then((v) => update.mutate(v))} confirmLoading={update.isPending}>
         <Form form={form} layout="vertical">
           <Form.Item name="test_definition_ids" label="Scenarios (Explicit)" rules={[{ required: false }]} tooltip="Explicitly select scenarios to include"><Select mode="multiple" showSearch optionFilterProp="label" options={testsOptions.map((t) => ({ value: t.id, label: `${t.name} (${t.key})` }))} allowClear /></Form.Item>
-          <Form.Item name="target_tags" label="Scenarios by Tags" rules={[{ required: false }]} tooltip="Automatically include all scenarios matching ANY of these tags"><Select mode="tags" placeholder="e.g. #60mins, nightly" allowClear /></Form.Item>
+          <Form.Item name="target_tags" label="Scenarios by Tags" rules={[{ required: false }]} tooltip="Automatically include all scenarios matching ANY of these tags"><Select mode="tags" placeholder="e.g. #60mins, nightly" allowClear options={allTags.map((tag: string) => ({ value: tag, label: tag }))} /></Form.Item>
           <Form.Item name="name" label="Name"><Input placeholder="optional" /></Form.Item>
           <Form.Item name="recurrence_type" label="Recurrence"><Select options={["interval", "cron", "once"].map((value) => ({ value }))} /></Form.Item>
           {rtype === "interval" && <Form.Item name="interval_seconds" label="Interval (seconds)" rules={[{ required: true }]}><InputNumber min={5} style={{ width: "100%" }} /></Form.Item>}
