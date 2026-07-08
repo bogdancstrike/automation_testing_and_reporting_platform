@@ -58,7 +58,25 @@ export interface AuditFilterState {
   related_to?: string
 }
 
-function getEntityUrl(type: string, id: string): string | null {
+export function getEntityUrl(row: AuditEventDto): string | null {
+  const type = row.entity_type
+  const id = row.entity_id
+  if (!type || !id) return null
+
+  if (type === 'entity_comments') {
+    let obj: any = {}
+    try { obj = typeof row.new_value === 'string' ? JSON.parse(row.new_value) : (row.new_value || {}) } catch (e) {}
+    if (!obj.entity_type && !obj.entity_id) {
+       try { obj = typeof row.old_value === 'string' ? JSON.parse(row.old_value) : (row.old_value || {}) } catch (e) {}
+    }
+    const t = obj.entity_type
+    const targetId = obj.entity_id
+    if (!t || !targetId) return null
+    if (t === 'test_runs' || t === 'run') return `/runs/${targetId}`
+    if (t === 'scenarios' || t === 'test') return `/scenarios/${targetId}`
+    return null
+  }
+
   if (type === 'scenarios') return `/scenarios/${id}`
   if (type === 'test_runs') return `/runs/${id}`
   if (type === 'schedules') return `/schedules/${id}`
@@ -213,7 +231,7 @@ export function AuditTable({ baseFilters, onRowClick }: { baseFilters?: Partial<
       width: 70,
       render: (_, row) => {
         if (!row.entity_type || !row.entity_id) return null
-        const url = getEntityUrl(row.entity_type, row.entity_id)
+        const url = getEntityUrl(row)
         if (!url) return null
         return <a onClick={(e) => { e.stopPropagation(); nav(url) }}>View</a>
       }

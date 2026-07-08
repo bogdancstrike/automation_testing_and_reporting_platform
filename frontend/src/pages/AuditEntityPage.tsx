@@ -3,16 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { Button, Card, Typography, Space, Breadcrumb } from 'antd'
 import { ArrowLeftOutlined } from '@ant-design/icons'
 import { qtp } from '../api/qtp'
-import { AuditTable } from '../components/AuditTable'
-
-function getEntityUrl(type: string, id: string): string | null {
-  if (type === 'scenarios') return `/scenarios/${id}`
-  if (type === 'test_runs') return `/runs/${id}`
-  if (type === 'schedules') return `/schedules/${id}`
-  if (type === 'targets') return `/targets/${id}`
-  if (type === 'workers') return `/workers/${id}`
-  return null
-}
+import { AuditTable, getEntityUrl } from '../components/AuditTable'
 
 export default function AuditEntityPage() {
   const { id } = useParams()
@@ -25,8 +16,9 @@ export default function AuditEntityPage() {
   })
 
   // Deduce the entity type from the first event that actually targets this ID natively
-  const entityType = auditEvents.find(e => e.entity_id === id)?.entity_type || 'Unknown Entity'
-  const entityUrl = id ? getEntityUrl(entityType, id) : null
+  const targetEvent = auditEvents.find(e => e.entity_id === id)
+  const entityType = targetEvent?.entity_type || 'Unknown Entity'
+  const entityUrl = targetEvent ? getEntityUrl(targetEvent) : null
 
   const idDisplay = entityUrl ? (
     <a onClick={() => nav(entityUrl)} style={{ cursor: 'pointer' }}>

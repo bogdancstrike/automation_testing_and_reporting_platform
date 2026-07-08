@@ -141,6 +141,10 @@ def run_scenario_in_subprocess(code_ref: str, ctx: Any, *, timeout_s: float) -> 
     queued_ms = int((time.monotonic() - waited) * 1000)
     if queued_ms > 50:
         ctx.log("info", f"waited {queued_ms}ms for a browser slot")
+    import gc
+    gc_was_enabled = gc.isenabled()
+    if gc_was_enabled:
+        gc.disable()
     try:
         proc = subprocess.Popen(
             [sys.executable, os.path.abspath(__file__), result_path],
@@ -148,6 +152,11 @@ def run_scenario_in_subprocess(code_ref: str, ctx: Any, *, timeout_s: float) -> 
             text=True,
             start_new_session=True,  # own process group so the timeout can reap the browser
         )
+    finally:
+        if gc_was_enabled:
+            gc.enable()
+
+    try:
         try:
             out, err = proc.communicate(input=job, timeout=timeout_s)
         except subprocess.TimeoutExpired:

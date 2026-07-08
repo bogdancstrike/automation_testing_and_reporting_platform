@@ -194,6 +194,10 @@ class CliClient:
         timeout = timeout_s or (Config.REQUEST_MAX_TIMEOUT_MS / 1000.0)
         self._ctx.log("info", f"cli: {rendered if shell else ' '.join(rendered)}")
         started = time.monotonic()
+        import gc
+        gc_was_enabled = gc.isenabled()
+        if gc_was_enabled:
+            gc.disable()
         try:
             proc = subprocess.run(
                 rendered, shell=shell, cwd=cwd, env=env, input=input_text,
@@ -202,6 +206,9 @@ class CliClient:
             code, out, err = proc.returncode, proc.stdout, proc.stderr
         except subprocess.TimeoutExpired as e:
             code, out, err = 124, (e.stdout or "") if isinstance(e.stdout, str) else "", f"timeout after {timeout}s"
+        finally:
+            if gc_was_enabled:
+                gc.enable()
         dur = int((time.monotonic() - started) * 1000)
         return CliResult(self._ctx, rendered if shell else " ".join(rendered), code, out or "", err or "", dur)
 
