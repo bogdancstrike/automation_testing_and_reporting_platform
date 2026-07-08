@@ -71,7 +71,7 @@
 - Modify: `frontend/src/pages/ScheduleDetailPage.tsx`
 
 - [ ] Add schedule-to-test association model/table.
-- [ ] Accept `test_definition_ids` for create/update while preserving single-test compatibility.
+- [ ] Accept `scenario_ids` for create/update while preserving single-test compatibility.
 - [ ] Serialize all scheduled scenarios.
 - [ ] Enqueue one run per associated scenario on each due schedule.
 - [ ] Update schedule list/detail UI to show scenario counts and all scenarios.

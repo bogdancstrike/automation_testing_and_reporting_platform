@@ -239,7 +239,7 @@ src/
       cli.py              # CLI/container executor (Testkube-style)
       python_script.py
   catalog/
-    models.py             # targets, test_definitions, revisions, suites
+    models.py             # targets, scenarios, revisions, suites
     schemas.py
     service.py
     request_test_service.py
@@ -467,7 +467,7 @@ validating that each class:
 - declares a supported `metadata.type`;
 - can validate its default configuration.
 
-Discovery writes or updates `test_definitions` and `test_revisions` without
+Discovery writes or updates `scenarios` and `test_revisions` without
 deleting historical revisions. This lets old run results stay reproducible.
 
 ## 9. UI-Created Request Tests
@@ -688,7 +688,7 @@ Key tables:
 | `environment_variables` | Non-secret variables and secret references. |
 | `secrets` | Encrypted secret values or external-manager references. |
 | `targets` | Named applications-under-test: base URL, health URL, default auth ref. |
-| `test_definitions` | Stable test identity, type, tags, status, current revision. |
+| `scenarios` | Stable test identity, type, tags, status, current revision. |
 | `test_revisions` | Immutable code reference or request config. |
 | `request_test_specs` | Query-friendly projection of UI-created HTTP request tests. |
 | `test_suites` | Suite metadata. |
@@ -725,11 +725,11 @@ PostgreSQL conventions:
 Important indexes:
 
 ```sql
-CREATE INDEX idx_test_definitions_project_status
-  ON test_definitions (project_id, status);
+CREATE INDEX idx_scenarios_project_status
+  ON scenarios (project_id, status);
 
-CREATE INDEX idx_test_definitions_tags
-  ON test_definitions USING GIN (tags);
+CREATE INDEX idx_scenarios_tags
+  ON scenarios USING GIN (tags);
 
 CREATE INDEX idx_schedules_due
   ON schedules (next_run_at)
@@ -740,7 +740,7 @@ CREATE INDEX idx_run_queue_claim
   WHERE status = 'queued';
 
 CREATE INDEX idx_test_runs_test_started
-  ON test_runs (test_definition_id, started_at DESC);
+  ON test_runs (scenario_id, started_at DESC);
 
 CREATE INDEX idx_test_runs_project_status_started
   ON test_runs (project_id, status, started_at DESC);

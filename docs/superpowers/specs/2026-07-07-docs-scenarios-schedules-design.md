@@ -16,7 +16,7 @@ Frontend `/tests` becomes `/scenarios`; `/tests` and `/tests/:id` will redirect 
 
 The overview route moves from `/` to `/overview`; `/` redirects to `/overview`.
 
-Run detail gets an `Open scenario` shortcut linking to `/scenarios/{run.test_definition_id}`.
+Run detail gets an `Open scenario` shortcut linking to `/scenarios/{run.scenario_id}`.
 
 ## Remote Table Pattern
 
@@ -24,7 +24,7 @@ List screens will use Ant Design table header controls rather than separate filt
 
 ## Multi-Scenario Schedules
 
-Schedules will support one or more test definitions. A normalized association table will connect schedules to tests while retaining compatibility with the existing single `test_definition_id` column during migration. Create/update APIs will accept `test_definition_ids`, and serializers will return `tests` plus summary fields. The scheduler will enqueue one run per associated scenario when the schedule is due. Schedule detail will show all scheduled scenarios and recent runs.
+Schedules will support one or more test definitions. A normalized association table will connect schedules to tests while retaining compatibility with the existing single `scenario_id` column during migration. Create/update APIs will accept `scenario_ids`, and serializers will return `tests` plus summary fields. The scheduler will enqueue one run per associated scenario when the schedule is due. Schedule detail will show all scheduled scenarios and recent runs.
 
 ## Scenario Types And Worker Image
 
