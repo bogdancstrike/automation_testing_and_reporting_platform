@@ -58,6 +58,8 @@ class TestResult:
     assertions: list[AssertionResult] = field(default_factory=list)
     error_category: str | None = None
     error_message: str | None = None
+    cleanup_failed: bool = False
+    cleanup_error: str | None = None
     # Free-form structured metadata (e.g. captured HTTP response summary).
     response: dict[str, Any] = field(default_factory=dict)
     metrics: dict[str, Any] = field(default_factory=dict)

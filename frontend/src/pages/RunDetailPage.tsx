@@ -91,6 +91,14 @@ export default function RunDetailPage() {
           <Descriptions.Item label="Queued">{run.queued_at?.replace("T", " ").slice(0, 19)}</Descriptions.Item>
           {failed && <Descriptions.Item label="Failure">{run.error_category}: {run.error_message}</Descriptions.Item>}
         </Descriptions>
+        {run.cleanup_failed && (
+          <div style={{ marginTop: 12 }}>
+            <Typography.Text type="danger" strong><WarningOutlined /> Cleanup Failed:</Typography.Text>
+            <div style={{ background: "#fff2f0", border: "1px solid #ffccc7", padding: "8px 12px", marginTop: 4, borderRadius: 4, whiteSpace: "pre-wrap", color: "#cf1322", fontSize: 12 }}>
+              {run.cleanup_error || "Unknown error"}
+            </div>
+          </div>
+        )}
         {failed && (
           <Space style={{ marginTop: 8 }}>
             <Typography.Text type="secondary">Defect triage:</Typography.Text>

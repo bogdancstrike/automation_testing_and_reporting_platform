@@ -65,6 +65,10 @@ def overview(db: Session, *, hours: int = 24, start: datetime | None = None,
         select(func.count()).select_from(Worker)
         .where(Worker.last_heartbeat >= utcnow() - timedelta(seconds=30))
     )
+    cleanup_failures = db.scalar(
+        select(func.count()).select_from(TestRun)
+        .where(TestRun.stats_reset_at.is_(None), TestRun.queued_at >= since, TestRun.queued_at <= end, TestRun.cleanup_failed == True)
+    )
 
     # Per-target health.
     tgt_rows = db.execute(
@@ -124,6 +128,7 @@ def overview(db: Session, *, hours: int = 24, start: datetime | None = None,
         "duration_ms": {"p50": p50, "p95": p95, "avg": round(avg, 1) if avg else None},
         "queue_backlog": queue_backlog or 0,
         "active_workers": active_workers or 0,
+        "cleanup_failures": cleanup_failures or 0,
         "trend": sorted(trend.values(), key=lambda x: x["bucket"]),
         "per_target": per_target_rows,
     }

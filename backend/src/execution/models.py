@@ -39,6 +39,9 @@ class TestRun(Base):
     defect_type: Mapped[str | None] = mapped_column(String(30), nullable=True)  # product_bug|automation_bug|...
     failure_signature: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
 
+    cleanup_failed: Mapped[bool] = mapped_column(Boolean, default=False)
+    cleanup_error: Mapped[str | None] = mapped_column(Text, nullable=True)
+
     response: Mapped[dict] = mapped_column(JSONB, default=dict)
     metrics: Mapped[dict] = mapped_column(JSONB, default=dict)
     correlation_id: Mapped[str | None] = mapped_column(String(64), nullable=True)

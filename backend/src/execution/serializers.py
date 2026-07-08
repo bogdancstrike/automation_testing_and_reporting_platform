@@ -20,6 +20,7 @@ def run_summary(r: TestRun, *, test_name: str | None = None, target_key: str | N
         "worker_name": r.worker_name, "triggered_by": r.triggered_by,
         "schedule_id": r.schedule_id,
         "error_category": r.error_category, "error_message": r.error_message,
+        "cleanup_failed": r.cleanup_failed, "cleanup_error": r.cleanup_error,
         "defect_type": r.defect_type, "failure_signature": r.failure_signature,
         "duration_ms": r.duration_ms,
         "queued_at": _iso(r.queued_at), "started_at": _iso(r.started_at),

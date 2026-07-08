@@ -136,6 +136,7 @@ export default function OverviewPage() {
         <Col xs={12} md={6}><StatCard label="Errors" value={totals.error || 0} icon={<WarningOutlined />} accent="#ea580c" tintValue /></Col>
         <Col xs={12} md={6}><StatCard label="p50 duration" value={ov?.duration_ms?.p50 || 0} icon={<FieldTimeOutlined />} accent="#0891b2" formatter={(v) => formatDurationMs(Number(v))} /></Col>
         <Col xs={12} md={6}><StatCard label="p95 duration" value={ov?.duration_ms?.p95 || 0} icon={<ThunderboltOutlined />} accent="#d97706" formatter={(v) => formatDurationMs(Number(v))} /></Col>
+        <Col xs={12} md={6}><StatCard label="Cleanup Fails" value={ov?.cleanup_failures || 0} icon={<WarningOutlined />} accent="#cf1322" tintValue /></Col>
       </Row>
 
       <Row gutter={[16, 16]} style={{ marginTop: 16 }}>

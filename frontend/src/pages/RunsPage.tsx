@@ -117,6 +117,7 @@ export default function RunsPage() {
           <Button danger onClick={confirmDeleteAll} loading={deleteAllRuns.isPending}>Delete All Runs</Button>
           <Button onClick={() => rerunQueued.mutate()} loading={rerunQueued.isPending}>Re-run all queued</Button>
           <Button onClick={() => restartFailed.mutate()} loading={restartFailed.isPending}>Re-run all failed/errors</Button>
+          <Switch size="small" checked={params.cleanup_failed === "true"} onChange={(c) => setParams(p => ({ ...p, cleanup_failed: c ? "true" : undefined, page: 1 }))} checkedChildren="Cleanup Failed" unCheckedChildren="All Cleanups" />
           <span>Live <Switch size="small" checked={live} onChange={setLive} /></span>
         </Space>
       </Space>
@@ -162,12 +163,25 @@ export default function RunsPage() {
             defect_type: "defect_type",
             error_category: "error_category",
             queued_at: "queued_at",
+            cleanup_failed: "cleanup_failed",
           },
           { sort: "queued_at", order: "desc", pageSize: 20 },
         ))}
         columns={[
           { title: "Scenario", dataIndex: "test_name", sorter: true, sortOrder: antSortOrder(params, "test_name"), ...textFilter("test", params, "Search scenario"), render: (v) => v || <em>—</em> },
-          { title: "Status", dataIndex: "status", sorter: true, sortOrder: antSortOrder(params, "status"), ...menuFilter("status", params, ["queued", "running", "passed", "failed", "error", "timeout", "canceled"].map((value) => ({ text: value, value }))), render: (s) => <StatusTag status={s} /> },
+          { 
+            title: "Status", 
+            dataIndex: "status", 
+            sorter: true, 
+            sortOrder: antSortOrder(params, "status"), 
+            ...menuFilter("status", params, ["queued", "running", "passed", "failed", "error", "timeout", "canceled"].map((value) => ({ text: value, value }))), 
+            render: (s, r) => (
+              <Space direction="vertical" size={0}>
+                <StatusTag status={s} />
+                {r.cleanup_failed && <Tag color="warning" style={{ fontSize: 10, margin: 0, marginTop: 4 }}>Cleanup Failed</Tag>}
+              </Space>
+            )
+          },
           { title: "Trigger", dataIndex: "trigger", sorter: true, sortOrder: antSortOrder(params, "trigger"), ...menuFilter("trigger", params, ["manual", "schedule", "api", "discovery"].map((value) => ({ text: value, value }))) },
           { title: "Target", dataIndex: "target_key", sorter: true, sortOrder: antSortOrder(params, "target_key"), ...menuFilter("target", params, targets.map((t) => ({ text: t.key, value: t.key }))) },
           { title: "Tags", dataIndex: "tags", sorter: true, sortOrder: antSortOrder(params, "tags"), ...menuFilter("tags", params, allTags.map((tag: string) => ({ text: tag, value: tag })), true), render: (tags) => tags?.length ? <Space size={2} wrap>{tags.map((t: string) => <Tag key={t} style={{ margin: 0, padding: "0 4px", fontSize: 11 }}>{t}</Tag>)}</Space> : "—" },

@@ -192,6 +192,8 @@ def _list_runs(db: Session, filters: dict[str, Any]) -> dict:
         stmt = stmt.where(TestRun.worker_name.ilike(f"%{filters['worker_name']}%"))
     if filters.get("duration_ms"):
         stmt = stmt.where(cast(TestRun.duration_ms, String).ilike(f"%{filters['duration_ms']}%"))
+    if filters.get("cleanup_failed") == "true":
+        stmt = stmt.where(TestRun.cleanup_failed == True)
     if filters.get("queued_at"):
         stmt = stmt.where(cast(TestRun.queued_at, String).ilike(f"%{filters['queued_at']}%"))
     if filters.get("tags"):

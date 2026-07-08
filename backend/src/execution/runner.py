@@ -62,6 +62,8 @@ def _run_code_test(code_ref: str, ctx: TestContext) -> TestResult:
         try:
             instance.cleanup(ctx)
         except Exception as e:
+            result.cleanup_failed = True
+            result.cleanup_error = str(e)
             ctx.log("warning", f"cleanup() failed: {e}")
         try:
             instance.teardown(ctx)
@@ -128,6 +130,8 @@ def _persist(db: Session, run: TestRun, definition: TestDefinition,
     run.duration_ms = result.metrics.get("elapsed_ms")
     run.error_category = result.error_category
     run.error_message = result.error_message
+    run.cleanup_failed = result.cleanup_failed
+    run.cleanup_error = result.cleanup_error
     run.response = result.response or {}
     run.metrics = result.metrics or {}
 
