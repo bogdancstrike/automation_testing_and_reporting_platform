@@ -12,9 +12,7 @@ export default function AuditExplorerPage() {
         </div>
       </Space>
 
-      <Card size="small" style={{ marginBottom: 16 }}>
-        <AuditTable />
-      </Card>
+      <AuditTable />
     </div>
   )
 }
