@@ -23,12 +23,8 @@ try:
 except Exception:  # pragma: no cover
     pass
 
-# kafka-python 2.3.x compatibility (OffsetAndMetadata gained a required
-# leader_epoch field) is handled inside the QF framework itself (qf>=1.0.3
-# constructs OffsetAndMetadata by its actual field count), so no monkeypatch is
-# needed here.
 import sys  # noqa: E402
-from pathlib import Path  # noqa: E402
+from pathlib import Path
 
 WORKER_DIR = Path(__file__).resolve().parent
 BACKEND_DIR = WORKER_DIR.parent / "backend"
