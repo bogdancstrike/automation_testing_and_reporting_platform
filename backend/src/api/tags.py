@@ -15,7 +15,7 @@ def list_tags(app, operation, request, principal=None, **kwargs):
 
 
 @require_authenticated
-def update_test_tags(app, operation, request, test_id=None, principal=None, **kwargs):
+def update_test_tags(app, operation, request, scenario_id=None, principal=None, **kwargs):
     body = json_body(request)
     with session_scope() as db:
-        return service.update_test_tags(db, test_id, body.get("tags") or []), 200
+        return service.update_test_tags(db, scenario_id, body.get("tags") or []), 200

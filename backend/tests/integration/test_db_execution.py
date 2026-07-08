@@ -198,23 +198,23 @@ def test_delete_request_test_refuses_active_runs(db_session):
     scenario = catalog_service.create_request_test(db, {
         "key": "ui.del", "name": "UI Del",
         "config": {"target": "test_target", "method": "GET", "url": "/get"}})
-    test_id = scenario["id"]
+    scenario_id = scenario["id"]
 
     # A queued (non-terminal) run must block deletion with a 409 ConflictError.
-    run = execution_service.enqueue_run(db, db.get(Scenario, test_id))
+    run = execution_service.enqueue_run(db, db.get(Scenario, scenario_id))
     assert run.status == "queued"
     with pytest.raises(ConflictError) as ei:
-        catalog_service.delete_request_test(db, test_id)
+        catalog_service.delete_request_test(db, scenario_id)
     assert ei.value.status_code == 409
     assert ei.value.details.get("active_runs") == 1
-    assert db.get(Scenario, test_id) is not None  # nothing deleted
+    assert db.get(Scenario, scenario_id) is not None  # nothing deleted
 
     # Once the run reaches a terminal state, deletion succeeds.
     execution_service.cancel_run(db, run.id)
     assert run.status == CANCELED
-    result = catalog_service.delete_request_test(db, test_id)
-    assert result == {"deleted": test_id}
-    assert db.get(Scenario, test_id) is None
+    result = catalog_service.delete_request_test(db, scenario_id)
+    assert result == {"deleted": scenario_id}
+    assert db.get(Scenario, scenario_id) is None
 
 
 def test_audit_logging(db_session):

@@ -215,12 +215,12 @@ class SelfTestDetailFromCatalog(HttpTest):
         with ctx.step("Find a code test"):
             response = ctx.http.get("/api/tests?source=code&page_size=1", auth=TOKEN)
             response.should.have_status(200)
-            test_id = response.json.get("items[0].id")
+            scenario_id = response.json.get("items[0].id")
 
         with ctx.step("Read test detail"):
-            response = ctx.http.get(f"/api/tests/{test_id}", auth=TOKEN)
+            response = ctx.http.get(f"/api/tests/{scenario_id}", auth=TOKEN)
             response.should.have_status(200)
-            response.json.should.have_field("id").equal_to(test_id)
+            response.json.should.have_field("id").equal_to(scenario_id)
             response.json.should.have_field("revisions").with_length_at_least(1)
 
 
@@ -396,16 +396,16 @@ class SelfRequestTestLifecycle(HttpTest):
                 },
             })
             response.should.have_status(201)
-            test_id = response.json.get("id")
-            ctx.set_var("test_id", test_id)
+            scenario_id = response.json.get("id")
+            ctx.set_var("scenario_id", scenario_id)
 
         with ctx.step("Read created request test"):
-            response = ctx.http.get(f"/api/tests/{test_id}", auth=TOKEN)
+            response = ctx.http.get(f"/api/tests/{scenario_id}", auth=TOKEN)
             response.should.have_status(200)
             response.json.should.have_field("key").equal_to(key)
 
         with ctx.step("Update request test"):
-            response = ctx.http.patch(f"/api/request-tests/{test_id}", auth=TOKEN, json={
+            response = ctx.http.patch(f"/api/request-tests/{scenario_id}", auth=TOKEN, json={
                 "name": "Scenario managed request updated",
                 "config": {
                     "target": "qtp_self",
@@ -418,18 +418,18 @@ class SelfRequestTestLifecycle(HttpTest):
             response.json.should.have_field("name").equal_to("Scenario managed request updated")
 
         with ctx.step("Delete request test"):
-            response = ctx.http.delete(f"/api/request-tests/{test_id}", auth=TOKEN)
+            response = ctx.http.delete(f"/api/request-tests/{scenario_id}", auth=TOKEN)
             response.should.have_status(200)
 
     def cleanup(self, ctx):
-        test_id = ctx.get_var("test_id")
-        if not test_id:
+        scenario_id = ctx.get_var("scenario_id")
+        if not scenario_id:
             return
         from src.core.db import session_scope
         from src.catalog.service import delete_request_test
 
         try:
             with session_scope() as db:
-                delete_request_test(db, test_id)
+                delete_request_test(db, scenario_id)
         except Exception:
             pass

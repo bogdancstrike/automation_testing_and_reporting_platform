@@ -12,15 +12,15 @@ def _author(principal) -> str:
 
 
 @require_authenticated
-def list_test_comments(app, operation, request, test_id=None, principal=None, **kwargs):
+def list_test_comments(app, operation, request, scenario_id=None, principal=None, **kwargs):
     with session_scope() as db:
-        return {"items": service.list_comments(db, "test", test_id)}, 200
+        return {"items": service.list_comments(db, "test", scenario_id)}, 200
 
 
 @require_authenticated
-def create_test_comment(app, operation, request, test_id=None, principal=None, **kwargs):
+def create_test_comment(app, operation, request, scenario_id=None, principal=None, **kwargs):
     with session_scope() as db:
-        return service.create_comment(db, "test", test_id, json_body(request), author=_author(principal)), 201
+        return service.create_comment(db, "test", scenario_id, json_body(request), author=_author(principal)), 201
 
 
 @require_authenticated

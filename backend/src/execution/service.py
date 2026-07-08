@@ -57,8 +57,8 @@ def enqueue_run(db: Session, definition: Scenario, *, trigger: str = "manual",
     return run
 
 
-def run_now(db: Session, test_id: str, *, environment: str = "default", triggered_by: str | None = None) -> dict:
-    d = db.get(Scenario, test_id)
+def run_now(db: Session, scenario_id: str, *, environment: str = "default", triggered_by: str | None = None) -> dict:
+    d = db.get(Scenario, scenario_id)
     if not d:
         raise NotFoundError("test not found")
     if d.status == "missing_from_source":

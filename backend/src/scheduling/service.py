@@ -28,17 +28,17 @@ def _scenario_summary(d: Scenario) -> dict[str, Any]:
     }
 
 
-def _load_definitions(db: Session, test_ids: list[str]) -> list[Scenario]:
-    if not test_ids:
+def _load_definitions(db: Session, scenario_ids: list[str]) -> list[Scenario]:
+    if not scenario_ids:
         return []
-    defs = {d.id: d for d in db.scalars(select(Scenario).where(Scenario.id.in_(test_ids))).all()}
-    missing = [test_id for test_id in test_ids if test_id not in defs]
+    defs = {d.id: d for d in db.scalars(select(Scenario).where(Scenario.id.in_(scenario_ids))).all()}
+    missing = [scenario_id for scenario_id in scenario_ids if scenario_id not in defs]
     if missing:
         raise ValidationError(f"unknown scenario id(s): {', '.join(missing)}")
-    return [defs[test_id] for test_id in test_ids]
+    return [defs[scenario_id] for scenario_id in scenario_ids]
 
 
-def _payload_test_ids(payload: dict[str, Any]) -> list[str]:
+def _payload_scenario_ids(payload: dict[str, Any]) -> list[str]:
     raw = payload.get("scenario_ids")
     if raw is None:
         raw = payload.get("scenario_id")
@@ -214,7 +214,7 @@ def get_schedule_detail(db: Session, schedule_id: str) -> dict:
 
 
 def create_schedule(db: Session, payload: dict[str, Any]) -> dict:
-    defs = _load_definitions(db, _payload_test_ids(payload))
+    defs = _load_definitions(db, _payload_scenario_ids(payload))
     project = default_project(db)
     target_tags = payload.get("target_tags", [])
     
@@ -259,7 +259,7 @@ def update_schedule(db: Session, schedule_id: str, payload: dict[str, Any]) -> d
         raise NotFoundError("schedule not found")
     defs: list[Scenario] | None = None
     if "scenario_ids" in payload or "scenario_id" in payload:
-        defs = _load_definitions(db, _payload_test_ids(payload))
+        defs = _load_definitions(db, _payload_scenario_ids(payload))
     for f in ("name", "recurrence_type", "interval_seconds", "cron_expression", "timezone", "environment", "is_enabled", "target_tags"):
         if f in payload:
             setattr(s, f, payload[f])

@@ -167,20 +167,20 @@ def delete_target(db: Session, target_id: str) -> dict:
     db.execute(sa_delete(RunQueue).where(RunQueue.test_run_id.in_(run_ids_subq)))
     db.execute(sa_delete(TestRun).where(TestRun.target_id == target_id))
 
-    ui_test_ids = list(db.scalars(
+    ui_scenario_ids = list(db.scalars(
         select(Scenario.id).where(Scenario.target_key == t.key, Scenario.source == "ui")
     ).all())
     
-    if ui_test_ids:
-        ui_run_ids_subq = select(TestRun.id).where(TestRun.scenario_id.in_(ui_test_ids))
+    if ui_scenario_ids:
+        ui_run_ids_subq = select(TestRun.id).where(TestRun.scenario_id.in_(ui_scenario_ids))
         db.execute(sa_delete(RunLog).where(RunLog.test_run_id.in_(ui_run_ids_subq)))
         db.execute(sa_delete(TestRunStep).where(TestRunStep.test_run_id.in_(ui_run_ids_subq)))
         db.execute(sa_delete(TestRunAssertion).where(TestRunAssertion.test_run_id.in_(ui_run_ids_subq)))
         db.execute(sa_delete(RunQueue).where(RunQueue.test_run_id.in_(ui_run_ids_subq)))
-        db.execute(sa_delete(TestRun).where(TestRun.scenario_id.in_(ui_test_ids)))
+        db.execute(sa_delete(TestRun).where(TestRun.scenario_id.in_(ui_scenario_ids)))
 
-        schedule_ids = list(db.scalars(select(ScheduleTest.schedule_id).where(ScheduleTest.scenario_id.in_(ui_test_ids))).all())
-        db.execute(sa_delete(ScheduleTest).where(ScheduleTest.scenario_id.in_(ui_test_ids)))
+        schedule_ids = list(db.scalars(select(ScheduleTest.schedule_id).where(ScheduleTest.scenario_id.in_(ui_scenario_ids))).all())
+        db.execute(sa_delete(ScheduleTest).where(ScheduleTest.scenario_id.in_(ui_scenario_ids)))
         for schedule_id in schedule_ids:
             schedule = db.get(Schedule, schedule_id)
             if not schedule:
@@ -191,8 +191,8 @@ def delete_target(db: Session, target_id: str) -> dict:
             else:
                 db.delete(schedule)
 
-        db.execute(sa_delete(TestRevision).where(TestRevision.scenario_id.in_(ui_test_ids)))
-        db.execute(sa_delete(Scenario).where(Scenario.id.in_(ui_test_ids)))
+        db.execute(sa_delete(TestRevision).where(TestRevision.scenario_id.in_(ui_scenario_ids)))
+        db.execute(sa_delete(Scenario).where(Scenario.id.in_(ui_scenario_ids)))
 
     db.execute(sa_delete(Target).where(Target.id == target_id))
     return {"deleted": target_id}
@@ -330,8 +330,8 @@ def _source_code(revision) -> str | None:
         return None
 
 
-def get_test_detail(db: Session, test_id: str) -> dict:
-    d = db.get(Scenario, test_id)
+def get_test_detail(db: Session, scenario_id: str) -> dict:
+    d = db.get(Scenario, scenario_id)
     if not d:
         raise NotFoundError("test not found")
     detail = serializers.test_detail(d)
@@ -357,12 +357,12 @@ def get_test_detail(db: Session, test_id: str) -> dict:
     return detail
 
 
-def delete_test(db: Session, test_id: str) -> dict:
+def delete_test(db: Session, scenario_id: str) -> dict:
     from sqlalchemy import delete as sa_delete
     from src.execution.models import RunLog, RunQueue, TestRun, TestRunAssertion, TestRunStep
     from src.scheduling.models import Schedule, ScheduleTest
 
-    d = db.get(Scenario, test_id)
+    d = db.get(Scenario, scenario_id)
     if not d:
         raise NotFoundError("test not found")
     
@@ -371,7 +371,7 @@ def delete_test(db: Session, test_id: str) -> dict:
         
     active = db.scalars(
         select(TestRun.id).where(
-            TestRun.scenario_id == test_id,
+            TestRun.scenario_id == scenario_id,
             TestRun.status.not_in(list(TERMINAL_STATUSES)),
         )
     ).all()
@@ -382,15 +382,15 @@ def delete_test(db: Session, test_id: str) -> dict:
             details={"active_runs": len(active)},
         )
 
-    run_ids_subq = select(TestRun.id).where(TestRun.scenario_id == test_id)
+    run_ids_subq = select(TestRun.id).where(TestRun.scenario_id == scenario_id)
     db.execute(sa_delete(RunLog).where(RunLog.test_run_id.in_(run_ids_subq)))
     db.execute(sa_delete(TestRunStep).where(TestRunStep.test_run_id.in_(run_ids_subq)))
     db.execute(sa_delete(TestRunAssertion).where(TestRunAssertion.test_run_id.in_(run_ids_subq)))
     db.execute(sa_delete(RunQueue).where(RunQueue.test_run_id.in_(run_ids_subq)))
-    db.execute(sa_delete(TestRun).where(TestRun.scenario_id == test_id))
+    db.execute(sa_delete(TestRun).where(TestRun.scenario_id == scenario_id))
 
-    schedule_ids = list(db.scalars(select(ScheduleTest.schedule_id).where(ScheduleTest.scenario_id == test_id)).all())
-    db.execute(sa_delete(ScheduleTest).where(ScheduleTest.scenario_id == test_id))
+    schedule_ids = list(db.scalars(select(ScheduleTest.schedule_id).where(ScheduleTest.scenario_id == scenario_id)).all())
+    db.execute(sa_delete(ScheduleTest).where(ScheduleTest.scenario_id == scenario_id))
     for schedule_id in schedule_ids:
         schedule = db.get(Schedule, schedule_id)
         if not schedule:
@@ -401,11 +401,11 @@ def delete_test(db: Session, test_id: str) -> dict:
         else:
             db.delete(schedule)
 
-    db.execute(sa_delete(TestRevision).where(TestRevision.scenario_id == test_id))
-    db.execute(sa_delete(Scenario).where(Scenario.id == test_id))
+    db.execute(sa_delete(TestRevision).where(TestRevision.scenario_id == scenario_id))
+    db.execute(sa_delete(Scenario).where(Scenario.id == scenario_id))
     db.flush()
     
-    return {"deleted": test_id}
+    return {"deleted": scenario_id}
 
 
 def _make_revision(db: Session, definition: Scenario, *, code_ref=None, config=None) -> TestRevision:
@@ -498,8 +498,8 @@ def create_request_test(db: Session, payload: dict[str, Any]) -> dict:
     return serializers.test_detail(d)
 
 
-def update_request_test(db: Session, test_id: str, payload: dict[str, Any]) -> dict:
-    d = db.get(Scenario, test_id)
+def update_request_test(db: Session, scenario_id: str, payload: dict[str, Any]) -> dict:
+    d = db.get(Scenario, scenario_id)
     if not d:
         raise NotFoundError("test not found")
     if d.source != "ui":
@@ -514,12 +514,12 @@ def update_request_test(db: Session, test_id: str, payload: dict[str, Any]) -> d
     return serializers.test_detail(d)
 
 
-def delete_request_test(db: Session, test_id: str) -> dict:
+def delete_request_test(db: Session, scenario_id: str) -> dict:
     from sqlalchemy import delete as sa_delete
     from src.execution.models import RunLog, RunQueue, TestRun, TestRunAssertion, TestRunStep
     from src.scheduling.models import Schedule, ScheduleTest
 
-    d = db.get(Scenario, test_id)
+    d = db.get(Scenario, scenario_id)
     if not d:
         raise NotFoundError("test not found")
     if d.source != "ui":
@@ -530,7 +530,7 @@ def delete_request_test(db: Session, test_id: str) -> dict:
     # wait for them to reach a terminal state (or cancel them) first.
     active = db.scalars(
         select(TestRun.id).where(
-            TestRun.scenario_id == test_id,
+            TestRun.scenario_id == scenario_id,
             TestRun.status.not_in(list(TERMINAL_STATUSES)),
         )
     ).all()
@@ -541,15 +541,15 @@ def delete_request_test(db: Session, test_id: str) -> dict:
             details={"active_runs": len(active)},
         )
 
-    run_ids = list(db.scalars(select(TestRun.id).where(TestRun.scenario_id == test_id)).all())
+    run_ids = list(db.scalars(select(TestRun.id).where(TestRun.scenario_id == scenario_id)).all())
     if run_ids:
         db.execute(sa_delete(RunLog).where(RunLog.test_run_id.in_(run_ids)))
         db.execute(sa_delete(TestRunStep).where(TestRunStep.test_run_id.in_(run_ids)))
         db.execute(sa_delete(TestRunAssertion).where(TestRunAssertion.test_run_id.in_(run_ids)))
         db.execute(sa_delete(RunQueue).where(RunQueue.test_run_id.in_(run_ids)))
         db.execute(sa_delete(TestRun).where(TestRun.id.in_(run_ids)))
-    schedule_ids = list(db.scalars(select(ScheduleTest.schedule_id).where(ScheduleTest.scenario_id == test_id)).all())
-    db.execute(sa_delete(ScheduleTest).where(ScheduleTest.scenario_id == test_id))
+    schedule_ids = list(db.scalars(select(ScheduleTest.schedule_id).where(ScheduleTest.scenario_id == scenario_id)).all())
+    db.execute(sa_delete(ScheduleTest).where(ScheduleTest.scenario_id == scenario_id))
     for schedule_id in schedule_ids:
         schedule = db.get(Schedule, schedule_id)
         if not schedule:
@@ -559,9 +559,9 @@ def delete_request_test(db: Session, test_id: str) -> dict:
             schedule.scenario_id = replacement.scenario_id
         else:
             db.delete(schedule)
-    db.execute(sa_delete(TestRevision).where(TestRevision.scenario_id == test_id))
-    db.execute(sa_delete(Scenario).where(Scenario.id == test_id))
-    return {"deleted": test_id}
+    db.execute(sa_delete(TestRevision).where(TestRevision.scenario_id == scenario_id))
+    db.execute(sa_delete(Scenario).where(Scenario.id == scenario_id))
+    return {"deleted": scenario_id}
 
 
 # ── Target detail / stats ──────────────────────────────────────────────────
@@ -580,7 +580,7 @@ def _get_target_detail(db: Session, target_id: str) -> dict:
         Scenario.project_id == target.project_id,
         Scenario.target_key == target.key,
     )
-    test_ids = list(db.scalars(tests_stmt).all())
+    scenario_ids = list(db.scalars(tests_stmt).all())
     active_run = TestRun.stats_reset_at.is_(None)
     status_counts = dict(db.execute(
         select(TestRun.status, func.count()).where(TestRun.target_id == target.id, active_run).group_by(TestRun.status)
@@ -594,14 +594,14 @@ def _get_target_detail(db: Session, target_id: str) -> dict:
     ).where(TestRun.target_id == target.id, active_run, TestRun.duration_ms.isnot(None))).first()
     p50, p95, avg = (durations or (None, None, None))
     scheduled = 0
-    if test_ids:
+    if scenario_ids:
         scheduled = int(db.scalar(
             select(func.count(func.distinct(ScheduleTest.schedule_id)))
-            .where(ScheduleTest.scenario_id.in_(test_ids))
+            .where(ScheduleTest.scenario_id.in_(scenario_ids))
         ) or 0)
     return {
         "target": serializers.target(target),
-        "test_count": len(test_ids),
+        "test_count": len(scenario_ids),
         "scheduled_test_count": scheduled,
         "totals": {**status_counts, "total_runs": sum(status_counts.values())},
         "pass_rate": round(passed / finished, 4) if finished else None,

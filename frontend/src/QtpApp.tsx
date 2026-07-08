@@ -13,7 +13,7 @@ import { keycloak } from "./keycloak";
 import { qtp } from "./api/qtp";
 import OverviewPage from "./pages/OverviewPage";
 import CatalogPage from "./pages/CatalogPage";
-import TestDetailPage from "./pages/TestDetailPage";
+import ScenarioDetailPage from "./pages/ScenarioDetailPage";
 import RequestBuilderPage from "./pages/RequestBuilderPage";
 import RunsPage from "./pages/RunsPage";
 import RunDetailPage from "./pages/RunDetailPage";
@@ -211,7 +211,7 @@ function AppShell({ mode, setMode }: { mode: ThemeMode; setMode: (mode: ThemeMod
             <Route path="/tests" element={<Navigate to="/scenarios" replace />} />
             <Route path="/tests/:id" element={<NavigateToScenario />} />
             <Route path="/scenarios" element={<CatalogPage />} />
-            <Route path="/scenarios/:id" element={<TestDetailPage />} />
+            <Route path="/scenarios/:id" element={<ScenarioDetailPage />} />
             <Route path="/request-builder" element={<RequestBuilderPage />} />
             <Route path="/runs" element={<RunsPage />} />
             <Route path="/runs/:id" element={<RunDetailPage />} />

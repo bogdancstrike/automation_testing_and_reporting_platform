@@ -82,7 +82,7 @@ def run_all_target_tests(app, operation, request, target_id=None, principal=None
     sync_mode = query_args(request).get("sync", "").lower() == "true"
     actor = getattr(principal, "username", None) or getattr(principal, "subject", None)
     body = json_body(request)
-    test_ids = body.get("scenario_ids")
+    scenario_ids = body.get("scenario_ids")
 
     with session_scope() as db:
         target = db.get(Target, target_id)
@@ -90,8 +90,8 @@ def run_all_target_tests(app, operation, request, target_id=None, principal=None
             return {"error": "target not found"}, 404
             
         stmt = select(Scenario).where(Scenario.target_key == target.key, Scenario.status != "missing_from_source")
-        if test_ids is not None:
-            stmt = stmt.where(Scenario.id.in_(test_ids))
+        if scenario_ids is not None:
+            stmt = stmt.where(Scenario.id.in_(scenario_ids))
         tests = db.scalars(stmt).all()
         
         queued = []

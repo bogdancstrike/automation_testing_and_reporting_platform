@@ -89,16 +89,16 @@ def _create_comment(db: Session, entity_type: str, entity_id: str, payload: dict
     return serializers.comment(comment)
 
 
-def update_test_tags(db: Session, test_id: str, tags: list[Any]) -> dict[str, Any]:
+def update_test_tags(db: Session, scenario_id: str, tags: list[Any]) -> dict[str, Any]:
     with tracer.start_as_current_span("tags.update_test") as span:
-        span.set_attribute("test.id", test_id)
-        result = _update_test_tags(db, test_id, tags)
+        span.set_attribute("test.id", scenario_id)
+        result = _update_test_tags(db, scenario_id, tags)
         span.set_attribute("tags.count", len(result.get("tags", [])))
         return result
 
 
-def _update_test_tags(db: Session, test_id: str, tags: list[Any]) -> dict[str, Any]:
-    test = db.get(Scenario, test_id)
+def _update_test_tags(db: Session, scenario_id: str, tags: list[Any]) -> dict[str, Any]:
+    test = db.get(Scenario, scenario_id)
     if not test:
         raise NotFoundError("test not found")
     test.tags = _clean_tags(tags)

@@ -5,6 +5,15 @@ import { ArrowLeftOutlined } from '@ant-design/icons'
 import { qtp } from '../api/qtp'
 import { AuditTimeline } from '../components/AuditTimeline'
 
+function getEntityUrl(type: string, id: string): string | null {
+  if (type === 'scenarios') return `/scenarios/${id}`
+  if (type === 'test_runs') return `/runs/${id}`
+  if (type === 'schedules') return `/schedules/${id}`
+  if (type === 'targets') return `/targets/${id}`
+  if (type === 'workers') return `/workers/${id}`
+  return null
+}
+
 export default function AuditEntityPage() {
   const { id } = useParams()
   const nav = useNavigate()
@@ -17,6 +26,15 @@ export default function AuditEntityPage() {
 
   // Deduce the entity type from the first event that actually targets this ID natively
   const entityType = auditEvents.find(e => e.entity_id === id)?.entity_type || 'Unknown Entity'
+  const entityUrl = id ? getEntityUrl(entityType, id) : null
+
+  const idDisplay = entityUrl ? (
+    <a onClick={() => nav(entityUrl)} style={{ cursor: 'pointer' }}>
+      <Typography.Text code style={{ color: '#1677ff', cursor: 'pointer' }}>{id}</Typography.Text>
+    </a>
+  ) : (
+    <Typography.Text code>{id}</Typography.Text>
+  )
 
   return (
     <div>
@@ -25,7 +43,7 @@ export default function AuditEntityPage() {
           <a onClick={() => nav('/audit')}>Audit Ledger</a>
         </Breadcrumb.Item>
         <Breadcrumb.Item>
-          {entityType.replace('_', ' ')} <Typography.Text code>{id}</Typography.Text>
+          {entityType.replace('_', ' ')} {idDisplay}
         </Breadcrumb.Item>
       </Breadcrumb>
 
@@ -38,7 +56,7 @@ export default function AuditEntityPage() {
 
       <Card>
         <Typography.Paragraph type="secondary">
-          Displaying all recorded events for {entityType.replace('_', ' ')} <Typography.Text code>{id}</Typography.Text> and its related branches.
+          Displaying all recorded events for {entityType.replace('_', ' ')} {idDisplay} and its related branches.
         </Typography.Paragraph>
         
         <div style={{ marginTop: 24 }}>

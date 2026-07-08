@@ -52,57 +52,66 @@ def record(
     return evt
 
 
-def list_(
-    db: Session,
-    actor: str,
-    *,
-    action: str | None = None,
-    entity_type: str | None = None,
-    entity_id: str | None = None,
-    related_to: str | None = None,
-    correlation_id: str | None = None,
-    created_after: str | None = None,
-    created_before: str | None = None,
-    sort_by: str = "created_at",
-    sort_dir: str = "desc",
-    limit: int = 100,
-) -> list[AuditEvent]:
-    limit = max(1, min(limit, 200))
+def list_(db: Session, actor: str, filters: dict[str, Any]) -> dict:
+    from src.core.pagination import parse_page, envelope, apply_sort
+    params = parse_page(filters, default_sort="created_at", default_order="desc", max_page_size=200)
+
     stmt = select(AuditEvent)
-    if action:
-        stmt = stmt.where(AuditEvent.action == action)
-    if actor:
-        # In a real system, you might filter if not admin. 
-        # But here we let the caller specify the actor filter.
-        # Wait, if `actor` is passed in as a filter, let's use it as a filter.
-        pass
-    if entity_type:
-        stmt = stmt.where(AuditEvent.entity_type == entity_type)
-    if entity_id:
-        stmt = stmt.where(AuditEvent.entity_id == entity_id)
+    
+    action = filters.get("action")
+    if action: stmt = stmt.where(AuditEvent.action == action)
+    
+    entity_type = filters.get("entity_type")
+    if entity_type: stmt = stmt.where(AuditEvent.entity_type == entity_type)
+    
+    entity_id = filters.get("entity_id")
+    if entity_id: stmt = stmt.where(AuditEvent.entity_id == entity_id)
+    
+    related_to = filters.get("related_to")
     if related_to:
         from sqlalchemy import or_, text
-        # If it's Postgres, we can do new_value->>'scenario_id' == related_to
-        # For simplicity and cross-db compatibility in SQLAlchemy, we can cast new_value to string 
-        # or just use postgres json operators since QTP uses Postgres.
         stmt = stmt.where(
             or_(
                 AuditEvent.entity_id == related_to,
                 text("(new_value->>'scenario_id' = :related_to OR old_value->>'scenario_id' = :related_to)").bindparams(related_to=related_to)
             )
         )
-    if correlation_id:
-        stmt = stmt.where(AuditEvent.correlation_id == correlation_id)
-    if created_after:
-        stmt = stmt.where(AuditEvent.created_at >= created_after)
-    if created_before:
-        stmt = stmt.where(AuditEvent.created_at <= created_before)
+        
+    correlation_id = filters.get("correlation_id")
+    if correlation_id: stmt = stmt.where(AuditEvent.correlation_id == correlation_id)
+    
+    # Search text
+    if params.q:
+        # Simplistic text search over some strings, e.g. actor or action
+        stmt = stmt.where(AuditEvent.actor.ilike(f"%{params.q}%"))
+        
+    actor_filter = filters.get("actor")
+    if actor_filter: stmt = stmt.where(AuditEvent.actor.ilike(f"%{actor_filter}%"))
 
-    col = getattr(AuditEvent, sort_by, AuditEvent.created_at)
-    stmt = stmt.order_by(desc(col) if sort_dir == "desc" else asc(col))
-    stmt = stmt.limit(limit)
+    created_after = filters.get("created_after")
+    if created_after: stmt = stmt.where(AuditEvent.created_at >= created_after)
 
-    return list(db.scalars(stmt))
+    created_before = filters.get("created_before")
+    if created_before: stmt = stmt.where(AuditEvent.created_at <= created_before)
+
+    # Sort
+    sort_fields = {
+        "created_at": AuditEvent.created_at,
+        "action": AuditEvent.action,
+        "actor": AuditEvent.actor,
+        "entity_type": AuditEvent.entity_type,
+        "correlation_id": AuditEvent.correlation_id,
+    }
+    stmt = apply_sort(stmt, params, sort_fields)
+
+    # Paginate
+    from sqlalchemy import func
+    total = db.scalar(select(func.count()).select_from(stmt.subquery()))
+    rows = db.scalars(stmt.offset((params.page - 1) * params.page_size).limit(params.page_size)).all()
+    
+    from src.audit.serializers import serialize_audit_event
+    return envelope([serialize_audit_event(r) for r in rows], total, params)
+
 
 
 def get_for_entity(

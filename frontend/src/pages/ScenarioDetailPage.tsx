@@ -16,7 +16,7 @@ const METHOD_COLOR: Record<string, string> = {
   GET: "green", POST: "blue", PUT: "orange", PATCH: "gold", DELETE: "red", HEAD: "default",
 };
 
-export default function TestDetailPage() {
+export default function ScenarioDetailPage() {
   const { id = "" } = useParams();
   const nav = useNavigate();
   const { message } = App.useApp();
