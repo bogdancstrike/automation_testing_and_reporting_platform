@@ -1,7 +1,7 @@
 """Placeholder adapters for test types not runnable in this deployment.
 
 Playwright/Selenium/CLI executors require browser binaries or container runtimes
-that the demo image does not ship. They return a clear ERROR result instead of
+that the environment does not ship. They return a clear ERROR result instead of
 crashing the worker, so the lifecycle and reporting paths still exercise them.
 """
 from __future__ import annotations

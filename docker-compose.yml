@@ -15,7 +15,7 @@ x-backend-env: &backend-env
   ALLOWED_ORIGINS: "http://localhost:5173"
   # The demo app-under-test lives inside the compose network on a private IP;
   # allow it (and the API self-tests target) past the SSRF private-range block.
-  SSRF_ALLOWLIST: "httpbin,api,localhost,127.0.0.1"
+  SSRF_ALLOWLIST: "api,localhost,127.0.0.1"
   LOG_LEVEL: "INFO"
   # ── Kafka worker transport ──
   KAFKA_BOOTSTRAP_SERVERS: "kafka:9092"
@@ -147,15 +147,6 @@ services:
       timeout: 5s
       retries: 30
       start_period: 25s
-    restart: unless-stopped
-
-  # ── Demo app-under-test (so the request builder has a real target) ───────
-  httpbin:
-    image: mccutchen/go-httpbin:v2.15.0
-    container_name: qtp-httpbin
-    networks: [qtpnet]
-    ports:
-      - "8088:8080"
     restart: unless-stopped
 
   # ── One-shot: create schema, seed data, create the runs topic (10 parts) ─

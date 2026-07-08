@@ -48,7 +48,7 @@ def discover_from_path(root: Path, *, package_root: str = "scenarios.automation"
     """Recursively discover scenarios from a filesystem tree.
 
     ``root`` is ``backend/scenarios/automation`` — one directory per target
-    (``scenarios/automation/httpbin``, ``scenarios/automation/qtp_self``, …).
+    (``scenarios/automation/qtp_self``, …).
     Every Python file under it is imported as ``scenarios.automation.<target>.
     <module>`` and its ``BaseAutomationTest`` subclass registered. Adding a new
     target directory therefore needs no registration step. Files whose name

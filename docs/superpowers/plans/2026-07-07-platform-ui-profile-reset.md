@@ -68,10 +68,10 @@
 
 **Files:**
 - Create: new or grouped scenario modules under `backend/scenarios/automation/qtp_self`
-- Create: new or grouped scenario modules under `backend/scenarios/automation/httpbin`
+- Create: new or grouped scenario modules under `backend/scenarios/automation/qtp_self`
 
 - [ ] Add at least 30 qtp_self scenario classes across health, auth, catalog, targets, runs, schedules, filters, and multi-step dependent flows.
-- [ ] Add at least 20 httpbin scenario classes across status, headers, redirects, auth, cookies, payloads, delay, cache, and dependent captures.
+- [ ] Add at least 20 qtp_self scenario classes across status, headers, redirects, auth, cookies, payloads, delay, cache, and dependent captures.
 - [ ] Keep scenario metadata keys unique and target keys aligned with seeded targets: `qtp_self` and `demo`.
 
 ### Task 6: Verification And Checkpoints

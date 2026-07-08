@@ -37,7 +37,7 @@ The API already serializes `created_at` for tests. The frontend type will expose
 
 ## Automation Scenarios
 
-Add at least 30 qtp_self scenarios and 20 httpbin scenarios under `backend/scenarios/automation`. The set will include simple single-step coverage and multi-step flows where later steps depend on data captured by earlier steps.
+Add at least 50 qtp_self scenarios under `backend/scenarios/automation`. The set will include simple single-step coverage and multi-step flows where later steps depend on data captured by earlier steps.
 
 ## Verification
 

@@ -22,7 +22,7 @@ class Schedule(Base):
     test_definition_id: Mapped[str | None] = mapped_column(
         UUID(as_uuid=False), ForeignKey("test_definitions.id"), index=True, nullable=True)
     name: Mapped[str] = mapped_column(String(200))
-    target_tags: Mapped[list] = mapped_column(JSONB, default=list)
+    target_tags: Mapped[list] = mapped_column(JSONB, server_default='[]', default=list)
 
     recurrence_type: Mapped[str] = mapped_column(String(20), default="interval")  # once|interval|cron
     interval_seconds: Mapped[int | None] = mapped_column(Integer, nullable=True)

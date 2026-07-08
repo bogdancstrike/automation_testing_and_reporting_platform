@@ -401,22 +401,22 @@ export default function DocsPage() {
             <ol className="qtp-docs-steps" style={{ paddingLeft: '20px', margin: '20px 0' }}>
               <li style={{ marginBottom: '16px' }}>
                 <strong>Create a Target.</strong> In the UI go to <strong>Targets → New target</strong>. Give it a key like{' '}
-                <code>demo_api</code> and a base URL such as <code>https://jsonplaceholder.typicode.com</code>. The key is
+                <code>example_api</code> and a base URL such as <code>https://jsonplaceholder.typicode.com</code>. The key is
                 how your code will address it.
               </li>
               <li style={{ marginBottom: '16px' }}>
                 <strong>Write the scenario.</strong> Add a file at{' '}
-                <code>backend/scenarios/automation/demo_api/fetch_user.py</code>:
+                <code>backend/scenarios/automation/example_api/fetch_user.py</code>:
                 <Code language="python">{`from src.testkit import HttpTest, TestMetadata, TYPE_HTTP
 
 
 class FetchUser(HttpTest):
     metadata = TestMetadata(
-        key="demo.fetch_user",
-        name="Demo · fetch user #1",
+        key="example.fetch_user",
+        name="Example · fetch user #1",
         type=TYPE_HTTP,
-        target="demo_api",          # matches the Target key
-        tags=["demo", "smoke"],
+        target="example_api",          # matches the Target key
+        tags=["example", "smoke"],
     )
 
     def test(self, ctx):
@@ -430,7 +430,7 @@ class FetchUser(HttpTest):
               <li style={{ marginBottom: '16px' }}>
                 <strong>Discover it.</strong> Open <strong>Scenarios</strong> and click <strong>Discover code scenarios</strong> (or
                 call <code>POST /api/tests/discover</code> from CI). QTP imports the file and registers{' '}
-                <code>demo.fetch_user</code>.
+                <code>example.fetch_user</code>.
               </li>
               <li style={{ marginBottom: '16px' }}>
                 <strong>Run &amp; inspect.</strong> Click <strong>Run</strong>. When it finishes, open the run to see the exact
@@ -447,8 +447,8 @@ class FetchUser(HttpTest):
               subclasses a QTP base and declares <code>metadata</code>.
             </Paragraph>
             <Code language="text">{`backend/scenarios/automation/
-├── demo_api/
-│   ├── fetch_user.py          → scenarios.automation.demo_api.fetch_user
+├── example_api/
+│   ├── fetch_user.py          → scenarios.automation.example_api.fetch_user
 │   └── create_post.py
 ├── payments/
 │   ├── checkout_e2e.py

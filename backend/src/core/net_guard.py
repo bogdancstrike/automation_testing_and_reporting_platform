@@ -60,7 +60,7 @@ def resolve_and_check(url: str) -> None:
     """Raise ValidationError if *url* resolves to a blocked address.
 
     Skips the block entirely when SSRF_BLOCK_PRIVATE is off, and honors the
-    per-deployment allowlist (used for the demo target inside the compose
+    per-deployment allowlist (used for internal test targets inside the compose
     network).
     """
     parsed = urlparse(url)

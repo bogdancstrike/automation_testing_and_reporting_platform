@@ -55,6 +55,41 @@ export function textFilter(paramKey: string, params: QueryParams, placeholder: s
   };
 }
 
+export function textFilterLocal(dataIndex: string, placeholder: string) {
+  return {
+    filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }: any) => (
+      <div style={{ padding: 8, width: 230 }} onClick={(event) => event.stopPropagation()}>
+        <Input
+          autoFocus
+          allowClear
+          placeholder={placeholder}
+          value={selectedKeys[0]}
+          onChange={(event) => setSelectedKeys(event.target.value ? [event.target.value] : [])}
+          onPressEnter={() => confirm()}
+          style={{ marginBottom: 8, display: "block" }}
+        />
+        <Space>
+          <Button type="primary" size="small" icon={<SearchOutlined />} onClick={() => confirm()}>
+            Search
+          </Button>
+          <Button
+            size="small"
+            icon={<CloseCircleOutlined />}
+            onClick={() => {
+              clearFilters?.();
+              confirm();
+            }}
+          >
+            Reset
+          </Button>
+        </Space>
+      </div>
+    ),
+    filterIcon: (filtered: boolean) => <SearchOutlined style={{ color: filtered ? "#1677ff" : undefined }} />,
+    onFilter: (value: any, record: any) => String(record[dataIndex] || "").toLowerCase().includes(String(value).toLowerCase()),
+  };
+}
+
 export function menuFilter(
   paramKey: string,
   params: QueryParams,

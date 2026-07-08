@@ -24,7 +24,7 @@ _Last updated: 2026-07-07._
 - [ ] Capability-aware routing not enforced over Kafka (single homogeneous group); revisit if heterogeneous workers are added
 
 ## Infrastructure & deploy
-- [x] `docker-compose.yml`: postgres 17, kafka + kafka-ui, redis, jaeger, keycloak 26.1 (realm import), httpbin demo target, init, api (backend: API+scheduler), worker ×3, frontend
+- [x] `docker-compose.yml`: postgres 17, kafka + kafka-ui, redis, jaeger, keycloak 26.1 (realm import), init, api (backend: API+scheduler), worker ×3, frontend
 - [x] Backend `Dockerfile` (installs QF wheel + requirements)
 - [x] Top-level `config.py` shim (QF requires importable `config.Config`)
 - [x] Keycloak realm seed (`keycloak/realm-export.json`) — single `admin`/`admin` user with `qtp_admin`
@@ -68,7 +68,7 @@ _Last updated: 2026-07-07._
 - [~] Suites, result ingestion, materialized views — modeled in docs, not built yet
 - [x] Cancellation of a *running* run (cooperative flag exists; queued-cancel works; running-cancel not fully exercised)
 
-## Backend — verification (done locally against real Postgres + httpbin)
+## Backend — verification (done locally against real Postgres)
 - [x] init_db creates tables + seeds
 - [x] worker claims + executes the code healthcheck (passed) and UI request test
 - [x] body `json_path` assertions evaluated; failure → signature + `to_investigate` defect
@@ -92,7 +92,7 @@ _Last updated: 2026-07-07._
 - [ ] Customizable dashboards (react-grid-layout) — Overview is fixed for now
 
 ## Tests (automated)
-- [x] 22 example code automation tests in `tests/automations/api/` (self-tests + httpbin: methods, status codes, headers, JSON body, regex, redirect, basic auth, timing) — all discovered and passing
+- [x] 22 example code automation tests in `tests/automations/api/` (self-tests: methods, status codes, headers, JSON body, regex, redirect, basic auth, timing) — all discovered and passing
 - [~] Backend unit/integration test suite (pytest) for services, recurrence, assertions, queue
 - [ ] Frontend component/E2E tests
 

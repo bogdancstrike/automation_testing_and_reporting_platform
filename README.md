@@ -362,8 +362,8 @@ Recommended structure:
 
 ```text
 backend/scenarios/automation/
-├── demo_api/
-│   ├── fetch_user.py          -> scenarios.automation.demo_api.fetch_user
+├── example_api/
+│   ├── fetch_user.py          -> scenarios.automation.example_api.fetch_user
 │   └── create_post.py
 ├── payments/
 │   ├── checkout_e2e.py
@@ -414,11 +414,11 @@ from src.testkit import HttpTest, TestMetadata, TYPE_HTTP
 
 class FetchUser(HttpTest):
     metadata = TestMetadata(
-        key="demo.fetch_user",
-        name="Demo · fetch user #1",
+        key="example.fetch_user",
+        name="Fetch User Flow",
         type=TYPE_HTTP,
-        target="demo_api",
-        tags=["demo", "smoke"],
+        target="example_api",
+        tags=["example", "smoke"],
         owner="platform-team",
     )
 

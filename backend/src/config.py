@@ -125,7 +125,7 @@ class Config:
     # Block requests that resolve to private/loopback/link-local ranges.
     SSRF_BLOCK_PRIVATE = _bool("SSRF_BLOCK_PRIVATE", True)
     # Comma-separated hostnames/CIDRs explicitly allowed to bypass the block
-    # (e.g. the demo target running inside the compose network).
+    # (e.g. an internal test target running inside the compose network).
     SSRF_ALLOWLIST = tuple(
         h.strip() for h in os.getenv("SSRF_ALLOWLIST", "").split(",") if h.strip()
     )

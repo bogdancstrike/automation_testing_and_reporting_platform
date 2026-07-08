@@ -1,6 +1,8 @@
 import { Card, Descriptions, Typography, Space, Button, Table, Tag, Switch, App, Tabs, Row, Col, Modal, Form, Select, Input, InputNumber } from "antd";
 import { ArrowLeftOutlined, PlayCircleOutlined, CheckCircleOutlined, CloseCircleOutlined, ThunderboltOutlined, BlockOutlined, EditOutlined } from "@ant-design/icons";
 import { useState } from "react";
+import { antSortOrder, menuFilter, nextTableParams, textFilter, textFilterLocal } from "../components/remoteTable";
+import type { QueryParams } from "../api/types";
 import { StatCard } from "../components/StatCard";
 import { formatDurationMs, formatLocalTime } from "../components/tags";
 import { useParams, useNavigate } from "react-router-dom";
@@ -22,6 +24,9 @@ export default function ScheduleDetailPage() {
   const { data: runsPage } = useQuery({ queryKey: ["runs", "bySchedule", id], queryFn: () => qtp.runs(`?schedule_id=${id}`) });
   const { data: testsPage } = useQuery({ queryKey: ["testsOptions"], queryFn: () => qtp.testsPage({ page_size: 100, sort: "name", order: "asc" }) });
   const testsOptions = testsPage?.items || [];
+
+  const [tableRunsParams, setTableRunsParams] = useState<QueryParams>({ page: 1, page_size: 10, sort: "queued_at", order: "desc", schedule_id: id });
+  const { data: tableRuns, isLoading: isTableRunsLoading } = useQuery({ queryKey: ["runsPage", tableRunsParams], queryFn: () => qtp.runsPage(tableRunsParams) });
 
   const toggle = useMutation({
     mutationFn: () => qtp.updateSchedule(id, { is_enabled: !s?.is_enabled }),
@@ -174,10 +179,10 @@ export default function ScheduleDetailPage() {
               dataSource={s.tests?.length ? s.tests : [{ id: s.test_definition_id, name: s.test_name, key: s.test_definition_id, target_key: s.target_key }]}
               onRow={(scenario: any) => ({ onClick: () => nav(`/scenarios/${scenario.id}`), style: { cursor: "pointer" } })}
               columns={[
-                { title: "Name", dataIndex: "name", render: (value, scenario: any) => <a>{value || scenario.id}</a> },
-                { title: "Key", dataIndex: "key", render: (value) => <Typography.Text code>{value || "—"}</Typography.Text> },
+                { title: "Name", dataIndex: "name", render: (value, scenario: any) => <a>{value || scenario.id}</a>, ...textFilterLocal("name", "Search name") },
+                { title: "Key", dataIndex: "key", render: (value) => <Typography.Text code>{value || "—"}</Typography.Text>, ...textFilterLocal("key", "Search key") },
                 { title: "Type", dataIndex: "type", render: (value) => value ? <Tag>{value}</Tag> : "—" },
-                { title: "Target", dataIndex: "target_key", render: (value) => value ? <Tag color="geekblue">{value}</Tag> : "—" },
+                { title: "Target", dataIndex: "target_key", render: (value) => value ? <Tag color="geekblue">{value}</Tag> : "—", ...textFilterLocal("target_key", "Search target") },
                 { title: "Status", dataIndex: "status", render: (value) => value ? <Tag>{value}</Tag> : "—" },
               ]}
             />
@@ -185,20 +190,27 @@ export default function ScheduleDetailPage() {
         },
         {
           key: "runs", 
-          label: `Recent Runs (${runs.length})`,
+          label: `Recent Runs (${tableRuns?.total || runs.length})`,
           children: (
             <div>
               <Table
                 rowKey="id"
                 size="small"
-                dataSource={runs}
+                loading={isTableRunsLoading}
+                dataSource={tableRuns?.items || []}
+                pagination={{ current: tableRuns?.page || 1, pageSize: tableRuns?.page_size || 10, total: tableRuns?.total || 0, showSizeChanger: true }}
+                onChange={(pagination, filters, sorter: any, extra) => setTableRunsParams((p) => nextTableParams(
+                  p, pagination, filters, sorter, extra,
+                  { test_name: "test_name", status: "status", defect_type: "defect_type" },
+                  { sort: "queued_at", order: "desc", pageSize: 10, schedule_id: id }
+                ))}
                 onRow={(r: any) => ({ onClick: () => nav(`/runs/${r.id}`), style: { cursor: "pointer" } })}
                 columns={[
-                  { title: "Scenario", dataIndex: "test_name", render: (n, r: any) => n || r.test_definition_id },
-                  { title: "Status", dataIndex: "status", render: (st) => <StatusTag status={st} /> },
-                  { title: "Duration", dataIndex: "duration_ms", render: (ms) => ms != null ? `${ms} ms` : "—" },
-                  { title: "Defect", dataIndex: "defect_type", render: (d) => d || "—" },
-                  { title: "Queued", dataIndex: "queued_at", render: (v) => formatLocalTime(v) },
+                  { title: "Scenario", dataIndex: "test_name", render: (n, r: any) => n || r.test_definition_id, sorter: true, sortOrder: antSortOrder(tableRunsParams, "test_name"), ...textFilter("test_name", tableRunsParams, "Search scenario") },
+                  { title: "Status", dataIndex: "status", render: (st) => <StatusTag status={st} />, ...menuFilter("status", tableRunsParams, ["queued", "running", "passed", "failed", "error", "timeout", "canceled"]) },
+                  { title: "Duration", dataIndex: "duration_ms", render: (ms) => ms != null ? `${ms} ms` : "—", sorter: true, sortOrder: antSortOrder(tableRunsParams, "duration_ms") },
+                  { title: "Defect", dataIndex: "defect_type", render: (d) => d || "—", ...menuFilter("defect_type", tableRunsParams, ["timeout", "validation_failed", "target_unavailable", "script_error", "infrastructure_error"]) },
+                  { title: "Queued", dataIndex: "queued_at", render: (v) => formatLocalTime(v), sorter: true, sortOrder: antSortOrder(tableRunsParams, "queued_at") },
                 ]}
               />
             </div>

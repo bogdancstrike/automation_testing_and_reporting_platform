@@ -39,8 +39,8 @@ def test_enqueue_and_claim(db_session):
     db = db_session
     # 1. Create target
     catalog_service.create_target(db, {
-        "key": "demo",
-        "name": "Demo Target",
+        "key": "test_target",
+        "name": "Test Target",
         "base_url": "http://example.com"
     })
     
@@ -49,7 +49,7 @@ def test_enqueue_and_claim(db_session):
         "key": "ui.test",
         "name": "UI Test",
         "config": {
-            "target": "demo",
+            "target": "test_target",
             "method": "GET",
             "url": "/get",
             "assertions": [{"type": "status_code", "operator": "equals", "expected": 200}]
@@ -76,15 +76,15 @@ def test_enqueue_and_claim(db_session):
 def test_mark_run_running_is_visible_before_final_result(db_session):
     db = db_session
     catalog_service.create_target(db, {
-        "key": "demo",
-        "name": "Demo Target",
+        "key": "test_target",
+        "name": "Test Target",
         "base_url": "http://example.com"
     })
     test_def = catalog_service.create_request_test(db, {
         "key": "ui.running",
         "name": "Running Visibility Test",
         "config": {
-            "target": "demo",
+            "target": "test_target",
             "method": "GET",
             "url": "/get",
         }
@@ -108,15 +108,15 @@ def test_mark_run_running_is_visible_before_final_result(db_session):
 def test_cancel_queued_run(db_session):
     db = db_session
     catalog_service.create_target(db, {
-        "key": "demo",
-        "name": "Demo Target",
+        "key": "test_target",
+        "name": "Test Target",
         "base_url": "http://example.com"
     })
     test_def = catalog_service.create_request_test(db, {
         "key": "ui.test",
         "name": "UI Test",
         "config": {
-            "target": "demo",
+            "target": "test_target",
             "method": "GET",
             "url": "/get",
         }
@@ -136,15 +136,15 @@ def test_cancel_queued_run(db_session):
 def test_cancel_running_run_cooperative(db_session):
     db = db_session
     catalog_service.create_target(db, {
-        "key": "demo",
-        "name": "Demo Target",
+        "key": "test_target",
+        "name": "Test Target",
         "base_url": "http://example.com"
     })
     test_def = catalog_service.create_request_test(db, {
         "key": "ui.test2",
         "name": "UI Test 2",
         "config": {
-            "target": "demo",
+            "target": "test_target",
             "steps": [
                 {"id": "step1", "name": "Step 1", "method": "GET", "url": "/get"},
                 {"id": "step2", "name": "Step 2", "method": "GET", "url": "/get"},
@@ -194,10 +194,10 @@ def test_delete_request_test_refuses_active_runs(db_session):
 
     db = db_session
     catalog_service.create_target(db, {
-        "key": "demo", "name": "Demo Target", "base_url": "http://example.com"})
+        "key": "test_target", "name": "Test Target", "base_url": "http://example.com"})
     test_def = catalog_service.create_request_test(db, {
         "key": "ui.del", "name": "UI Del",
-        "config": {"target": "demo", "method": "GET", "url": "/get"}})
+        "config": {"target": "test_target", "method": "GET", "url": "/get"}})
     test_id = test_def["id"]
 
     # A queued (non-terminal) run must block deletion with a 409 ConflictError.

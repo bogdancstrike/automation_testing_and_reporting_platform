@@ -71,13 +71,7 @@ def main() -> int:
             db.flush()
             log.info("seeded project 'default'")
 
-        target = db.scalars(select(Target).where(Target.key == "demo")).first()
-        if not target:
-            catalog.create_target(db, {
-                "key": "demo", "name": "Demo (httpbin)", "base_url": DEMO_TARGET_URL,
-                "health_url": f"{DEMO_TARGET_URL}/status/200", "tags": ["demo"],
-            })
-            log.info(f"seeded target 'demo' -> {DEMO_TARGET_URL}")
+        # Target demo removed as requested
 
         if not db.scalars(select(Target).where(Target.key == "qtp_self")).first():
             catalog.create_target(db, {
@@ -92,24 +86,7 @@ def main() -> int:
         result = catalog.discover_tests(db)
         log.info(f"discovery: {result}")
 
-    # Sample UI request test (asserts on the response BODY, not just status).
-    with session_scope() as db:
-        if not db.scalars(select(TestDefinition).where(TestDefinition.key == "ui.httpbin_get")).first():
-            catalog.create_request_test(db, {
-                "key": "ui.httpbin_get",
-                "name": "httpbin GET (body check)",
-                "config": {
-                    "target": "demo",
-                    "method": "GET",
-                    "url": "{{base_url}}/get?team=qtp",
-                    "assertions": [
-                        {"type": "status_code", "operator": "equals", "expected": 200},
-                        {"type": "json_path", "path": "$.args.team", "operator": "contains", "expected": "qtp"},
-                        {"type": "response_time_ms", "operator": "lte", "expected": 5000},
-                    ],
-                },
-            })
-            log.info("seeded UI request test 'ui.httpbin_get'")
+    # Sample UI request test removed as requested
 
     # A schedule + one immediate run so there is data on first load.
     with session_scope() as db:

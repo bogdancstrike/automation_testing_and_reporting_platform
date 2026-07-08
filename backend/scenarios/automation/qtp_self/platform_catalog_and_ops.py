@@ -188,15 +188,6 @@ class SelfTestsFilterSourceCode(HttpTest):
         response.json.should.have_field("items[0].source").equal_to("code")
 
 
-class SelfTestsFilterTargetDemo(HttpTest):
-    metadata = _meta("self.tests_filter_target_demo", "QTP · demo target test filter", ["tests"])
-
-    def test(self, ctx):
-        response = ctx.http.get("/api/tests?target=demo&page_size=10", auth=TOKEN)
-        response.should.have_status(200)
-        response.json.should.have_field("items").with_length_at_least(1)
-        response.json.should.have_field("items[0].target_key").equal_to("demo")
-
 
 class SelfTestsFilterTargetSelf(HttpTest):
     metadata = _meta("self.tests_filter_target_self", "QTP · self target test filter", ["tests"])
