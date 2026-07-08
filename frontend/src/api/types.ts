@@ -249,3 +249,4 @@ export interface TargetStatsReset {
   reset_at: string;
   reset_by: string;
 }
+export interface AuditEventDto { id: string; actor: string | null; action: string; entity_type: string; entity_id: string | null; old_value: any; new_value: any; metadata: any; request_ip: string | null; user_agent: string | null; correlation_id: string | null; created_at: string; }

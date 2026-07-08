@@ -10,20 +10,22 @@ from src.iam import decorators, principal
 from src.audit.models import AuditEvent
 
 
-def _request_metadata() -> tuple[str | None, str | None]:
+def _request_metadata() -> tuple[str | None, str | None, str | None]:
     try:
-        from flask import request
+        from flask import request, g
         ip = request.headers.get("X-Forwarded-For", request.remote_addr)
         ua = request.headers.get("User-Agent")
-        return ip, ua
+        
+        principal = getattr(g, "principal", None)
+        actor = getattr(principal, "username", None) or getattr(principal, "subject", None) if principal else None
+        
+        return ip, ua, actor
     except Exception:
-        return None, None
+        return None, None, None
 
 
 def record(
     db: Session,
-    *,
-    actor: str | None,
     action: str,
     entity_type: str,
     entity_id: str | None = None,
@@ -31,7 +33,7 @@ def record(
     new_value: dict[str, Any] | None = None,
     metadata: dict[str, Any] | None = None,
 ) -> AuditEvent:
-    ip, ua = _request_metadata()
+    ip, ua, actor = _request_metadata()
     evt = AuditEvent(
         actor=actor,
         action=action,

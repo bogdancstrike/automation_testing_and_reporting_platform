@@ -25,6 +25,8 @@ import WorkersPage from "./pages/WorkersPage";
 import WorkerDetailPage from "./pages/WorkerDetailPage";
 import DocsPage from "./pages/DocsPage";
 import ProfilePage from "./pages/ProfilePage";
+import AuditExplorerPage from "./pages/AuditExplorerPage";
+import { AuditOutlined } from "@ant-design/icons";
 
 const { Header, Sider, Content } = Layout;
 
@@ -61,6 +63,13 @@ const NAV_GROUPS = [
       { key: "/docs", icon: <BookOutlined />, label: "Developer Docs" },
     ],
   },
+  {
+    key: "administration",
+    label: "Administration",
+    children: [
+      { key: "/audit", icon: <AuditOutlined />, label: "Audit Ledger" },
+    ],
+  },
 ];
 
 const NAV = NAV_GROUPS.flatMap((group) => group.children);
@@ -75,6 +84,7 @@ const PAGE_META: Record<string, string> = {
   "/workers": "Execution workers, capabilities, and health",
   "/docs": "Developer documentation and integration guides",
   "/profile": "Your account and access",
+  "/audit": "Global event ledger across the system",
 };
 
 const THEME_STORAGE_KEY = "qtp-theme-mode";
@@ -210,6 +220,7 @@ function AppShell({ mode, setMode }: { mode: ThemeMode; setMode: (mode: ThemeMod
             <Route path="/targets/:id" element={<TargetDetailPage />} />
             <Route path="/workers" element={<WorkersPage />} />
             <Route path="/workers/:id" element={<WorkerDetailPage />} />
+            <Route path="/audit" element={<AuditExplorerPage />} />
             <Route path="/docs" element={<DocsPage />} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="*" element={<Navigate to="/overview" replace />} />

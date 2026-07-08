@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react'
 import { Card, Descriptions, Empty, Space, Tag, Typography, theme as antTheme, Tooltip } from 'antd'
 import { CaretRightOutlined, CaretDownOutlined } from '@ant-design/icons'
-import type { AuditEventDto } from '@/api/tickets'
-import { fmtDateTime, fmtRelative } from './format'
+import { qtp } from '../api/qtp'
+import type { AuditEventDto } from '../api/types'
+import dayjs from 'dayjs'
 
 const ACTION_COLORS: Record<string, string> = {
   ticket_created: 'green',
@@ -85,14 +86,16 @@ function AuditCard({ event, expanded, onToggle }: { event: AuditEventDto; expand
       styles={{ body: { padding: 12 } }}
     >
       <Space style={{ width: '100%', justifyContent: 'space-between' }} align="start">
-        <Space orientation="vertical" size={4} style={{ flex: 1 }}>
-          <Space wrap>
-            <Tag color={color}>{actionLabel(event.action)}</Tag>
-            <Typography.Text type="secondary">{event.actor_username || event.actor_user_id || 'system'}</Typography.Text>
-          </Space>
-          <Tooltip title={fmtDateTime(event.created_at)}>
-            <Typography.Text type="secondary" style={{ fontSize: 12 }}>{fmtRelative(event.created_at)}</Typography.Text>
-          </Tooltip>
+        <Space direction="vertical" size={4} style={{ flex: 1 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Tag color={ACTION_COLORS[event.action] || 'default'}>{actionLabel(event.action)}</Tag>
+            <Tooltip title={dayjs(event.created_at).format('YYYY-MM-DD HH:mm:ss')}>
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                {dayjs(event.created_at).fromNow()}
+              </Typography.Text>
+            </Tooltip>
+          </div>
+          <Typography.Text type="secondary" style={{ fontSize: 13 }}>{event.actor || 'system'}</Typography.Text>
         </Space>
         {expanded ? <CaretDownOutlined /> : <CaretRightOutlined />}
       </Space>

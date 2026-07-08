@@ -10,3 +10,4 @@ from src.audit import models as _audit               # noqa: F401
 
 __all__ = ["_catalog", "_execution", "_scheduling", "_comments", "_audit"]
 from src.audit.models import AuditEvent
+import src.audit.db_events

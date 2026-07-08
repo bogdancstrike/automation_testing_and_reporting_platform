@@ -2,7 +2,7 @@ import { api } from "./client";
 import type {
   CommentItem, Failures, Me, Overview, Page, QueryParams, RunDetail, RunSummary,
   Schedule, SendResult, Target, TargetDetail, TargetStats, TestDef, TestDetail, WorkerInfo,
-  TargetStatsReset,
+  TargetStatsReset, AuditEventDto
 } from "./types";
 
 const list = <T>() => (r: { items: T[] }) => r.items;
@@ -77,6 +77,9 @@ export const qtp = {
   deleteSchedule: (id: string) => api.del<any>(`/api/schedules/${id}`),
 
   workers: () => api.get<{ items: WorkerInfo[] }>("/api/workers").then(list<WorkerInfo>()),
+
+  listAudit: (params: QueryParams = {}) => api.get<Page<AuditEventDto>>(`/api/audit${qs(params)}`),
+  entityAudit: (type: string, id: string, params: QueryParams = {}) => api.get<Page<AuditEventDto>>(`/api/audit/${type}/${id}${qs(params)}`),
 
   overview: (params: QueryParams = {}) => api.get<Overview>(`/api/dashboards/overview${qs(params)}`),
   failures: (params: QueryParams = {}) => api.get<Failures>(`/api/dashboards/failures${qs(params)}`),
