@@ -1,5 +1,5 @@
 # QF Framework (local wheel — installed separately from dist/)
-# qf @ file:///app/dist/qf-1.0.3-py3-none-any.whl
+# qf @ file:///app/dist/qf-1.0.4-py3-none-any.whl
 
 # API / framework
 flask>=3.0.0

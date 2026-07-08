@@ -1300,7 +1300,7 @@ Docker Compose is the recommended path for local development. If you need to run
 cd backend
 python3 -m venv .venv
 source .venv/bin/activate
-pip install dist/qf-1.0.3-py3-none-any.whl -r requirements.txt
+pip install dist/qf-1.0.4-py3-none-any.whl -r requirements.txt
 python scripts/init_db.py
 gunicorn -c gunicorn.conf.py wsgi:app
 ```
