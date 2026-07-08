@@ -138,7 +138,7 @@ class TestContext:
                 step_id=f"step-{len(self._steps) + 1}"))
             self._current_step = prev
 
-    def record_network_call(self, method: str, url: str, status_code: int, duration_ms: int, dns: int=0, ttfb: int=0, download: int=0, content_type: str="", content_length: int=0) -> None:
+    def record_network_call(self, method: str, url: str, status_code: int, duration_ms: int, dns: int=0, ttfb: int=0, download: int=0, content_type: str="", content_length: int=0, payload: dict | None = None) -> None:
         from src.testkit.result import PASSED, FAILED, StepResult
         st = PASSED if 200 <= status_code < 400 else FAILED
         self._steps.append(StepResult(
@@ -150,7 +150,22 @@ class TestContext:
                 "dns": dns, "ttfb": ttfb, "download": download,
                 "method": method, "url": url, "status_code": status_code,
                 "content_type": content_type, "content_length": content_length,
-                "is_network": True
+                "is_network": True,
+                "payload": payload or {}
+            }
+        ))
+
+    def record_event(self, name: str, event_type: str, status: str = "passed", details: dict | None = None) -> None:
+        from src.testkit.result import StepResult
+        self._steps.append(StepResult(
+            name=name,
+            status=status,
+            duration_ms=0,
+            step_id=f"evt-{len(self._steps) + 1}",
+            timings={
+                "is_event": True,
+                "event_type": event_type,
+                "details": details or {}
             }
         ))
 
@@ -166,6 +181,15 @@ class TestContext:
         ar = AssertionResult(source=source, operator=operator, expected=expected,
                              actual=actual, passed=passed, target=target, message=message)
         self._assertions.append(ar)
+        
+        # Also plot this assertion as an event in the timeline
+        self.record_event(
+            name=f"Assertion: {source} {operator}",
+            event_type="assertion",
+            status="passed" if passed else "failed",
+            details={"expected": expected, "actual": actual, "message": message}
+        )
+        
         if not passed:
             raise AssertionFailure(message or f"expected {source} {operator} {expected!r}, got {actual!r}")
 

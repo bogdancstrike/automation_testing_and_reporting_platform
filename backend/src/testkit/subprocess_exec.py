@@ -212,8 +212,48 @@ def _run_lifecycle(code_ref: str, ctx: Any) -> Any:
         result = TestResult(status=ERROR, error_category="script_error", error_message=str(e))
     finally:
         if hasattr(ctx, '_browser') and getattr(ctx._browser, '_driver', None):
+            driver = ctx._browser._driver
             try:
-                logs = ctx._browser._driver.get_log("performance")
+                perf_script = """return JSON.stringify({
+                    navs: window.performance.getEntriesByType('navigation'),
+                    resources: window.performance.getEntriesByType('resource'),
+                    paints: window.performance.getEntriesByType('paint')
+                });"""
+                perf_str = driver.execute_script(perf_script)
+                if perf_str:
+                    perf = json.loads(perf_str)
+                    for nav in perf.get("navs", []):
+                        nav_dur = nav.get("loadEventEnd", 0) - nav.get("startTime", 0)
+                        if nav_dur > 0:
+                            ctx.record_event(
+                                f"Page Load: {nav.get('type', 'navigate')}",
+                                "navigation",
+                                details={"duration_ms": nav_dur, "name": nav.get("name")}
+                            )
+                    for paint in perf.get("paints", []):
+                        ctx.record_event(
+                            paint.get("name", "paint"),
+                            "marker",
+                            details={"offset_ms": paint.get("startTime", 0)}
+                        )
+                    for res in perf.get("resources", []):
+                        itype = res.get("initiatorType", "")
+                        if itype in ("css", "script", "font", "link"):
+                            ctx.record_event(
+                                f"Parsed {itype}: {res.get('name', '').split('/')[-1]}",
+                                "resource",
+                                details={
+                                    "duration_ms": res.get("duration", 0),
+                                    "decodedBodySize": res.get("decodedBodySize", 0),
+                                    "transferSize": res.get("transferSize", 0),
+                                    "url": res.get("name", "")
+                                }
+                            )
+            except Exception:
+                pass
+
+            try:
+                logs = driver.get_log("performance")
                 for entry in logs:
                     msg = json.loads(entry.get("message", "{}")).get("message", {})
                     if msg.get("method") == "Network.responseReceived":

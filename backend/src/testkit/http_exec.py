@@ -42,6 +42,7 @@ def perform_request(
     owns_session = session is None
     session = session or requests.Session()
     hops = 0
+    redirect_hops = []
     current_url, current_method, current_body = url, method.upper(), body
     dns_ms = 0
     ttfb_ms = 0
@@ -65,10 +66,22 @@ def perform_request(
                 hops += 1
                 if hops > Config.REQUEST_MAX_REDIRECTS:
                     raise requests.TooManyRedirects("max redirects exceeded")
+                
+                redirect_hops.append({
+                    "method": current_method,
+                    "url": current_url,
+                    "status_code": resp.status_code,
+                    "duration_ms": int((time.monotonic() - req_start) * 1000) + dns_ms,
+                    "dns": dns_ms,
+                    "ttfb": int((time.monotonic() - req_start) * 1000),
+                    "content_type": dict(resp.headers).get("Content-Type", "").split(";")[0],
+                })
+
                 current_url = urljoin(current_url, resp.headers.get("Location", ""))
                 if resp.status_code in (301, 302, 303) and current_method != "HEAD":
                     current_method, current_body = "GET", None
                 resp.close()
+                dns_ms = 0
                 continue
             break
 
@@ -89,8 +102,13 @@ def perform_request(
                 "ttfb": ttfb_ms,
                 "download": download_ms,
             },
+            "redirect_hops": redirect_hops,
             "truncated": truncated,
             "url": resp.url,
+            "request_payload": {
+                "headers": headers,
+                "body": current_body.decode("utf-8", errors="replace")[:2048] if isinstance(current_body, bytes) else str(current_body)[:2048] if current_body else None,
+            }
         }
     finally:
         if owns_session:

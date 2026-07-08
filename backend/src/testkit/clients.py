@@ -70,9 +70,21 @@ class HttpClient:
         timings = raw.get("timings", {})
         headers = raw.get("headers", {})
         
-        # normalize headers key for case insensitivity
+        # Record any redirect hops that occurred
+        for hop in raw.get("redirect_hops", []):
+            self._ctx.record_network_call(
+                method=hop["method"],
+                url=hop["url"],
+                status_code=hop["status_code"],
+                duration_ms=hop["duration_ms"],
+                dns=hop["dns"],
+                ttfb=hop["ttfb"],
+                content_type=hop["content_type"]
+            )
+            
         lower_headers = {k.lower(): v for k, v in headers.items()}
-        
+        resp_headers = raw.get("headers", {})
+
         self._ctx.record_network_call(
             method=method,
             url=url,
@@ -82,7 +94,13 @@ class HttpClient:
             ttfb=timings.get("ttfb", 0),
             download=timings.get("download", 0),
             content_type=lower_headers.get("content-type", "").split(";")[0],
-            content_length=int(lower_headers.get("content-length", 0)) if lower_headers.get("content-length", "0").isdigit() else 0
+            content_length=int(lower_headers.get("content-length", 0)) if lower_headers.get("content-length", "0").isdigit() else 0,
+            payload={
+                "request_headers": raw.get("request_payload", {}).get("headers", {}),
+                "response_headers": resp_headers,
+                "request_body": raw.get("request_payload", {}).get("body"),
+                "response_body": raw.get("body_text", "")[:2048]
+            }
         )
         return Response(self._ctx, raw)
 
@@ -274,10 +292,78 @@ class BrowserClient:
                 pass
 
         page.on("requestfinished", on_request_finished)
+        
+        # Capture console logs and page errors as waterfall events
+        page.on("console", lambda msg: self._ctx.record_event(
+            name=f"Console [{msg.type}]",
+            event_type="console",
+            status="passed" if msg.type != "error" else "failed",
+            details={"text": msg.text}
+        ))
+        page.on("pageerror", lambda exc: self._ctx.record_event(
+            name="Page Error",
+            event_type="console",
+            status="failed",
+            details={"text": str(exc)}
+        ))
+
+        # Monkey-patch browser actions to trace them in the timeline
+        for action in ["click", "fill", "type", "select_option", "check", "uncheck", "wait_for_selector", "hover"]:
+            original = getattr(page, action, None)
+            if original:
+                def make_wrapper(orig, act_name):
+                    def wrapper(*args, **kwargs):
+                        with self._ctx.step(f"page.{act_name}({args[0] if args else ''})"):
+                            return orig(*args, **kwargs)
+                    return wrapper
+                setattr(page, action, make_wrapper(original, action))
 
         started = time.monotonic()
         resp = page.goto(url, wait_until="load")
         dur = int((time.monotonic() - started) * 1000)
+        
+        # Extract Performance API metrics after page load
+        try:
+            perf_script = """JSON.stringify({
+                navs: window.performance.getEntriesByType('navigation'),
+                resources: window.performance.getEntriesByType('resource'),
+                paints: window.performance.getEntriesByType('paint')
+            })"""
+            perf_str = page.evaluate(perf_script)
+            if perf_str:
+                perf = _json.loads(perf_str)
+                for nav in perf.get("navs", []):
+                    nav_dur = nav.get("loadEventEnd", 0) - nav.get("startTime", 0)
+                    if nav_dur > 0:
+                        self._ctx.record_event(
+                            f"Page Load: {nav.get('type', 'navigate')}",
+                            "navigation",
+                            details={"duration_ms": nav_dur, "name": nav.get("name")}
+                        )
+
+                for paint in perf.get("paints", []):
+                    self._ctx.record_event(
+                        paint.get("name", "paint"),
+                        "marker",
+                        details={"offset_ms": paint.get("startTime", 0)}
+                    )
+
+                for res in perf.get("resources", []):
+                    itype = res.get("initiatorType", "")
+                    if itype in ("css", "script", "font", "link"):
+                        self._ctx.record_event(
+                            f"Parsed {itype}: {res.get('name', '').split('/')[-1]}",
+                            "resource",
+                            details={
+                                "duration_ms": res.get("duration", 0),
+                                "decodedBodySize": res.get("decodedBodySize", 0),
+                                "transferSize": res.get("transferSize", 0),
+                                "url": res.get("name", "")
+                            }
+                        )
+        except Exception:
+            pass
+            
         return PageResult(self._ctx, page, resp.status if resp else 0, dur)
 
     def close(self) -> None:

@@ -157,10 +157,23 @@ def _execute_http_step(config: dict[str, Any], ctx: TestContext, *, session: req
                 hops += 1
                 if hops > Config.REQUEST_MAX_REDIRECTS:
                     raise requests.TooManyRedirects("max redirects exceeded")
+                
+                # Record this redirect hop
+                ctx.record_network_call(
+                    method=current_method,
+                    url=current_url,
+                    status_code=resp.status_code,
+                    duration_ms=int((time.monotonic() - req_start) * 1000) + dns_ms,
+                    dns=dns_ms,
+                    ttfb=int((time.monotonic() - req_start) * 1000),
+                    content_type=dict(resp.headers).get("Content-Type", "").split(";")[0],
+                )
+
                 current_url = urljoin(current_url, resp.headers.get("Location", ""))
                 if resp.status_code in (301, 302, 303) and current_method != "HEAD":
                     current_method, current_body = "GET", None
                 resp.close()
+                dns_ms = 0
                 continue
             break
 
@@ -192,7 +205,12 @@ def _execute_http_step(config: dict[str, Any], ctx: TestContext, *, session: req
                 "status_code": resp.status_code,
                 "content_type": content_type,
                 "content_length": content_length,
-                "is_network": True
+                "is_network": True,
+                "payload": {
+                    "request_headers": headers,
+                    "response_headers": headers_dict,
+                    "request_body": current_body.decode("utf-8", errors="replace")[:2048] if isinstance(current_body, bytes) else str(current_body)[:2048] if current_body else None,
+                }
             },
             "truncated": truncated,
             "url": resp.url,

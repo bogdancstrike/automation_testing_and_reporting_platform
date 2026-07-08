@@ -20,6 +20,40 @@ interface Step {
   error?: string;
 }
 
+const PayloadView = ({ payload, details }: { payload?: any, details?: any }) => {
+  if (details) {
+    return (
+      <div style={{ background: "#f8fafc", padding: 12, borderRadius: 4, margin: "8px 0" }}>
+        <Typography.Text strong>Event Details</Typography.Text>
+        <pre style={{ fontSize: 11, marginTop: 8, whiteSpace: "pre-wrap" }}>
+          {JSON.stringify(details, null, 2)}
+        </pre>
+      </div>
+    );
+  }
+  if (!payload) return null;
+  return (
+    <div style={{ background: "#f8fafc", padding: 12, borderRadius: 4, margin: "8px 0", display: "flex", gap: 24 }}>
+      <div style={{ flex: 1 }}>
+        <Typography.Text strong>Request</Typography.Text>
+        <pre style={{ fontSize: 11, marginTop: 8, maxHeight: 200, overflow: "auto" }}>
+          {JSON.stringify(payload.request_headers || {}, null, 2)}
+          {"\n\n"}
+          {payload.request_body || "(no body)"}
+        </pre>
+      </div>
+      <div style={{ flex: 1 }}>
+        <Typography.Text strong>Response</Typography.Text>
+        <pre style={{ fontSize: 11, marginTop: 8, maxHeight: 200, overflow: "auto" }}>
+          {JSON.stringify(payload.response_headers || {}, null, 2)}
+          {"\n\n"}
+          {payload.response_body || "(no body)"}
+        </pre>
+      </div>
+    </div>
+  );
+};
+
 interface WaterfallChartProps {
   steps: Step[];
 }
@@ -58,6 +92,21 @@ export default function WaterfallChart({ steps }: WaterfallChartProps) {
               </Space>
               <Typography.Text ellipsis style={{ width: 260, fontSize: 11 }} title={url || name}>
                 {url || name}
+              </Typography.Text>
+            </div>
+          );
+        }
+
+        if (step.timings?.is_event) {
+          const color = step.status === "passed" ? "#10b981" : step.status === "error" || step.status === "failed" ? "#ef4444" : "#f59e0b";
+          return (
+            <div style={{ display: "flex", flexDirection: "column", maxWidth: 260 }}>
+              <Space>
+                <span style={{ fontSize: 14, color }}>●</span>
+                <span style={{ fontSize: 10, fontWeight: "bold" }}>{step.timings.event_type?.toUpperCase()}</span>
+              </Space>
+              <Typography.Text ellipsis style={{ width: 260, fontSize: 11 }} title={name}>
+                {name}
               </Typography.Text>
             </div>
           );
@@ -135,6 +184,22 @@ export default function WaterfallChart({ steps }: WaterfallChartProps) {
         const ttfbW = (ttfb / maxDuration) * 100;
         const downW = (download / maxDuration) * 100;
 
+        // Render event markers differently
+        if (step.timings?.is_event) {
+          return (
+            <div style={{ width: "100%", height: 16, position: "relative" }}>
+              <div style={{ 
+                position: "absolute", 
+                left: 0, 
+                width: 2, 
+                height: 24, 
+                background: step.status === "passed" ? "#10b981" : "#ef4444",
+                top: -4
+              }} />
+            </div>
+          );
+        }
+
         return (
           <div style={{ width: "100%", background: "transparent", height: 16, position: "relative", borderRadius: 2, display: "flex" }}>
             <Tooltip title={`DNS Lookup: ${dns}ms`}>
@@ -183,6 +248,12 @@ export default function WaterfallChart({ steps }: WaterfallChartProps) {
         pagination={false}
         dataSource={steps}
         columns={columns}
+        expandable={{
+          expandedRowRender: (record) => (
+            <PayloadView payload={(record.timings as any)?.payload} details={(record.timings as any)?.details} />
+          ),
+          rowExpandable: (record) => !!((record.timings as any)?.payload || (record.timings as any)?.details),
+        }}
       />
     </div>
   );
