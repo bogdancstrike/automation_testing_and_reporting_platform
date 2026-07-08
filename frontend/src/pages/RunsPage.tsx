@@ -16,7 +16,7 @@ export default function RunsPage() {
   const { data: page, isLoading } = useQuery({
     queryKey: ["runsPage", params],
     queryFn: () => qtp.runsPage(params),
-    refetchInterval: live ? 3000 : false,
+    refetchInterval: live ? 2000 : false,
   });
   const { data: targets = [] } = useQuery({ queryKey: ["targetsOptions"], queryFn: qtp.targets });
   const { data: allTags = [] } = useQuery({ queryKey: ["allTags"], queryFn: () => qtp.tags("") });
