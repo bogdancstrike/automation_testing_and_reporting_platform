@@ -47,8 +47,8 @@ export default function RunDetailPage() {
     onError: (e: any) => message.error(e.message),
   });
   const rerun = useMutation({
-    mutationFn: () => qtp.rerunRun(id),
-    onSuccess: () => { message.success("Run re-queued"); qc.invalidateQueries({ queryKey: ["run", id] }); },
+    mutationFn: () => qtp.restartRun(id),
+    onSuccess: () => { message.success("Run restarted"); qc.invalidateQueries({ queryKey: ["run", id] }); },
     onError: (e: any) => message.error(e.message),
   });
 
@@ -75,7 +75,7 @@ export default function RunDetailPage() {
         <Button icon={<ArrowLeftOutlined />} onClick={() => nav("/runs")}>Runs</Button>
         <Button icon={<ExperimentOutlined />} onClick={() => nav(`/scenarios/${run.test_definition_id}`)}>Open scenario</Button>
         {active(run.status) && <Button danger icon={<StopOutlined />} loading={cancel.isPending} onClick={() => cancel.mutate()}>Cancel</Button>}
-        {run.status === "queued" && <Button type="primary" icon={<PlayCircleOutlined />} loading={rerun.isPending} onClick={() => rerun.mutate()}>Re-run</Button>}
+        {run.status !== "passed" && !active(run.status) && <Button type="primary" icon={<PlayCircleOutlined />} loading={rerun.isPending} onClick={() => rerun.mutate()}>Re-run</Button>}
       </Space>
       <Typography.Title level={3}>
         {run.test_name || "Run"} <StatusTag status={run.status} />

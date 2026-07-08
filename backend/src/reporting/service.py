@@ -152,14 +152,23 @@ def failures(db: Session, *, hours: int = 168, start: datetime | None = None,
     ).all()
     defect_distribution = {(dt or "untriaged"): c for dt, c in defect_rows}
 
-    recent_stmt = (
-        select(TestRun)
-        .outerjoin(TestDefinition, TestRun.test_definition_id == TestDefinition.id)
+    latest_subq = (
+        select(TestRun.id)
+        .distinct(TestRun.test_definition_id)
         .where(
             TestRun.stats_reset_at.is_(None),
-            TestRun.status.in_(["failed", "error", "timeout"]),
             TestRun.queued_at >= since,
             TestRun.queued_at <= end,
+        )
+        .order_by(TestRun.test_definition_id, TestRun.queued_at.desc())
+    ).subquery()
+
+    recent_stmt = (
+        select(TestRun)
+        .join(latest_subq, TestRun.id == latest_subq.c.id)
+        .outerjoin(TestDefinition, TestRun.test_definition_id == TestDefinition.id)
+        .where(
+            TestRun.status.in_(["failed", "error", "timeout"]),
         )
     )
     if filters.get("recent_failed_q"):

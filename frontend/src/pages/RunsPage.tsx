@@ -116,7 +116,7 @@ export default function RunsPage() {
         <Space>
           <Button danger onClick={confirmDeleteAll} loading={deleteAllRuns.isPending}>Delete All Runs</Button>
           <Button onClick={() => rerunQueued.mutate()} loading={rerunQueued.isPending}>Re-run all queued</Button>
-          <Button onClick={() => restartFailed.mutate()} loading={restartFailed.isPending}>Re-run all failed</Button>
+          <Button onClick={() => restartFailed.mutate()} loading={restartFailed.isPending}>Re-run all failed/errors</Button>
           <span>Live <Switch size="small" checked={live} onChange={setLive} /></span>
         </Space>
       </Space>
