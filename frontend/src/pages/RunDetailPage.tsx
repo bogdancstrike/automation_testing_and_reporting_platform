@@ -189,12 +189,8 @@ export default function RunDetailPage() {
           })(),
         },
         {
-          key: "flow", label: "Execution Plan (Flow)",
-          children: (
-            <div style={{ marginTop: 12 }}>
-              <ExecutionFlow steps={run.steps} status={run.status} />
-            </div>
-          ),
+          key: "logs", label: `Logs (${logs.length})`,
+          children: <pre className="qtp-code" style={{ maxHeight: 400 }}>{logs.map((l: any) => `[${l.level}] ${l.message}`).join("\n") || "(no logs)"}</pre>,
         },
         {
           key: "waterfall", label: "Waterfall",
@@ -205,14 +201,18 @@ export default function RunDetailPage() {
           ),
         },
         {
+          key: "flow", label: "Steps Flow",
+          children: (
+            <div style={{ marginTop: 12 }}>
+              <ExecutionFlow steps={run.steps} status={run.status} />
+            </div>
+          ),
+        },
+        {
           key: "steps", label: `Steps Table (${run.steps.length})`,
           children: <Table rowKey="name" size="small" pagination={false} dataSource={run.steps}
             columns={[{ title: "Step", dataIndex: "name" }, { title: "Status", dataIndex: "status", render: (s) => <StatusTag status={s} /> },
             { title: "Duration", dataIndex: "duration_ms", render: (m) => <Duration ms={m} /> }, { title: "Error", dataIndex: "error" }]} />,
-        },
-        {
-          key: "logs", label: `Logs (${logs.length})`,
-          children: <pre className="qtp-code" style={{ maxHeight: 400 }}>{logs.map((l: any) => `[${l.level}] ${l.message}`).join("\n") || "(no logs)"}</pre>,
         },
         {
           key: "comments", label: `Comments (${comments.length})`,

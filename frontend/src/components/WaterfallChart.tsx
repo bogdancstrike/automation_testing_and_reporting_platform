@@ -59,8 +59,18 @@ interface WaterfallChartProps {
 }
 
 export default function WaterfallChart({ steps }: WaterfallChartProps) {
-  // Find the total duration across all steps to calculate percentages
-  const maxDuration = steps.reduce((max, step) => Math.max(max, step.duration_ms), 100);
+  let runningTotal = 0;
+  const computedStarts = steps.map((step) => {
+    let start = step.timings?.start_ms;
+    if (start === undefined) start = runningTotal;
+    runningTotal = Math.max(runningTotal, start + step.duration_ms);
+    return start;
+  });
+
+  const maxDuration = Math.max(
+    100,
+    ...steps.map((step, i) => computedStarts[i] + Math.max(step.duration_ms, 1))
+  );
   
   const networkSteps = steps.filter(s => s.timings?.is_network);
   const totalSize = networkSteps.reduce((acc, s) => acc + (s.timings?.content_length || 0), 0);
@@ -149,7 +159,10 @@ export default function WaterfallChart({ steps }: WaterfallChartProps) {
     {
       title: "Waterfall",
       key: "waterfall",
-      render: (_: any, step: Step) => {
+      render: (_: any, step: Step, index: number) => {
+        const start = computedStarts[index];
+        const leftPercent = (start / maxDuration) * 100;
+        
         const hasTimings = step.timings && (step.timings.dns !== undefined || step.timings.ttfb !== undefined);
         const dns = step.timings?.dns || 0;
         const ttfb = step.timings?.ttfb || 0;
@@ -159,12 +172,12 @@ export default function WaterfallChart({ steps }: WaterfallChartProps) {
         if (!hasTimings) {
           const width = Math.max((step.duration_ms / maxDuration) * 100, 1);
           return (
-            <div style={{ width: "100%", background: "#f0f0f0", height: 16, position: "relative", borderRadius: 2 }}>
+            <div style={{ width: "100%", background: "transparent", height: 16, position: "relative" }}>
               <Tooltip title={`Total: ${step.duration_ms}ms`}>
                 <div
                   style={{
                     position: "absolute",
-                    left: 0,
+                    left: `${leftPercent}%`,
                     width: `${width}%`,
                     height: "100%",
                     background: step.status === "passed" ? "#10b981" : "#ef4444",
@@ -179,10 +192,7 @@ export default function WaterfallChart({ steps }: WaterfallChartProps) {
         const totalGranular = dns + ttfb + download;
         // In case the sum is slightly off from duration_ms, we use the max of both for scale
         const scaleBase = Math.max(step.duration_ms, totalGranular, 1);
-        
-        const dnsW = (dns / maxDuration) * 100;
-        const ttfbW = (ttfb / maxDuration) * 100;
-        const downW = (download / maxDuration) * 100;
+        const widthPercent = (scaleBase / maxDuration) * 100;
 
         // Render event markers differently
         if (step.timings?.is_event) {
@@ -190,7 +200,7 @@ export default function WaterfallChart({ steps }: WaterfallChartProps) {
             <div style={{ width: "100%", height: 16, position: "relative" }}>
               <div style={{ 
                 position: "absolute", 
-                left: 0, 
+                left: `${leftPercent}%`, 
                 width: 2, 
                 height: 24, 
                 background: step.status === "passed" ? "#10b981" : "#ef4444",
@@ -201,16 +211,18 @@ export default function WaterfallChart({ steps }: WaterfallChartProps) {
         }
 
         return (
-          <div style={{ width: "100%", background: "transparent", height: 16, position: "relative", borderRadius: 2, display: "flex" }}>
-            <Tooltip title={`DNS Lookup: ${dns}ms`}>
-              <div style={{ width: `${dnsW}%`, background: "#3b82f6", height: "100%" }} />
-            </Tooltip>
-            <Tooltip title={`Connection / TTFB: ${ttfb}ms`}>
-              <div style={{ width: `${ttfbW}%`, background: "#10b981", height: "100%" }} />
-            </Tooltip>
-            <Tooltip title={`Content Download: ${download}ms`}>
-              <div style={{ width: `${downW}%`, background: "#8b5cf6", height: "100%" }} />
-            </Tooltip>
+          <div style={{ width: "100%", background: "transparent", height: 16, position: "relative" }}>
+            <div style={{ position: "absolute", left: `${leftPercent}%`, display: "flex", width: `${widthPercent}%`, height: "100%", borderRadius: 2, overflow: "hidden" }}>
+              <Tooltip title={`DNS Lookup: ${dns}ms`}>
+                <div style={{ width: `${(dns / scaleBase) * 100}%`, background: "#3b82f6", height: "100%" }} />
+              </Tooltip>
+              <Tooltip title={`Connection / TTFB: ${ttfb}ms`}>
+                <div style={{ width: `${(ttfb / scaleBase) * 100}%`, background: "#10b981", height: "100%" }} />
+              </Tooltip>
+              <Tooltip title={`Content Download: ${download}ms`}>
+                <div style={{ width: `${(download / scaleBase) * 100}%`, background: "#8b5cf6", height: "100%" }} />
+              </Tooltip>
+            </div>
           </div>
         );
       },

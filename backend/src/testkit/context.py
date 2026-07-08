@@ -133,9 +133,12 @@ class TestContext:
             raise
         finally:
             dur = int((time.monotonic() - started) * 1000)
+            start_ms = int((started - getattr(self, '_scenario_start_time', started)) * 1000)
             self._steps.append(StepResult(
                 name=name, status=status, duration_ms=dur, error=error,
-                step_id=f"step-{len(self._steps) + 1}"))
+                step_id=f"step-{len(self._steps) + 1}",
+                timings={"start_ms": start_ms}
+            ))
             self._current_step = prev
 
     def record_network_call(self, method: str, url: str, status_code: int, duration_ms: int, dns: int=0, ttfb: int=0, download: int=0, content_type: str="", content_length: int=0, payload: dict | None = None) -> None:
@@ -164,12 +167,16 @@ class TestContext:
         history.append(now)
 
         st = PASSED if 200 <= status_code < 400 else FAILED
+        # Network calls usually report duration, so start time is roughly now - duration
+        start_ms = int((time.monotonic() - getattr(self, '_scenario_start_time', time.monotonic())) * 1000) - duration_ms
+        start_ms = max(0, start_ms)
         self._steps.append(StepResult(
             name=f"{method} {url}",
             status=st,
             duration_ms=duration_ms,
             step_id=f"net-{len(self._steps) + 1}",
             timings={
+                "start_ms": start_ms,
                 "dns": dns, "ttfb": ttfb, "download": download,
                 "method": method, "url": url, "status_code": status_code,
                 "content_type": content_type, "content_length": content_length,
@@ -179,13 +186,16 @@ class TestContext:
         ))
 
     def record_event(self, name: str, event_type: str, status: str = "passed", details: dict | None = None) -> None:
+        import time
         from src.testkit.result import StepResult
+        start_ms = int((time.monotonic() - getattr(self, '_scenario_start_time', time.monotonic())) * 1000)
         self._steps.append(StepResult(
             name=name,
             status=status,
             duration_ms=0,
             step_id=f"evt-{len(self._steps) + 1}",
             timings={
+                "start_ms": start_ms,
                 "is_event": True,
                 "event_type": event_type,
                 "details": details or {}
@@ -217,6 +227,8 @@ class TestContext:
             raise AssertionFailure(message or f"expected {source} {operator} {expected!r}, got {actual!r}")
 
     def _begin_scenario(self) -> None:
+        import time
+        self._scenario_start_time = time.monotonic()
         self._steps = []
         self._assertions = []
         self._current_step: StepResult | None = None
