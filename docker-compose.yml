@@ -224,7 +224,7 @@ services:
       SERVICE_NAME: "qtp-worker"
       # Shared Kafka consumer group across every replica (partition split).
       WORKER_NAME: "qtp-workers"
-      WORKER_CAPABILITIES: "http,python"
+      WORKER_CAPABILITIES: "http,python,cli,playwright,selenium"
       GUNICORN_WORKERS: "1"
       PYTHONPATH: "/app/backend"
     command: ["gunicorn", "-c", "gunicorn.conf.py", "wsgi:app"]
