@@ -64,6 +64,18 @@ def rerun_queued_run(app, operation, request, run_id=None, principal=None, **kwa
 
 
 @require_authenticated
+def restart_run(app, operation, request, run_id=None, principal=None, **kwargs):
+    with session_scope() as db:
+        return service.restart_run(db, run_id), 200
+
+
+@require_authenticated
+def restart_failed(app, operation, request, principal=None, **kwargs):
+    with session_scope() as db:
+        return service.restart_all_failed(db), 200
+
+
+@require_authenticated
 def rerun_all_queued(app, operation, request, principal=None, **kwargs):
     with session_scope() as db:
         return service.requeue_all_queued(db), 200

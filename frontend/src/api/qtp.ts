@@ -61,6 +61,8 @@ export const qtp = {
   runComments: (id: string) => api.get<{ items: CommentItem[] }>(`/api/runs/${id}/comments`).then(list<CommentItem>()),
   createRunComment: (id: string, body: string, tags: string[] = []) => api.post<CommentItem>(`/api/runs/${id}/comments`, { body, tags }),
   cancelRun: (id: string) => api.post<any>(`/api/runs/${id}/cancel`),
+  restartRun: (id: string) => api.post<any>(`/api/runs/${id}/restart`),
+  restartFailedRuns: () => api.post<any>("/api/runs/restart-failed"),
   deleteRun: (id: string) => api.del<any>(`/api/runs/${id}`),
   deleteAllRuns: () => api.del<any>("/api/runs"),
   setDefect: (id: string, defect_type: string) => api.put<any>(`/api/runs/${id}/defect`, { defect_type }),

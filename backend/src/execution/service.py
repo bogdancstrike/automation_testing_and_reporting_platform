@@ -91,6 +91,57 @@ def requeue_all_queued(db: Session) -> dict:
     return {"requeued_count": count}
 
 
+def restart_run(db: Session, run_id: str) -> dict:
+    from sqlalchemy import delete
+    from src.execution.models import TestRunStep, TestRunAssertion, RunLog
+    r = db.get(TestRun, run_id)
+    if not r or r.stats_reset_at is not None:
+        raise NotFoundError("run not found")
+    if r.status in ("queued", "running"):
+        raise ValidationError("run is already queued or running")
+    
+    r.status = "queued"
+    r.worker_name = None
+    r.cancel_requested = False
+    r.error_category = None
+    r.error_message = None
+    r.defect_type = None
+    r.failure_signature = None
+    r.response = {}
+    r.metrics = {}
+    r.started_at = None
+    r.finished_at = None
+    r.duration_ms = None
+    
+    db.execute(delete(TestRunStep).where(TestRunStep.test_run_id == r.id))
+    db.execute(delete(TestRunAssertion).where(TestRunAssertion.test_run_id == r.id))
+    db.execute(delete(RunLog).where(RunLog.test_run_id == r.id))
+    
+    q = db.scalar(select(RunQueue).where(RunQueue.test_run_id == r.id))
+    if q:
+        q.status = "queued"
+        q.claimed_by = None
+        q.claimed_at = None
+        capability = q.capability
+    else:
+        d = db.get(TestDefinition, r.test_definition_id)
+        capability = capability_for(d.type) if d else "http"
+        db.add(RunQueue(test_run_id=r.id, capability=capability))
+        
+    db.flush()
+    db.info.setdefault("pending_runs", []).append((r.id, capability))
+    return serializers.run_summary(r)
+
+
+def restart_all_failed(db: Session) -> dict:
+    runs = db.scalars(select(TestRun).where(TestRun.status.in_(("error", "failed", "timeout")))).all()
+    count = 0
+    for r in runs:
+        restart_run(db, r.id)
+        count += 1
+    return {"restarted_count": count}
+
+
 def _names(db: Session, runs: list[TestRun]) -> tuple[dict, dict]:
     def_ids = {r.test_definition_id for r in runs}
     tgt_ids = {r.target_id for r in runs if r.target_id}

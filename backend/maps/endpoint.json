@@ -362,6 +362,32 @@
     },
     {
       "namespace": "qtp",
+      "operation_name": "runs_restart",
+      "model_name": "Empty",
+      "request_method": [
+        "POST"
+      ],
+      "api_url": "/api/runs/<run_id>/restart",
+      "exec_method": {
+        "module_name": "src.api.runs",
+        "method_name": "restart_run"
+      }
+    },
+    {
+      "namespace": "qtp",
+      "operation_name": "runs_restart_failed",
+      "model_name": "Empty",
+      "request_method": [
+        "POST"
+      ],
+      "api_url": "/api/runs/restart-failed",
+      "exec_method": {
+        "module_name": "src.api.runs",
+        "method_name": "restart_failed"
+      }
+    },
+    {
+      "namespace": "qtp",
       "operation_name": "schedules_list",
       "model_name": "Empty",
       "request_method": [

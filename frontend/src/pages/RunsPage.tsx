@@ -36,6 +36,15 @@ export default function RunsPage() {
     onError: (e: any) => message.error(e.message),
   });
 
+  const restartFailed = useMutation({
+    mutationFn: () => qtp.restartFailedRuns(),
+    onSuccess: (data: any) => {
+      message.success(`Restarted ${data.restarted_count} failed runs`);
+      qc.invalidateQueries({ queryKey: ["runsPage"] });
+    },
+    onError: (e: any) => message.error(e.message),
+  });
+
   const deleteRun = useMutation({
     mutationFn: (id: string) => qtp.deleteRun(id),
     onSuccess: () => {
@@ -107,6 +116,7 @@ export default function RunsPage() {
         <Space>
           <Button danger onClick={confirmDeleteAll} loading={deleteAllRuns.isPending}>Delete All Runs</Button>
           <Button onClick={() => rerunQueued.mutate()} loading={rerunQueued.isPending}>Re-run all queued</Button>
+          <Button onClick={() => restartFailed.mutate()} loading={restartFailed.isPending}>Re-run all failed</Button>
           <span>Live <Switch size="small" checked={live} onChange={setLive} /></span>
         </Space>
       </Space>
