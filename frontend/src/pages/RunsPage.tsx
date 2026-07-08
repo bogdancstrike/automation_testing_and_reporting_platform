@@ -9,7 +9,7 @@ import type { QueryParams } from "../api/types";
 
 export default function RunsPage() {
   const nav = useNavigate();
-  const { message } = App.useApp();
+  const { message, modal } = App.useApp();
   const qc = useQueryClient();
   const [live, setLive] = useState(true);
   const [params, setParams] = useState<QueryParams>({ page: 1, page_size: 20, sort: "queued_at", order: "desc" });
@@ -36,6 +36,67 @@ export default function RunsPage() {
     onError: (e: any) => message.error(e.message),
   });
 
+  const deleteRun = useMutation({
+    mutationFn: (id: string) => qtp.deleteRun(id),
+    onSuccess: () => {
+      message.success("Run deleted");
+      qc.invalidateQueries({ queryKey: ["runsPage"] });
+      qc.invalidateQueries({ queryKey: ["overview"] });
+    },
+    onError: (e: any) => message.error(e.message),
+  });
+
+  const deleteAllRuns = useMutation({
+    mutationFn: () => qtp.deleteAllRuns(),
+    onSuccess: (data: any) => {
+      message.success(`Deleted ${data.count} runs`);
+      qc.invalidateQueries({ queryKey: ["runsPage"] });
+      qc.invalidateQueries({ queryKey: ["overview"] });
+    },
+    onError: (e: any) => message.error(e.message),
+  });
+
+  const confirmDeleteRun = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    modal.confirm({
+      title: "Delete Run",
+      content: "Are you sure you want to delete this run?",
+      okText: "Yes",
+      okType: "danger",
+      cancelText: "No",
+      onOk: () => {
+        modal.confirm({
+          title: "Final Confirmation",
+          content: "This action is irreversible. Are you absolutely sure you want to delete this run?",
+          okText: "Delete",
+          okType: "danger",
+          cancelText: "Cancel",
+          onOk: () => deleteRun.mutate(id),
+        });
+      },
+    });
+  };
+
+  const confirmDeleteAll = () => {
+    modal.confirm({
+      title: "Delete ALL Runs",
+      content: "Are you sure you want to delete ALL runs across ALL targets?",
+      okText: "Yes",
+      okType: "danger",
+      cancelText: "No",
+      onOk: () => {
+        modal.confirm({
+          title: "DANGER: Final Confirmation",
+          content: "This will permanently delete EVERY run, log, and step history in the database. Are you absolutely sure?",
+          okText: "Delete ALL",
+          okType: "danger",
+          cancelText: "Cancel",
+          onOk: () => deleteAllRuns.mutate(),
+        });
+      },
+    });
+  };
+
   return (
     <div>
       <Space style={{ marginBottom: 16, justifyContent: "space-between", width: "100%" }}>
@@ -44,6 +105,7 @@ export default function RunsPage() {
           <Typography.Text type="secondary">Search, filters, sorting, and pagination are executed by the backend.</Typography.Text>
         </div>
         <Space>
+          <Button danger onClick={confirmDeleteAll} loading={deleteAllRuns.isPending}>Delete All Runs</Button>
           <Button onClick={() => rerunQueued.mutate()} loading={rerunQueued.isPending}>Re-run all queued</Button>
           <span>Live <Switch size="small" checked={live} onChange={setLive} /></span>
         </Space>
@@ -104,6 +166,15 @@ export default function RunsPage() {
           { title: "Defect", dataIndex: "defect_type", sorter: true, sortOrder: antSortOrder(params, "defect_type"), ...menuFilter("defect_type", params, ["product_bug", "automation_bug", "system_issue", "to_investigate", "no_defect"].map((value) => ({ text: value.replace(/_/g, " "), value }))), render: (d, r) => (["failed", "error", "timeout"].includes(r.status) ? <DefectTag defect={d} /> : null) },
           { title: "Category", dataIndex: "error_category", sorter: true, sortOrder: antSortOrder(params, "error_category"), ...textFilter("error_category", params, "Search category"), render: (v) => v || "—" },
           { title: "Queued", dataIndex: "queued_at", sorter: true, sortOrder: antSortOrder(params, "queued_at"), ...textFilter("queued_at", params, "YYYY-MM-DD"), render: (v) => v?.replace("T", " ").slice(0, 19) },
+          { 
+            title: "Action", 
+            key: "action", 
+            render: (_, r) => (
+              <Button size="small" danger onClick={(e) => confirmDeleteRun(e, r.id)} loading={deleteRun.variables === r.id && deleteRun.isPending}>
+                Delete
+              </Button>
+            )
+          },
         ]}
       />
     </div>

@@ -258,6 +258,32 @@
     },
     {
       "namespace": "qtp",
+      "operation_name": "runs_delete",
+      "model_name": "Empty",
+      "request_method": [
+        "DELETE"
+      ],
+      "api_url": "/api/runs/<run_id>",
+      "exec_method": {
+        "module_name": "src.api.runs",
+        "method_name": "delete_run"
+      }
+    },
+    {
+      "namespace": "qtp",
+      "operation_name": "runs_delete_all",
+      "model_name": "Empty",
+      "request_method": [
+        "DELETE"
+      ],
+      "api_url": "/api/runs",
+      "exec_method": {
+        "module_name": "src.api.runs",
+        "method_name": "delete_all_runs"
+      }
+    },
+    {
+      "namespace": "qtp",
       "operation_name": "runs_logs",
       "model_name": "Empty",
       "request_method": [

@@ -216,6 +216,36 @@ def set_defect(db: Session, run_id: str, defect_type: str) -> dict:
     return {"id": r.id, "defect_type": r.defect_type}
 
 
+def delete_run(db: Session, run_id: str) -> dict:
+    from sqlalchemy import delete
+    from src.execution.models import RunLog
+    r = db.get(TestRun, run_id)
+    if not r:
+        raise NotFoundError("run not found")
+    
+    db.execute(delete(RunQueue).where(RunQueue.test_run_id == run_id))
+    db.execute(delete(RunLog).where(RunLog.test_run_id == run_id))
+    db.delete(r)
+    return {"deleted": True, "id": run_id}
+
+
+def delete_all_runs(db: Session) -> dict:
+    from sqlalchemy import delete
+    from src.execution.models import RunLog, TestRunStep, TestRunAssertion
+    db.execute(delete(RunQueue))
+    db.execute(delete(RunLog))
+    db.execute(delete(TestRunStep))
+    db.execute(delete(TestRunAssertion))
+    res = db.execute(delete(TestRun))
+    
+    # Also reset test definitions last run stats
+    for test in db.scalars(select(TestDefinition)).all():
+        test.last_run_status = None
+        test.last_run_at = None
+        
+    return {"deleted": True, "count": res.rowcount}
+
+
 def reset_target_stats(db: Session, target_id: str, *, actor: str, reason: str = "target stats reset") -> dict:
     """Soft-reset all execution data for a target without deleting rows."""
     target = db.get(Target, target_id)
