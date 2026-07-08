@@ -1,5 +1,5 @@
-import { Table, Typography, Button, Space, Modal, Form, Input, App, Tag } from "antd";
-import { PlusOutlined, PlayCircleOutlined } from "@ant-design/icons";
+import { Table, Typography, Button, Space, Modal, Form, Input, App, Tag, Dropdown } from "antd";
+import { PlusOutlined, PlayCircleOutlined, MoreOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
@@ -12,6 +12,7 @@ export default function TargetsPage() {
   const nav = useNavigate();
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
+  const [editTarget, setEditTarget] = useState<any>(null);
   const [runTarget, setRunTarget] = useState<any>(null);
   const [form] = Form.useForm();
   const [params, setParams] = useState<QueryParams>({ page: 1, page_size: 20, sort: "name", order: "asc" });
@@ -19,8 +20,20 @@ export default function TargetsPage() {
 
   const create = useMutation({
     mutationFn: (v: any) => qtp.createTarget({ ...v, tags: v.tags ? v.tags.split(",").map((s: string) => s.trim()).filter(Boolean) : [] }),
-    onSuccess: () => { message.success("Target created"); setOpen(false); form.resetFields(); qc.invalidateQueries({ queryKey: ["targetsPage"] }); qc.invalidateQueries({ queryKey: ["targetsOptions"] }); },
+    onSuccess: () => { message.success("Target created"); setOpen(false); setEditTarget(null); form.resetFields(); qc.invalidateQueries({ queryKey: ["targetsPage"] }); qc.invalidateQueries({ queryKey: ["targetsOptions"] }); },
     onError: (e: any) => message.error(e.message || "failed"),
+  });
+
+  const update = useMutation({
+    mutationFn: (v: any) => qtp.updateTarget(editTarget.id, { ...v, tags: v.tags ? (typeof v.tags === "string" ? v.tags.split(",") : v.tags).map((s: string) => s.trim()).filter(Boolean) : [] }),
+    onSuccess: () => { message.success("Target updated"); setOpen(false); setEditTarget(null); form.resetFields(); qc.invalidateQueries({ queryKey: ["targetsPage"] }); qc.invalidateQueries({ queryKey: ["targetDetail"] }); },
+    onError: (e: any) => message.error(e.message || "failed"),
+  });
+
+  const del = useMutation({
+    mutationFn: (id: string) => qtp.deleteTarget(id),
+    onSuccess: () => { message.success("Target deleted"); qc.invalidateQueries({ queryKey: ["targetsPage"] }); },
+    onError: (e: any) => message.error(e.message || "failed to delete target (may have active runs)"),
   });
 
   return (
@@ -30,7 +43,7 @@ export default function TargetsPage() {
           <Typography.Title level={3} style={{ margin: 0 }}>Targets</Typography.Title>
           <Typography.Text type="secondary">Applications under test. Click a target for tests, runs, ratios, and charts.</Typography.Text>
         </div>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => setOpen(true)}>New target</Button>
+        <Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditTarget(null); form.resetFields(); setOpen(true); }}>New target</Button>
       </Space>
       <Table
         rowKey="id"
@@ -56,18 +69,26 @@ export default function TargetsPage() {
           { title: "Tags", dataIndex: "tags", sorter: true, sortOrder: antSortOrder(params, "tags"), ...textFilter("tag", params, "Search tag"), render: (t) => (t || []).map((x: string) => <Tag key={x}>{x}</Tag>) },
           {
             title: "Actions", key: "actions", width: 120, render: (_, r: any) => (
-              <Button type="primary" size="small" icon={<PlayCircleOutlined />} onClick={(e) => {
-                e.stopPropagation();
-                setRunTarget(r);
-              }}>Run all</Button>
+              <Space onClick={(e) => e.stopPropagation()}>
+                <Button type="primary" size="small" icon={<PlayCircleOutlined />} onClick={() => setRunTarget(r)}>Run all</Button>
+                <Dropdown menu={{
+                  items: [
+                    { key: 'edit', label: 'Edit', icon: <EditOutlined />, onClick: () => { setEditTarget(r); form.setFieldsValue({ ...r, tags: (r.tags || []).join(", ") }); setOpen(true); } },
+                    { type: 'divider' },
+                    { key: 'delete', label: 'Delete', danger: true, icon: <DeleteOutlined />, onClick: () => Modal.confirm({ title: `Delete ${r.name}?`, content: "This will permanently delete the target and all its execution history.", okText: "Delete", okType: "danger", onOk: () => del.mutateAsync(r.id) }) }
+                  ]
+                }}>
+                  <Button size="small" icon={<MoreOutlined />} />
+                </Dropdown>
+              </Space>
             )
           }
         ]}
       />
 
-      <Modal title="New target" open={open} onCancel={() => setOpen(false)} onOk={() => form.validateFields().then((v) => create.mutate(v))} confirmLoading={create.isPending}>
+      <Modal title={editTarget ? "Edit target" : "New target"} open={open} onCancel={() => { setOpen(false); setEditTarget(null); form.resetFields(); }} onOk={() => form.validateFields().then((v) => editTarget ? update.mutate(v) : create.mutate(v))} confirmLoading={create.isPending || update.isPending}>
         <Form form={form} layout="vertical">
-          <Form.Item name="key" label="Key" rules={[{ required: true }]}><Input placeholder="orders_api" /></Form.Item>
+          <Form.Item name="key" label="Key" rules={[{ required: true }]}><Input placeholder="orders_api" disabled={!!editTarget} /></Form.Item>
           <Form.Item name="name" label="Name" rules={[{ required: true }]}><Input placeholder="Orders API (staging)" /></Form.Item>
           <Form.Item name="base_url" label="Base URL" rules={[{ required: true }]}><Input placeholder="https://staging.example.com" /></Form.Item>
           <Form.Item name="environment" label="Environment" initialValue="default"><Input /></Form.Item>

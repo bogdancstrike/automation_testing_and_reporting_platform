@@ -137,6 +137,67 @@ def _target_or_404(db: Session, target_id: str) -> Target:
     return target
 
 
+def delete_target(db: Session, target_id: str) -> dict:
+    from sqlalchemy import delete as sa_delete
+    from src.execution.models import RunLog, RunQueue, TestRun, TestRunAssertion, TestRunStep
+    from src.catalog.models import TestDefinition, TestRevision
+    from src.scheduling.models import Schedule, ScheduleTest
+
+    t = db.get(Target, target_id)
+    if not t:
+        raise NotFoundError("target not found")
+
+    active = db.scalars(
+        select(TestRun.id).where(
+            TestRun.target_id == target_id,
+            TestRun.status.not_in(list(TERMINAL_STATUSES)),
+        )
+    ).all()
+    if active:
+        raise ConflictError(
+            f"cannot delete target: {len(active)} run(s) still active (queued/running); "
+            "wait for them to finish or cancel them first",
+            details={"active_runs": len(active)},
+        )
+
+    run_ids_subq = select(TestRun.id).where(TestRun.target_id == target_id)
+    db.execute(sa_delete(RunLog).where(RunLog.test_run_id.in_(run_ids_subq)))
+    db.execute(sa_delete(TestRunStep).where(TestRunStep.test_run_id.in_(run_ids_subq)))
+    db.execute(sa_delete(TestRunAssertion).where(TestRunAssertion.test_run_id.in_(run_ids_subq)))
+    db.execute(sa_delete(RunQueue).where(RunQueue.test_run_id.in_(run_ids_subq)))
+    db.execute(sa_delete(TestRun).where(TestRun.target_id == target_id))
+
+    ui_test_ids = list(db.scalars(
+        select(TestDefinition.id).where(TestDefinition.target_key == t.key, TestDefinition.source == "ui")
+    ).all())
+    
+    if ui_test_ids:
+        ui_run_ids_subq = select(TestRun.id).where(TestRun.test_definition_id.in_(ui_test_ids))
+        db.execute(sa_delete(RunLog).where(RunLog.test_run_id.in_(ui_run_ids_subq)))
+        db.execute(sa_delete(TestRunStep).where(TestRunStep.test_run_id.in_(ui_run_ids_subq)))
+        db.execute(sa_delete(TestRunAssertion).where(TestRunAssertion.test_run_id.in_(ui_run_ids_subq)))
+        db.execute(sa_delete(RunQueue).where(RunQueue.test_run_id.in_(ui_run_ids_subq)))
+        db.execute(sa_delete(TestRun).where(TestRun.test_definition_id.in_(ui_test_ids)))
+
+        schedule_ids = list(db.scalars(select(ScheduleTest.schedule_id).where(ScheduleTest.test_definition_id.in_(ui_test_ids))).all())
+        db.execute(sa_delete(ScheduleTest).where(ScheduleTest.test_definition_id.in_(ui_test_ids)))
+        for schedule_id in schedule_ids:
+            schedule = db.get(Schedule, schedule_id)
+            if not schedule:
+                continue
+            replacement = db.scalars(select(ScheduleTest).where(ScheduleTest.schedule_id == schedule_id).order_by(ScheduleTest.created_at)).first()
+            if replacement:
+                schedule.test_definition_id = replacement.test_definition_id
+            else:
+                db.delete(schedule)
+
+        db.execute(sa_delete(TestRevision).where(TestRevision.test_definition_id.in_(ui_test_ids)))
+        db.execute(sa_delete(TestDefinition).where(TestDefinition.id.in_(ui_test_ids)))
+
+    db.execute(sa_delete(Target).where(Target.id == target_id))
+    return {"deleted": target_id}
+
+
 # ── Request config normalization ───────────────────────────────────────────
 def normalized_request_steps(config: dict[str, Any]) -> list[dict[str, Any]]:
     if isinstance(config.get("steps"), list) and config["steps"]:

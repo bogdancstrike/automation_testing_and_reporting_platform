@@ -33,6 +33,8 @@ export const qtp = {
   targetRuns: (id: string, params: QueryParams = {}) => api.get<Page<RunSummary>>(`/api/targets/${id}/runs${qs(params)}`),
   resetTargetStats: (id: string) => api.post<TargetStatsReset>(`/api/targets/${id}/reset-stats`),
   createTarget: (b: Partial<Target>) => api.post<Target>("/api/targets", b),
+  updateTarget: (id: string, b: Partial<Target>) => api.patch<Target>(`/api/targets/${id}`, b),
+  deleteTarget: (id: string) => api.del<any>(`/api/targets/${id}`),
   runAllTargetTests: (id: string, environment = "default", sync = false) => api.post<any>(`/api/targets/${id}/run-all${sync ? "?sync=true" : ""}`, { environment }),
 
   testsPage: (params: QueryParams = {}) => api.get<Page<TestDef>>(`/api/tests${qs(params)}`),

@@ -115,6 +115,19 @@
     },
     {
       "namespace": "qtp",
+      "operation_name": "targets_delete",
+      "model_name": "Empty",
+      "request_method": [
+        "DELETE"
+      ],
+      "api_url": "/api/targets/<target_id>",
+      "exec_method": {
+        "module_name": "src.api.targets",
+        "method_name": "delete_target"
+      }
+    },
+    {
+      "namespace": "qtp",
       "operation_name": "tests_list",
       "model_name": "Empty",
       "request_method": [

@@ -66,6 +66,12 @@ def update_target(app, operation, request, target_id=None, principal=None, **kwa
         return service.update_target(db, target_id, json_body(request)), 200
 
 
+@require_role(ROLE_PROJECT_ADMIN)
+def delete_target(app, operation, request, target_id=None, principal=None, **kwargs):
+    with session_scope() as db:
+        return service.delete_target(db, target_id), 200
+
+
 @require_role(ROLE_OPERATOR)
 def run_all_target_tests(app, operation, request, target_id=None, principal=None, **kwargs):
     from src.api._helpers import query_args

@@ -1,5 +1,5 @@
 import { App, Button, Card, Col, Descriptions, Empty, Progress, Row, Space, Statistic, Table, Tag, Typography } from "antd";
-import { ArrowLeftOutlined, ClearOutlined } from "@ant-design/icons";
+import { ArrowLeftOutlined, ClearOutlined, DeleteOutlined } from "@ant-design/icons";
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -35,6 +35,15 @@ export default function TargetDetailPage() {
     },
     onError: (e: any) => message.error(e.message || "reset failed"),
   });
+  const del = useMutation({
+    mutationFn: () => qtp.deleteTarget(id),
+    onSuccess: () => {
+      message.success("Target deleted");
+      qc.invalidateQueries({ queryKey: ["targetsPage"] });
+      nav("/targets");
+    },
+    onError: (e: any) => message.error(e.message || "failed to delete target (may have active runs)"),
+  });
 
   if (!detail) return null;
   const target = detail.target;
@@ -59,6 +68,15 @@ export default function TargetDetailPage() {
           onOk: () => resetStats.mutateAsync(),
         });
       },
+    });
+  };
+  const confirmDelete = () => {
+    modal.confirm({
+      title: `Delete ${target.name}?`,
+      content: "This will permanently delete the target and all its execution history.",
+      okText: "Delete",
+      okButtonProps: { danger: true, loading: del.isPending },
+      onOk: () => del.mutateAsync(),
     });
   };
 
@@ -86,9 +104,12 @@ export default function TargetDetailPage() {
         <Space align="baseline" wrap>
           <Typography.Title level={3} style={{ margin: 0 }}>{target.name}</Typography.Title>
           <Typography.Text code>{target.key}</Typography.Text>
-          {(target.tags || []).map((tag) => <Tag key={tag}>{tag}</Tag>)}
+          {(target.tags || []).map((tag: string) => <Tag key={tag}>{tag}</Tag>)}
         </Space>
-        <Button danger icon={<ClearOutlined />} loading={resetStats.isPending} onClick={confirmReset}>Reset stats</Button>
+        <Space>
+          <Button danger icon={<ClearOutlined />} loading={resetStats.isPending} onClick={confirmReset}>Reset stats</Button>
+          <Button danger type="primary" icon={<DeleteOutlined />} loading={del.isPending} onClick={confirmDelete}>Delete target</Button>
+        </Space>
       </Space>
       <Card size="small" style={{ marginTop: 12, marginBottom: 16 }}>
         <Descriptions column={2} size="small">
