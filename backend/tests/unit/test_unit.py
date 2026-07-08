@@ -92,3 +92,60 @@ def test_evaluate_all():
     assert len(results) == len(specs)
     for r in results:
         assert r.passed, f"Failed: {r.source} {r.operator} {r.expected}"
+
+
+# --- Browser subprocess isolation ---
+# Browser scenarios (playwright/selenium) run in a fresh child interpreter so the
+# sync browser APIs don't collide with the worker's gevent hub. These drive the
+# real spawn path against pure PythonTest scenarios (type-agnostic plumbing).
+from src.testkit.context import ResolvedTarget
+from src.testkit.context import TestContext as _TestContext  # aliased: pytest would try to collect a `Test*` class
+from src.testkit.subprocess_exec import run_scenario_in_subprocess
+
+
+def _browser_ctx():
+    ctx = _TestContext(correlation_id="test-corr")
+    ctx.secrets = {"tok": "SECRET"}
+    ctx.targets["qtp_self"] = ResolvedTarget(key="qtp_self", base_url="https://example.com")
+    return ctx
+
+
+def test_subprocess_folds_result_and_logs_back():
+    ctx = _browser_ctx()
+    res = run_scenario_in_subprocess(
+        "scenarios.automation.qtp_self.test_python:QtpSelfPythonTest1", ctx, timeout_s=30)
+    assert res.status == "passed"
+    assert any(a.source == "json_roundtrip" and a.passed for a in res.assertions)
+    # child logs are spliced into the parent context for persistence
+    assert any("roundtrip" in e["message"].lower() for e in ctx.logs())
+
+
+def test_subprocess_bad_code_ref_is_script_error():
+    ctx = _browser_ctx()
+    res = run_scenario_in_subprocess(
+        "scenarios.automation.qtp_self.test_python:NoSuchClass", ctx, timeout_s=30)
+    assert res.status == "error"
+    assert res.error_category == "script_error"
+
+
+def test_subprocess_timeout_kills_and_reports(tmp_path):
+    # A throwaway sleeper scenario written where discovery can import it.
+    import pathlib
+    root = pathlib.Path(__file__).resolve().parents[2]  # backend/
+    sleeper = root / "scenarios" / "automation" / "qtp_self" / "_tmp_test_sleeper.py"
+    sleeper.write_text(
+        "import time\n"
+        "from src.testkit import PythonTest, TYPE_PYTHON, TestMetadata\n"
+        "class Sleeper(PythonTest):\n"
+        "    metadata = TestMetadata(key='qtp_self._sleeper', name='s', type=TYPE_PYTHON, target='qtp_self')\n"
+        "    def test(self, ctx):\n"
+        "        time.sleep(30)\n"
+    )
+    try:
+        ctx = _browser_ctx()
+        res = run_scenario_in_subprocess(
+            "scenarios.automation.qtp_self._tmp_test_sleeper:Sleeper", ctx, timeout_s=2)
+        assert res.status == "timeout"
+        assert res.error_category == "timeout"
+    finally:
+        sleeper.unlink(missing_ok=True)
