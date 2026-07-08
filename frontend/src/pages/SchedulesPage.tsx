@@ -89,7 +89,7 @@ export default function SchedulesPage() {
           { title: "Next run", dataIndex: "next_run_at", sorter: true, sortOrder: antSortOrder(params, "next_run_at"), ...textFilter("next_run_at", params, "YYYY-MM-DD"), render: (v) => v?.replace("T", " ").slice(0, 19) || "—" },
           { title: "Runs", dataIndex: "total_runs" },
           { title: "Enabled", dataIndex: "is_enabled", sorter: true, sortOrder: antSortOrder(params, "is_enabled"), ...menuFilter("is_enabled", params, [{ text: "enabled", value: "true" }, { text: "disabled", value: "false" }]), render: (_, s) => <div onClick={(e) => e.stopPropagation()}><Switch size="small" checked={s.is_enabled} onChange={() => toggle.mutate(s)} /></div> },
-          { title: "", render: (_, s) => <Button size="small" danger type="text" onClick={(e) => { e.stopPropagation(); remove.mutate(s.id); }}>Delete</Button> },
+          { title: "Actions", render: (_, s) => <Button size="small" danger type="text" onClick={(e) => { e.stopPropagation(); remove.mutate(s.id); }}>Delete</Button> },
         ]}
       />
 

@@ -65,6 +65,9 @@ export default function RunDetailPage() {
   if (!run) return null;
   const failed = ["failed", "error", "timeout"].includes(run.status);
   const resp = run.response || {};
+  
+  const runRevision = testDefinition?.revisions?.find((r: any) => r.id === run.revision_id) || testDefinition?.revisions?.[testDefinition?.revisions?.length - 1] || testDefinition;
+  const sourceCode = runRevision?.source_code || testDefinition?.source_code;
 
   return (
     <div>
@@ -100,11 +103,11 @@ export default function RunDetailPage() {
       </Card>
 
       <Tabs items={[
-        ...(testDefinition?.source_code ? [{
+        ...(sourceCode ? [{
           key: "code", 
           label: "Scenario Code",
           children: (
-            <CodeSnippet language="python" code={testDefinition.source_code} maxHeight={600} />
+            <CodeSnippet language={testDefinition?.source === "ui" ? "json" : "python"} code={sourceCode} maxHeight={600} />
           )
         }] : []),
         {

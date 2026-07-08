@@ -24,9 +24,11 @@ def target(t: Target) -> dict[str, Any]:
 
 
 def revision(r: TestRevision) -> dict[str, Any]:
+    from src.catalog.service import _source_code
     return {
         "id": r.id, "revision_number": r.revision_number, "code_ref": r.code_ref,
         "config": r.config or {}, "created_at": _iso(r.created_at),
+        "source_code": _source_code(r) or (r.config or {}).get("source_code"),
     }
 
 

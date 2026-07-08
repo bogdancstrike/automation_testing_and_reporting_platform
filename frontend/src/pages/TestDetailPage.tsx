@@ -81,6 +81,39 @@ export default function TestDetailPage() {
   };
   const flowSteps = getFlowSteps();
 
+  const statusCounts = runs.reduce((acc: any, r: any) => {
+    acc[r.status] = (acc[r.status] || 0) + 1;
+    return acc;
+  }, {});
+
+  const triggerCounts = runs.reduce((acc: any, r: any) => {
+    const trigger = r.trigger || "unknown";
+    acc[trigger] = (acc[trigger] || 0) + 1;
+    return acc;
+  }, {});
+
+  const pieOptionStatus = {
+    tooltip: { trigger: "item" },
+    legend: { bottom: 0 },
+    series: [{
+      type: "pie", radius: ["45%", "70%"], center: ["50%", "45%"],
+      data: Object.entries(statusCounts).map(([k, v]) => ({ 
+        name: k, 
+        value: v as number, 
+        itemStyle: { color: k === 'passed' ? '#52c41a' : k === 'failed' ? '#ff4d4f' : k === 'error' ? '#fa541c' : '#faad14' } 
+      })),
+    }],
+  };
+
+  const pieOptionTrigger = {
+    tooltip: { trigger: "item" },
+    legend: { bottom: 0 },
+    series: [{
+      type: "pie", radius: ["45%", "70%"], center: ["50%", "45%"],
+      data: Object.entries(triggerCounts).map(([k, v]) => ({ name: k, value: v as number })),
+    }],
+  };
+
   const chartData = runs.slice().reverse();
   const runChartOptions = {
     tooltip: { trigger: 'axis', formatter: (params: any) => { const p = params[0]; const data = chartData[p.dataIndex]; return `${data.queued_at?.replace("T", " ").slice(0, 19)}<br/>Status: ${data.status}<br/>Duration: ${data.duration_ms || 0} ms`; } },
@@ -127,6 +160,21 @@ export default function TestDetailPage() {
           </Descriptions.Item>
         </Descriptions>
       </Card>
+
+      {runs.length > 0 && (
+        <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
+          <Col xs={24} md={12}>
+            <Card size="small" title="Status Distribution" bordered={false} style={{ boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
+              <ReactECharts option={pieOptionStatus} style={{ height: 200 }} />
+            </Card>
+          </Col>
+          <Col xs={24} md={12}>
+            <Card size="small" title="Trigger Distribution" bordered={false} style={{ boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
+              <ReactECharts option={pieOptionTrigger} style={{ height: 200 }} />
+            </Card>
+          </Col>
+        </Row>
+      )}
 
       <Tabs items={[
         ...(flowSteps.length > 0 ? [{
