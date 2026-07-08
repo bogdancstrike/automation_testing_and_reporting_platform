@@ -164,7 +164,7 @@ export function AuditTable({ baseFilters, onRowClick }: { baseFilters?: Partial<
       title: 'Actor',
       dataIndex: 'actor',
       width: 180,
-      render: (v) => v || '-',
+      render: (v) => v || 'System',
       sorter: { multiple: 0 },
       filterDropdown: textFilterDropdown('Search actor'),
       filteredValue: params.actor ? [params.actor] : null,
