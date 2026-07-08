@@ -5,7 +5,7 @@ import uuid
 from datetime import datetime
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint, func
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from src.core.db import Base
@@ -19,9 +19,10 @@ class Schedule(Base):
     __tablename__ = "schedules"
     id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True, default=_uuid)
     project_id: Mapped[str] = mapped_column(UUID(as_uuid=False), index=True)
-    test_definition_id: Mapped[str] = mapped_column(
-        UUID(as_uuid=False), ForeignKey("test_definitions.id"), index=True)
+    test_definition_id: Mapped[str | None] = mapped_column(
+        UUID(as_uuid=False), ForeignKey("test_definitions.id"), index=True, nullable=True)
     name: Mapped[str] = mapped_column(String(200))
+    target_tags: Mapped[list] = mapped_column(JSONB, default=list)
 
     recurrence_type: Mapped[str] = mapped_column(String(20), default="interval")  # once|interval|cron
     interval_seconds: Mapped[int | None] = mapped_column(Integer, nullable=True)

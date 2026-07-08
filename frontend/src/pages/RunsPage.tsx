@@ -6,6 +6,7 @@ import { qtp } from "../api/qtp";
 import { StatusTag, DefectTag, Duration } from "../components/tags";
 import { antSortOrder, menuFilter, nextTableParams, textFilter } from "../components/remoteTable";
 import type { QueryParams } from "../api/types";
+import { formatLocalTime } from "../components/tags";
 
 export default function RunsPage() {
   const nav = useNavigate();
@@ -210,7 +211,7 @@ export default function RunsPage() {
           { title: "Duration", dataIndex: "duration_ms", sorter: true, sortOrder: antSortOrder(params, "duration_ms"), ...textFilter("duration_ms", params, "Duration ms"), render: (m) => <Duration ms={m} /> },
           { title: "Defect", dataIndex: "defect_type", sorter: true, sortOrder: antSortOrder(params, "defect_type"), ...menuFilter("defect_type", params, ["product_bug", "automation_bug", "system_issue", "to_investigate", "no_defect"].map((value) => ({ text: value.replace(/_/g, " "), value }))), render: (d, r) => (["failed", "error", "timeout"].includes(r.status) ? <DefectTag defect={d} /> : null) },
           { title: "Category", dataIndex: "error_category", sorter: true, sortOrder: antSortOrder(params, "error_category"), ...textFilter("error_category", params, "Search category"), render: (v) => v || "—" },
-          { title: "Queued", dataIndex: "queued_at", sorter: true, sortOrder: antSortOrder(params, "queued_at"), ...textFilter("queued_at", params, "YYYY-MM-DD"), render: (v) => v?.replace("T", " ").slice(0, 19) },
+          { title: "Queued", dataIndex: "queued_at", sorter: true, sortOrder: antSortOrder(params, "queued_at"), ...textFilter("queued_at", params, "YYYY-MM-DD"), render: (v) => formatLocalTime(v) },
           { 
             title: "Action", 
             key: "action", 

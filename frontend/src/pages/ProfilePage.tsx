@@ -4,9 +4,10 @@ import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { qtp } from "../api/qtp";
 import { Duration, StatusTag } from "../components/tags";
+import { formatLocalTime } from "../components/tags";
 
 function displayDate(value?: string) {
-  return value ? value.replace("T", " ").slice(0, 19) : "—";
+  return value ? formatLocalTime(value) : "—";
 }
 
 export default function ProfilePage() {

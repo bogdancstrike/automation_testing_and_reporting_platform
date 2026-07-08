@@ -8,6 +8,7 @@ import { StatCard } from "../components/StatCard";
 import ReactECharts from "echarts-for-react";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
+import { formatLocalTime } from "../components/tags";
 
 dayjs.extend(relativeTime);
 
@@ -47,7 +48,7 @@ export default function WorkerDetailPage() {
 
   const chartData = runs.slice().reverse();
   const runChartOptions = {
-    tooltip: { trigger: 'axis', formatter: (params: any) => { const p = params[0]; const data = chartData[p.dataIndex]; return `${data.queued_at?.replace("T", " ").slice(0, 19)}<br/>Status: ${data.status}<br/>Duration: ${data.duration_ms || 0} ms`; } },
+    tooltip: { trigger: 'axis', formatter: (params: any) => { const p = params[0]; const data = chartData[p.dataIndex]; return `${formatLocalTime(data.queued_at)}<br/>Status: ${data.status}<br/>Duration: ${data.duration_ms || 0} ms`; } },
     xAxis: { type: 'category', data: chartData.map((r: any) => ""), show: false },
     yAxis: { type: 'value', splitLine: { lineStyle: { type: 'dashed', color: '#f0f0f0' } } },
     series: [{

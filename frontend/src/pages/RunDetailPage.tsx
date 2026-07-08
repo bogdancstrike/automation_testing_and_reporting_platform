@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Card, Descriptions, Button, Typography, Table, Space, Tabs, App, Tag, Select, Row, Col, List, Form, Input } from "antd";
-import { ArrowLeftOutlined, ExperimentOutlined, StopOutlined, PlayCircleOutlined } from "@ant-design/icons";
+import { ArrowLeftOutlined, ExperimentOutlined, StopOutlined, PlayCircleOutlined, WarningOutlined } from "@ant-design/icons";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { qtp } from "../api/qtp";
@@ -8,6 +8,7 @@ import { StatusTag, DefectTag, Duration } from "../components/tags";
 import ExecutionFlow from "../components/ExecutionFlow";
 import WaterfallChart from "../components/WaterfallChart";
 import CodeSnippet from "../components/CodeSnippet";
+import { formatLocalTime } from "../components/tags";
 
 const DEFECTS = ["product_bug", "automation_bug", "system_issue", "to_investigate", "no_defect"];
 const ACTIVE_RUN_REFETCH_MS = 1000;
@@ -89,7 +90,7 @@ export default function RunDetailPage() {
           <Descriptions.Item label="Worker">{run.worker_name || "—"}</Descriptions.Item>
           <Descriptions.Item label="Duration"><Duration ms={run.duration_ms} /></Descriptions.Item>
           <Descriptions.Item label="Environment">{run.environment}</Descriptions.Item>
-          <Descriptions.Item label="Queued">{run.queued_at?.replace("T", " ").slice(0, 19)}</Descriptions.Item>
+          <Descriptions.Item label="Queued">{formatLocalTime(run.queued_at)}</Descriptions.Item>
           {failed && <Descriptions.Item label="Failure">{run.error_category}: {run.error_message}</Descriptions.Item>}
         </Descriptions>
         {run.cleanup_failed && (
@@ -255,7 +256,7 @@ export default function RunDetailPage() {
                         <Space>
                           <Typography.Text strong>{item.author}</Typography.Text>
                           <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                            {item.created_at?.replace("T", " ").slice(0, 19)}
+                            {formatLocalTime(item.created_at)}
                           </Typography.Text>
                           {(item.tags || []).map((tc: string) => (
                             <Tag key={tc} color="purple">{tc}</Tag>

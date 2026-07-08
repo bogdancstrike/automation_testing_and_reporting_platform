@@ -30,7 +30,7 @@ def _scenario_summary(d: TestDefinition) -> dict[str, Any]:
 
 def _load_definitions(db: Session, test_ids: list[str]) -> list[TestDefinition]:
     if not test_ids:
-        raise ValidationError("at least one scenario is required")
+        return []
     defs = {d.id: d for d in db.scalars(select(TestDefinition).where(TestDefinition.id.in_(test_ids))).all()}
     missing = [test_id for test_id in test_ids if test_id not in defs]
     if missing:
@@ -42,21 +42,26 @@ def _payload_test_ids(payload: dict[str, Any]) -> list[str]:
     raw = payload.get("test_definition_ids")
     if raw is None:
         raw = payload.get("test_definition_id")
+    if not raw and payload.get("target_tags"):
+        return []
     if raw is None:
-        raise ValidationError("at least one scenario is required")
+        raise ValidationError("at least one scenario or target tags is required")
     values = raw if isinstance(raw, list) else [raw]
     out: list[str] = []
     for value in values:
         text = str(value or "").strip()
         if text and text not in out:
             out.append(text)
-    if not out:
-        raise ValidationError("at least one scenario is required")
+    if not out and not payload.get("target_tags"):
+        raise ValidationError("at least one scenario or target tags is required")
     return out
 
 
 def _sync_schedule_tests(db: Session, schedule: Schedule, defs: list[TestDefinition]) -> None:
-    schedule.test_definition_id = defs[0].id
+    if defs:
+        schedule.test_definition_id = defs[0].id
+    else:
+        schedule.test_definition_id = None
     db.execute(sa_delete(ScheduleTest).where(ScheduleTest.schedule_id == schedule.id))
     for definition in defs:
         db.add(ScheduleTest(schedule_id=schedule.id, test_definition_id=definition.id))
@@ -74,6 +79,24 @@ def _tests_by_schedule(db: Session, schedules: list[Schedule]) -> dict[str, list
         ).all()
         for schedule_id, definition in rows:
             out.setdefault(schedule_id, []).append(_scenario_summary(definition))
+
+    for s in schedules:
+        if s.target_tags:
+            conditions = [TestDefinition.tags.contains([t]) for t in s.target_tags]
+            if conditions:
+                matched_defs = db.scalars(
+                    select(TestDefinition)
+                    .where(TestDefinition.project_id == s.project_id)
+                    .where(TestDefinition.status != "archived")
+                    .where(or_(*conditions))
+                ).all()
+                existing_ids = {t["id"] for t in out.setdefault(s.id, [])}
+                for md in matched_defs:
+                    if md.id not in existing_ids:
+                        summary = _scenario_summary(md)
+                        summary["is_dynamic"] = True
+                        out[s.id].append(summary)
+                        existing_ids.add(md.id)
 
     # Legacy fallback for databases that have not backfilled schedule_tests yet.
     missing = [s for s in schedules if not out.get(s.id) and s.test_definition_id]
@@ -155,6 +178,7 @@ def list_schedules(db: Session, filters: dict[str, Any] | None = None) -> dict:
         item = serializers.schedule(s, test_name=first["name"] if first else None, tests=tests)
         item["target_key"] = first["target_key"] if first else None
         item["target_keys"] = sorted({t["target_key"] for t in tests if t.get("target_key")})
+        item["target_tags"] = s.target_tags
         item["total_runs"] = counts.get(s.id, 0)
         out.append(item)
         
@@ -181,6 +205,7 @@ def get_schedule_detail(db: Session, schedule_id: str) -> dict:
     out = serializers.schedule(s, test_name=first["name"] if first else None, tests=tests)
     out["target_key"] = first["target_key"] if first else None
     out["target_keys"] = sorted({t["target_key"] for t in tests if t.get("target_key")})
+    out["target_tags"] = s.target_tags
     out["total_runs"] = sum(c for _, c in stats)
     out["status_counts"] = {st: c for st, c in stats}
     out["last_run_status"] = last_run.status if last_run else None
@@ -191,10 +216,22 @@ def get_schedule_detail(db: Session, schedule_id: str) -> dict:
 def create_schedule(db: Session, payload: dict[str, Any]) -> dict:
     defs = _load_definitions(db, _payload_test_ids(payload))
     project = default_project(db)
+    target_tags = payload.get("target_tags", [])
+    
+    name = payload.get("name")
+    if not name:
+        if defs:
+            name = f"{defs[0].name} schedule" if len(defs) == 1 else f"{len(defs)} scenario schedule"
+        elif target_tags:
+            name = f"Auto schedule for {', '.join(target_tags)}"
+        else:
+            name = "Unnamed schedule"
+
     s = Schedule(
         project_id=project.id,
-        test_definition_id=defs[0].id,
-        name=payload.get("name") or (f"{defs[0].name} schedule" if len(defs) == 1 else f"{len(defs)} scenario schedule"),
+        test_definition_id=defs[0].id if defs else None,
+        name=name,
+        target_tags=target_tags,
         recurrence_type=payload.get("recurrence_type", "interval"),
         interval_seconds=payload.get("interval_seconds"),
         cron_expression=payload.get("cron_expression"),
@@ -207,9 +244,12 @@ def create_schedule(db: Session, payload: dict[str, Any]) -> dict:
     db.flush()
     _sync_schedule_tests(db, s, defs)
     tests = [_scenario_summary(d) for d in defs]
-    item = serializers.schedule(s, test_name=defs[0].name, tests=tests)
-    item["target_key"] = defs[0].target_key
-    item["target_keys"] = sorted({d.target_key for d in defs})
+    tests = _tests_by_schedule(db, [s]).get(s.id, [])
+    first = tests[0] if tests else None
+    item = serializers.schedule(s, test_name=first["name"] if first else None, tests=tests)
+    item["target_key"] = first["target_key"] if first else None
+    item["target_keys"] = sorted({t["target_key"] for t in tests if t.get("target_key")})
+    item["target_tags"] = target_tags
     return item
 
 
@@ -220,7 +260,7 @@ def update_schedule(db: Session, schedule_id: str, payload: dict[str, Any]) -> d
     defs: list[TestDefinition] | None = None
     if "test_definition_ids" in payload or "test_definition_id" in payload:
         defs = _load_definitions(db, _payload_test_ids(payload))
-    for f in ("name", "recurrence_type", "interval_seconds", "cron_expression", "timezone", "environment", "is_enabled"):
+    for f in ("name", "recurrence_type", "interval_seconds", "cron_expression", "timezone", "environment", "is_enabled", "target_tags"):
         if f in payload:
             setattr(s, f, payload[f])
     if defs is not None:
@@ -233,6 +273,7 @@ def update_schedule(db: Session, schedule_id: str, payload: dict[str, Any]) -> d
     item = serializers.schedule(s, test_name=first["name"] if first else None, tests=tests)
     item["target_key"] = first["target_key"] if first else None
     item["target_keys"] = sorted({t["target_key"] for t in tests if t.get("target_key")})
+    item["target_tags"] = getattr(s, "target_tags", [])
     return item
 
 

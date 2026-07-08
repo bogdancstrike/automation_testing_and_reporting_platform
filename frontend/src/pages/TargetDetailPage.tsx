@@ -5,7 +5,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import ReactECharts from "echarts-for-react";
 import { qtp } from "../api/qtp";
-import { StatusTag, DefectTag, Duration } from "../components/tags";
+import { StatusTag, DefectTag, Duration, formatLocalTimeShort } from "../components/tags";
 import type { QueryParams } from "../api/types";
 
 function sortOrder(order?: string) { return order === "ascend" ? "asc" : order === "descend" ? "desc" : undefined; }
@@ -82,7 +82,7 @@ export default function TargetDetailPage() {
 
   const trendOption = {
     tooltip: { trigger: "axis" }, legend: { data: statuses }, grid: { left: 36, right: 16, top: 32, bottom: 28 },
-    xAxis: { type: "category", data: trend.map((t) => (t.bucket || "").slice(5, 16).replace("T", " ")) },
+    xAxis: { type: "category", data: trend.map((t) => formatLocalTimeShort(t.bucket)) },
     yAxis: { type: "value" },
     series: statuses.map((s) => ({ name: s, type: "bar", stack: "runs", data: trend.map((t) => t[s] || 0) })),
   };
@@ -92,7 +92,7 @@ export default function TargetDetailPage() {
   };
   const durationOption = {
     tooltip: { trigger: "axis" }, grid: { left: 44, right: 16, top: 20, bottom: 28 },
-    xAxis: { type: "category", data: (stats?.duration_trend || []).map((d) => d.bucket.slice(5, 16).replace("T", " ")) },
+    xAxis: { type: "category", data: (stats?.duration_trend || []).map((d) => formatLocalTimeShort(d.bucket)) },
     yAxis: { type: "value" },
     series: [{ name: "avg ms", type: "line", smooth: true, showSymbol: false, data: (stats?.duration_trend || []).map((d) => d.avg_ms || 0) }],
   };

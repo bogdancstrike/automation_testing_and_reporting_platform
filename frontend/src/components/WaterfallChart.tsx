@@ -9,6 +9,7 @@ interface Timings {
   url?: string;
   status_code?: number;
   is_network?: boolean;
+  [key: string]: any;
 }
 
 interface Step {

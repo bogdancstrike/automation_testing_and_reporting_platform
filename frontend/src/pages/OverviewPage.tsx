@@ -14,6 +14,7 @@ import { StatCard } from "../components/StatCard";
 import { apiSortOrder, menuFilter, textFilter } from "../components/remoteTable";
 import type { QueryParams } from "../api/types";
 import { useNavigate } from "react-router-dom";
+import { formatLocalTime } from "../components/tags";
 
 const { RangePicker } = DatePicker;
 
@@ -221,7 +222,7 @@ export default function OverviewPage() {
                 { title: "Status", dataIndex: "status", sorter: true, sortOrder: prefixedSortOrder(failureTableParams, "recent_failed", "status"), ...menuFilter("recent_failed_status", failureTableParams, ["failed", "error", "timeout"].map((value) => ({ text: value, value }))), render: (s) => <StatusTag status={s} /> },
                 { title: "Category", dataIndex: "error_category", sorter: true, sortOrder: prefixedSortOrder(failureTableParams, "recent_failed", "error_category"), ...textFilter("recent_failed_error_category", failureTableParams, "Search category") },
                 { title: "Defect", dataIndex: "defect_type", sorter: true, sortOrder: prefixedSortOrder(failureTableParams, "recent_failed", "defect_type"), ...menuFilter("recent_failed_defect_type", failureTableParams, ["product_bug", "automation_bug", "system_issue", "to_investigate", "no_defect"].map((value) => ({ text: value.replace(/_/g, " "), value }))), render: (d) => <DefectTag defect={d} /> },
-                { title: "Time", dataIndex: "finished_at", sorter: true, sortOrder: prefixedSortOrder(failureTableParams, "recent_failed", "finished_at"), ...textFilter("recent_failed_finished_at", failureTableParams, "YYYY-MM-DD"), render: (v) => v?.replace("T", " ").slice(0, 19) }
+                { title: "Time", dataIndex: "finished_at", sorter: true, sortOrder: prefixedSortOrder(failureTableParams, "recent_failed", "finished_at"), ...textFilter("recent_failed_finished_at", failureTableParams, "YYYY-MM-DD"), render: (v) => formatLocalTime(v) }
               ]}
               locale={{ emptyText: <Empty description="No failures 🎉" /> }}
             />

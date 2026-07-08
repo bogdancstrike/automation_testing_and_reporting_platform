@@ -2,7 +2,7 @@ import { Card, Descriptions, Typography, Space, Button, Table, Tag, Switch, App,
 import { ArrowLeftOutlined, PlayCircleOutlined, CheckCircleOutlined, CloseCircleOutlined, ThunderboltOutlined, BlockOutlined, EditOutlined } from "@ant-design/icons";
 import { useState } from "react";
 import { StatCard } from "../components/StatCard";
-import { formatDurationMs } from "../components/tags";
+import { formatDurationMs, formatLocalTime } from "../components/tags";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { qtp } from "../api/qtp";
@@ -44,12 +44,13 @@ export default function ScheduleDetailPage() {
   const handleEdit = () => {
     form.setFieldsValue({
       name: s.name,
-      test_definition_ids: (s.tests || []).map((t: any) => t.id),
       recurrence_type: s.recurrence_type,
       interval_seconds: s.interval_seconds,
       cron_expression: s.cron_expression,
       timezone: s.timezone,
       is_enabled: s.is_enabled,
+      test_definition_ids: (s.tests || []).filter((t: any) => !t.is_dynamic).map((t: any) => t.id),
+      target_tags: s.target_tags || []
     });
     setOpenEdit(true);
   };
@@ -59,7 +60,7 @@ export default function ScheduleDetailPage() {
   const runs = runsPage || [];
   const chartData = runs.slice().reverse();
   const runChartOptions = {
-    tooltip: { trigger: 'axis', formatter: (params: any) => { const p = params[0]; const data = chartData[p.dataIndex]; return `${data.queued_at?.replace("T", " ").slice(0, 19)}<br/>Status: ${data.status}<br/>Duration: ${data.duration_ms || 0} ms`; } },
+    tooltip: { trigger: 'axis', formatter: (params: any) => { const p = params[0]; const data = chartData[p.dataIndex]; return `Scenario: ${data.test_name || data.test_definition_id}<br/>${formatLocalTime(data.queued_at)}<br/>Status: ${data.status}<br/>Duration: ${data.duration_ms || 0} ms`; } },
     xAxis: { type: 'category', data: chartData.map((r: any) => ""), show: false },
     yAxis: { type: 'value', splitLine: { lineStyle: { type: 'dashed', color: '#f0f0f0' } } },
     series: [{
@@ -108,16 +109,22 @@ export default function ScheduleDetailPage() {
           <Descriptions.Item label="Recurrence">
             {s.recurrence_type === "cron" ? <Tag>cron: {s.cron_expression}</Tag> : s.recurrence_type === "interval" ? <Tag>every {s.interval_seconds}s</Tag> : <Tag>once</Tag>}
           </Descriptions.Item>
-          <Descriptions.Item label="Next Run At">{s.next_run_at?.replace("T", " ").slice(0, 19) || "—"}</Descriptions.Item>
+          <Descriptions.Item label="Next Run At">{formatLocalTime(s.next_run_at)}</Descriptions.Item>
 
           <Descriptions.Item label="Target">
             {s.target_keys?.length
               ? s.target_keys.map((target: string) => <Tag key={target} color="geekblue">{target}</Tag>)
               : s.target_key ? <Tag color="geekblue">{s.target_key}</Tag> : "—"}
           </Descriptions.Item>
+          <Descriptions.Item label="Target Tags">
+            {s.target_tags?.length ? s.target_tags.map((t: string) => <Tag key={t} color="purple">{t}</Tag>) : "—"}
+          </Descriptions.Item>
           <Descriptions.Item label="Environment">{s.environment}</Descriptions.Item>
           <Descriptions.Item label="Scenarios">
-            {s.scenario_count || s.tests?.length || 1}
+            {s.tests?.length || s.scenario_count || 1}
+            {(s.tests || []).some((t: any) => t.is_dynamic) && (
+              <span style={{ marginLeft: 4, fontSize: 12, color: "#888" }}>(includes auto-tagged)</span>
+            )}
           </Descriptions.Item>
           
           <Descriptions.Item label="Total Runs">{s.total_runs}</Descriptions.Item>
@@ -128,7 +135,7 @@ export default function ScheduleDetailPage() {
               </a>
             ) : "—"}
           </Descriptions.Item>
-          <Descriptions.Item label="Created">{s.created_at?.replace("T", " ").slice(0, 19)}</Descriptions.Item>
+          <Descriptions.Item label="Created">{formatLocalTime(s.created_at)}</Descriptions.Item>
         </Descriptions>
       </Card>
 
@@ -191,7 +198,7 @@ export default function ScheduleDetailPage() {
                   { title: "Status", dataIndex: "status", render: (st) => <StatusTag status={st} /> },
                   { title: "Duration", dataIndex: "duration_ms", render: (ms) => ms != null ? `${ms} ms` : "—" },
                   { title: "Defect", dataIndex: "defect_type", render: (d) => d || "—" },
-                  { title: "Queued", dataIndex: "queued_at", render: (v) => v?.replace("T", " ").slice(0, 19) },
+                  { title: "Queued", dataIndex: "queued_at", render: (v) => formatLocalTime(v) },
                 ]}
               />
             </div>
@@ -201,7 +208,8 @@ export default function ScheduleDetailPage() {
 
       <Modal title="Edit schedule" open={openEdit} onCancel={() => setOpenEdit(false)} onOk={() => form.validateFields().then((v) => update.mutate(v))} confirmLoading={update.isPending}>
         <Form form={form} layout="vertical">
-          <Form.Item name="test_definition_ids" label="Scenarios" rules={[{ required: true }]}><Select mode="multiple" showSearch optionFilterProp="label" options={testsOptions.map((t) => ({ value: t.id, label: `${t.name} (${t.key})` }))} /></Form.Item>
+          <Form.Item name="test_definition_ids" label="Scenarios (Explicit)" rules={[{ required: false }]} tooltip="Explicitly select scenarios to include"><Select mode="multiple" showSearch optionFilterProp="label" options={testsOptions.map((t) => ({ value: t.id, label: `${t.name} (${t.key})` }))} allowClear /></Form.Item>
+          <Form.Item name="target_tags" label="Scenarios by Tags" rules={[{ required: false }]} tooltip="Automatically include all scenarios matching ANY of these tags"><Select mode="tags" placeholder="e.g. #60mins, nightly" allowClear /></Form.Item>
           <Form.Item name="name" label="Name"><Input placeholder="optional" /></Form.Item>
           <Form.Item name="recurrence_type" label="Recurrence"><Select options={["interval", "cron", "once"].map((value) => ({ value }))} /></Form.Item>
           {rtype === "interval" && <Form.Item name="interval_seconds" label="Interval (seconds)" rules={[{ required: true }]}><InputNumber min={5} style={{ width: "100%" }} /></Form.Item>}

@@ -124,6 +124,7 @@ export interface Schedule {
   test_name?: string;
   target_key?: string;
   target_keys?: string[];
+  target_tags?: string[];
   total_runs?: number;
   name: string;
   recurrence_type: string;

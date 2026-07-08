@@ -7,8 +7,9 @@ import { qtp } from "../api/qtp";
 import { StatusTag, TypeTag } from "../components/tags";
 import { antSortOrder, menuFilter, nextTableParams, textFilter } from "../components/remoteTable";
 import type { QueryParams } from "../api/types";
+import { formatLocalTime } from "../components/tags";
 
-function displayDate(value?: string) { return value ? value.replace("T", " ").slice(0, 19) : "—"; }
+function displayDate(value?: string) { return value ? formatLocalTime(value) : "—"; }
 
 export default function CatalogPage() {
   const { message } = App.useApp();

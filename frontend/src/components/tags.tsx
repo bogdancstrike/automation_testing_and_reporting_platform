@@ -77,3 +77,22 @@ export function Duration({ ms }: { ms?: number | null }) {
   if (ms === null || ms === undefined) return <span>—</span>;
   return <span>{formatDurationMs(ms)}</span>;
 }
+
+export function formatLocalTime(isoString?: string): string {
+  if (!isoString) return "—";
+  let s = isoString;
+  if (!s.endsWith("Z") && !s.includes("+")) {
+    s += "Z";
+  }
+  return new Date(s).toLocaleString();
+}
+
+export function formatLocalTimeShort(isoString?: string): string {
+  if (!isoString) return "";
+  let s = isoString;
+  if (!s.endsWith("Z") && !s.includes("+")) {
+    s += "Z";
+  }
+  const d = new Date(s);
+  return `${(d.getMonth() + 1).toString().padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')} ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+}

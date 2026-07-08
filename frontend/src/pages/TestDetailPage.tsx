@@ -10,6 +10,7 @@ import ReactECharts from "echarts-for-react";
 import CodeSnippet from "../components/CodeSnippet";
 import { StatCard } from "../components/StatCard";
 import { CheckCircleOutlined, CloseCircleOutlined, FieldTimeOutlined, ThunderboltOutlined, DeleteOutlined } from "@ant-design/icons";
+import { formatLocalTime } from "../components/tags";
 
 const METHOD_COLOR: Record<string, string> = {
   GET: "green", POST: "blue", PUT: "orange", PATCH: "gold", DELETE: "red", HEAD: "default",
@@ -133,7 +134,7 @@ export default function TestDetailPage() {
   const p95 = durations.length ? durations[Math.floor(durations.length * 0.95)] : 0;
 
   const runChartOptions = {
-    tooltip: { trigger: 'axis', formatter: (params: any) => { const p = params[0]; const data = chartData[p.dataIndex]; return `${data.queued_at?.replace("T", " ").slice(0, 19)}<br/>Status: ${data.status}<br/>Duration: ${data.duration_ms || 0} ms`; } },
+    tooltip: { trigger: 'axis', formatter: (params: any) => { const p = params[0]; const data = chartData[p.dataIndex]; return `${formatLocalTime(data.queued_at)}<br/>Status: ${data.status}<br/>Duration: ${data.duration_ms || 0} ms`; } },
     xAxis: { type: 'category', data: chartData.map((r: any) => ""), show: false },
     yAxis: { type: 'value', splitLine: { lineStyle: { type: 'dashed', color: '#f0f0f0' } } },
     series: [{
@@ -337,7 +338,7 @@ export default function TestDetailPage() {
                 { title: "Status", dataIndex: "status", render: (s) => <StatusTag status={s} /> },
                 { title: "Trigger", dataIndex: "trigger" },
                 { title: "Duration", dataIndex: "duration_ms", render: (m) => m != null ? `${m} ms` : "—" },
-                { title: "Queued", dataIndex: "queued_at", render: (v) => v?.replace("T", " ").slice(0, 19) },
+                { title: "Queued", dataIndex: "queued_at", render: (v) => formatLocalTime(v) },
               ]} />
             </div>
           ),
@@ -349,7 +350,7 @@ export default function TestDetailPage() {
               columns={[
                 { title: "#", dataIndex: "revision_number", width: 60 },
                 { title: "Code ref", dataIndex: "code_ref", render: (v) => v ? <Typography.Text code>{v}</Typography.Text> : "—" },
-                { title: "Created", dataIndex: "created_at", render: (v) => v?.replace("T", " ").slice(0, 19) },
+                { title: "Created", dataIndex: "created_at", render: (v) => formatLocalTime(v) },
               ]}
               expandable={{
                 expandedRowRender: (r) => <CodeSnippet language="json" code={JSON.stringify(r.config, null, 2)} />,
@@ -371,7 +372,7 @@ export default function TestDetailPage() {
                         <Space>
                           <Typography.Text strong>{item.author}</Typography.Text>
                           <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                            {item.created_at?.replace("T", " ").slice(0, 19)}
+                            {formatLocalTime(item.created_at)}
                           </Typography.Text>
                           {(item.tags || []).map((tc: string) => (
                             <Tag key={tc} color="purple">{tc}</Tag>
