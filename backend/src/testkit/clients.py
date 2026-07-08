@@ -348,6 +348,26 @@ class BrowserClient:
                     return wrapper
                 setattr(page, action, make_wrapper(original, action))
 
+        orig_locator = page.locator
+        def wrap_locator(loc, base_selector):
+            for act in ["click", "fill", "type", "check", "uncheck", "hover", "inner_text", "get_attribute", "first", "last", "nth"]:
+                orig_act = getattr(loc, act, None)
+                if orig_act:
+                    def make_loc_wrapper(o, a, selector):
+                        def lw(*la, **lkw):
+                            if a in ("first", "last", "nth"):
+                                new_selector = f"{selector}.{a}()"
+                                return wrap_locator(o(*la, **lkw), new_selector)
+                            with self._ctx.step(f"locator({selector}).{a}()"):
+                                return o(*la, **lkw)
+                        return lw
+                    setattr(loc, act, make_loc_wrapper(orig_act, act, base_selector))
+            return loc
+
+        def locator_wrapper(*args, **kwargs):
+            return wrap_locator(orig_locator(*args, **kwargs), args[0] if args else "")
+        page.locator = locator_wrapper
+
         started = time.monotonic()
         resp = page.goto(url, wait_until="load")
         dur = int((time.monotonic() - started) * 1000)

@@ -110,22 +110,28 @@ export default function WaterfallChart({ steps }: WaterfallChartProps) {
 
         if (step.timings?.is_event) {
           const color = step.status === "passed" ? "#10b981" : step.status === "error" || step.status === "failed" ? "#ef4444" : "#f59e0b";
+          const details = step.timings.details || {};
+          const extraInfo = details.text || details.message || details.url || details.name || "";
+          const displayName = extraInfo ? `${name} - ${extraInfo}` : name;
           return (
             <div style={{ display: "flex", flexDirection: "column", maxWidth: 260 }}>
               <Space>
                 <span style={{ fontSize: 14, color }}>●</span>
                 <span style={{ fontSize: 10, fontWeight: "bold" }}>{step.timings.event_type?.toUpperCase()}</span>
               </Space>
-              <Typography.Text ellipsis style={{ width: 260, fontSize: 11 }} title={name}>
-                {name}
+              <Typography.Text ellipsis style={{ width: 260, fontSize: 11 }} title={displayName}>
+                {displayName}
               </Typography.Text>
             </div>
           );
         }
 
+        const details = step.timings?.details || {};
+        const extraInfo = details.text || details.message || details.url || details.name || "";
+        const displayName = extraInfo ? `${name} - ${extraInfo}` : name;
         return (
-          <Typography.Text ellipsis style={{ width: 260 }} title={name}>
-            {name}
+          <Typography.Text ellipsis style={{ width: 260 }} title={displayName}>
+            {displayName}
           </Typography.Text>
         );
       },

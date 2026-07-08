@@ -80,7 +80,7 @@ def _encode_result(result: Any, logs: list[dict]) -> str:
         "metrics": result.metrics or {},
         "steps": [
             {"name": s.name, "status": s.status, "duration_ms": s.duration_ms,
-             "error": s.error, "step_id": s.step_id}
+             "error": s.error, "step_id": s.step_id, "timings": getattr(s, "timings", {})}
             for s in result.steps
         ],
         "assertions": [
@@ -96,7 +96,7 @@ def _decode_result(payload: dict) -> Any:
     from src.testkit.result import AssertionResult, StepResult, TestResult
     steps = [
         StepResult(name=s["name"], status=s["status"], duration_ms=s.get("duration_ms", 0),
-                   error=s.get("error"), step_id=s.get("step_id"))
+                   error=s.get("error"), step_id=s.get("step_id"), timings=s.get("timings", {}))
         for s in payload.get("steps", [])
     ]
     assertions = [
