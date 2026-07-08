@@ -10,7 +10,7 @@ from __future__ import annotations
 from functools import wraps
 from typing import Callable, Iterable
 
-from flask import request as flask_request
+from flask import request as flask_request, g
 
 from src.config import Config
 from src.core.errors import AuthenticationError, PermissionDeniedError, QtpError
@@ -21,14 +21,17 @@ from src.iam.token_verifier import verify_token
 
 def _build_principal() -> Principal:
     if Config.AUTH_DISABLED:
-        return synthetic_admin()
+        g.principal = synthetic_admin()
+        return g.principal
     auth = flask_request.headers.get("Authorization") or ""
     if not auth.lower().startswith("bearer "):
         raise AuthenticationError("missing bearer token")
     token = auth.split(" ", 1)[1].strip()
     if token == "system-bearer-token":
-        return synthetic_admin()
-    return principal_from_claims(verify_token(token))
+        g.principal = synthetic_admin()
+        return g.principal
+    g.principal = principal_from_claims(verify_token(token))
+    return g.principal
 
 
 def _err(err: QtpError):

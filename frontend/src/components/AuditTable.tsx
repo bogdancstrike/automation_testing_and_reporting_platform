@@ -58,7 +58,16 @@ export interface AuditFilterState {
   related_to?: string
 }
 
-export function AuditTable({ baseFilters }: { baseFilters?: Partial<AuditFilterState> }) {
+function getEntityUrl(type: string, id: string): string | null {
+  if (type === 'scenarios') return `/scenarios/${id}`
+  if (type === 'test_runs') return `/runs/${id}`
+  if (type === 'schedules') return `/schedules/${id}`
+  if (type === 'targets') return `/targets/${id}`
+  if (type === 'workers') return `/workers/${id}`
+  return null
+}
+
+export function AuditTable({ baseFilters, onRowClick }: { baseFilters?: Partial<AuditFilterState>; onRowClick?: (record: AuditEventDto) => void }) {
   const nav = useNavigate()
   const [params, setParams] = useState<AuditFilterState>({ sort_by: 'created_at', sort_dir: 'desc', page: 1, page_size: 20, ...baseFilters })
   const audit = useQuery({
@@ -129,6 +138,16 @@ export function AuditTable({ baseFilters }: { baseFilters?: Partial<AuditFilterS
       filterDropdown: textFilterDropdown('Correlation ID'),
       filteredValue: params.correlation_id ? [params.correlation_id] : null,
     },
+    {
+      title: 'Link',
+      width: 70,
+      render: (_, row) => {
+        if (!row.entity_type || !row.entity_id) return null
+        const url = getEntityUrl(row.entity_type, row.entity_id)
+        if (!url) return null
+        return <a onClick={(e) => { e.stopPropagation(); nav(url) }}>View</a>
+      }
+    }
   ], [params])
 
   const handleTableChange = (
@@ -227,11 +246,13 @@ export function AuditTable({ baseFilters }: { baseFilters?: Partial<AuditFilterS
         }}
         onRow={(record) => ({
           onClick: () => {
-            if (record.entity_id) {
+            if (onRowClick) {
+              onRowClick(record)
+            } else if (record.entity_id) {
               nav(`/audit/${record.entity_id}`)
             }
           },
-          style: { cursor: record.entity_id ? 'pointer' : 'default' }
+          style: { cursor: record.entity_id || onRowClick ? 'pointer' : 'default' }
         })}
       />
     </div>
