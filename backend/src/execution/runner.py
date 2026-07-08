@@ -133,7 +133,7 @@ def _persist(db: Session, run: TestRun, definition: TestDefinition,
 
     for i, step in enumerate(result.steps):
         db.add(TestRunStep(test_run_id=run.id, ord=i, name=step.name, status=step.status,
-                           duration_ms=step.duration_ms, error=step.error))
+                           duration_ms=step.duration_ms, error=step.error, timings=step.timings))
     for i, a in enumerate(result.assertions):
         db.add(TestRunAssertion(
             test_run_id=run.id, ord=i, source=a.source, operator=a.operator,

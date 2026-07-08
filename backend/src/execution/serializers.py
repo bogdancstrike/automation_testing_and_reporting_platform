@@ -29,7 +29,8 @@ def run_summary(r: TestRun, *, test_name: str | None = None, target_key: str | N
 
 
 def _step(s: TestRunStep) -> dict[str, Any]:
-    return {"name": s.name, "status": s.status, "duration_ms": s.duration_ms, "error": s.error}
+    return {"id": s.id, "ord": s.ord, "name": s.name, "status": s.status,
+            "duration_ms": s.duration_ms, "error": s.error, "timings": s.timings}
 
 
 def _assertion(a: TestRunAssertion) -> dict[str, Any]:

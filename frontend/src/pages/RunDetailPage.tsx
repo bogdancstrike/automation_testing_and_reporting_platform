@@ -6,6 +6,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { qtp } from "../api/qtp";
 import { StatusTag, DefectTag, Duration } from "../components/tags";
 import ExecutionFlow from "../components/ExecutionFlow";
+import WaterfallChart from "../components/WaterfallChart";
 
 const DEFECTS = ["product_bug", "automation_bug", "system_issue", "to_investigate", "no_defect"];
 
@@ -192,6 +193,14 @@ export default function RunDetailPage() {
           children: (
             <div style={{ marginTop: 12 }}>
               <ExecutionFlow steps={run.steps} status={run.status} />
+            </div>
+          ),
+        },
+        {
+          key: "waterfall", label: "Waterfall",
+          children: (
+            <div style={{ marginTop: 12 }}>
+              <WaterfallChart steps={run.steps} />
             </div>
           ),
         },

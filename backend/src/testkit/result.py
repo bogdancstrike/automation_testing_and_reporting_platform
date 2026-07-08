@@ -44,10 +44,11 @@ class StepResult:
     duration_ms: int = 0
     error: str | None = None
     step_id: str | None = None
+    timings: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
         return {"id": self.step_id, "name": self.name, "status": self.status,
-                "duration_ms": self.duration_ms, "error": self.error}
+                "duration_ms": self.duration_ms, "error": self.error, "timings": self.timings}
 
 
 @dataclass

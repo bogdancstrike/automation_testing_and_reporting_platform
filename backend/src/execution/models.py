@@ -79,6 +79,7 @@ class TestRunStep(Base):
     status: Mapped[str] = mapped_column(String(20))
     duration_ms: Mapped[int] = mapped_column(Integer, default=0)
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    timings: Mapped[dict] = mapped_column(JSONB, default=dict)
 
 
 class TestRunAssertion(Base):

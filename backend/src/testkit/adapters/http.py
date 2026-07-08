@@ -132,8 +132,15 @@ def _execute_http_step(config: dict[str, Any], ctx: TestContext, *, session: req
         current_url = url
         current_method = method
         current_body: Any = body
+        dns_ms = 0
+        ttfb_ms = 0
+        download_ms = 0
         while True:
+            dns_start = time.monotonic()
             resolve_and_check(current_url)
+            dns_ms += int((time.monotonic() - dns_start) * 1000)
+
+            req_start = time.monotonic()
             resp = session.request(
                 current_method,
                 current_url,
@@ -145,6 +152,7 @@ def _execute_http_step(config: dict[str, Any], ctx: TestContext, *, session: req
                 verify=tls_verify,
                 stream=True,
             )
+            ttfb_ms += int((time.monotonic() - req_start) * 1000)
             if follow and resp.is_redirect and resp.next is not None:
                 hops += 1
                 if hops > Config.REQUEST_MAX_REDIRECTS:
@@ -156,7 +164,9 @@ def _execute_http_step(config: dict[str, Any], ctx: TestContext, *, session: req
                 continue
             break
 
+        download_start = time.monotonic()
         raw = resp.raw.read(max_bytes + 1, decode_content=True) or b""
+        download_ms = int((time.monotonic() - download_start) * 1000)
         truncated = len(raw) > max_bytes
         raw = raw[:max_bytes]
         body_text = raw.decode(resp.encoding or "utf-8", errors="replace")
@@ -166,6 +176,11 @@ def _execute_http_step(config: dict[str, Any], ctx: TestContext, *, session: req
             "headers": dict(resp.headers),
             "body_text": body_text,
             "elapsed_ms": elapsed_ms,
+            "timings": {
+                "dns": dns_ms,
+                "ttfb": ttfb_ms,
+                "download": download_ms,
+            },
             "truncated": truncated,
             "url": resp.url,
         }
@@ -176,7 +191,7 @@ def _execute_http_step(config: dict[str, Any], ctx: TestContext, *, session: req
         ctx.log("info", f"{step_name}: -> {resp.status_code} in {elapsed_ms}ms ({len(results)} assertions, {sum(1 for a in results if a.passed)} passed)")
         return TestResult(
             status=status,
-            steps=[StepResult(name=str(step_name), status=status, duration_ms=elapsed_ms, step_id=step_id)],
+            steps=[StepResult(name=str(step_name), status=status, duration_ms=elapsed_ms, step_id=step_id, timings=response.get("timings", {}))],
             assertions=results,
             error_category=error_category,
             error_message=None if all_pass else "one or more assertions failed",

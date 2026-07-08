@@ -43,9 +43,16 @@ def perform_request(
     session = session or requests.Session()
     hops = 0
     current_url, current_method, current_body = url, method.upper(), body
+    dns_ms = 0
+    ttfb_ms = 0
+    download_ms = 0
     try:
         while True:
+            dns_start = time.monotonic()
             resolve_and_check(current_url)
+            dns_ms += int((time.monotonic() - dns_start) * 1000)
+
+            req_start = time.monotonic()
             resp = session.request(
                 current_method, current_url,
                 params=params if hops == 0 else None,
@@ -53,6 +60,7 @@ def perform_request(
                 timeout=timeout_ms / 1000.0,
                 allow_redirects=False, verify=tls_verify, stream=True,
             )
+            ttfb_ms += int((time.monotonic() - req_start) * 1000)
             if follow_redirects and resp.is_redirect and resp.next is not None:
                 hops += 1
                 if hops > Config.REQUEST_MAX_REDIRECTS:
@@ -64,7 +72,9 @@ def perform_request(
                 continue
             break
 
+        download_start = time.monotonic()
         raw = resp.raw.read(max_bytes + 1, decode_content=True) or b""
+        download_ms = int((time.monotonic() - download_start) * 1000)
         truncated = len(raw) > max_bytes
         raw = raw[:max_bytes]
         body_text = raw.decode(resp.encoding or "utf-8", errors="replace")
@@ -74,6 +84,11 @@ def perform_request(
             "headers": dict(resp.headers),
             "body_text": body_text,
             "elapsed_ms": elapsed_ms,
+            "timings": {
+                "dns": dns_ms,
+                "ttfb": ttfb_ms,
+                "download": download_ms,
+            },
             "truncated": truncated,
             "url": resp.url,
         }
