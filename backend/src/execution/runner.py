@@ -18,7 +18,7 @@ from src.testkit.adapters.stubs import unsupported
 from src.testkit.base import TYPE_HTTP
 from src.testkit.subprocess_exec import BROWSER_TYPES, run_scenario_in_subprocess
 from src.testkit.context import ResolvedTarget, TestContext
-from src.testkit.result import (CANCELED, ERROR, FAILED, TERMINAL_STATUSES,
+from src.testkit.result import (CANCELED, ERROR, FAILED, RUNNING, TERMINAL_STATUSES,
                                 TIMEOUT, TestResult)
 from src.core.secrets import get_secrets_for_project
 
@@ -87,7 +87,7 @@ def execute_run(db: Session, run: TestRun, worker_name: str) -> None:
         if target:
             span.set_attribute("target.key", target.key)
 
-        run.status = "running"
+        run.status = RUNNING
         run.worker_name = worker_name
         run.started_at = utcnow()
         db.flush()

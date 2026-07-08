@@ -65,8 +65,8 @@ export default function OverviewPage() {
 
   const totals = ov?.totals || {};
   const trend = ov?.trend || [];
-  const statuses = ["passed", "failed", "error", "timeout"];
-  const colors: Record<string, string> = { passed: "#52c41a", failed: "#ff4d4f", error: "#fa541c", timeout: "#faad14" };
+  const statuses = ["passed", "failed", "error", "timeout", "running"];
+  const colors: Record<string, string> = { passed: "#52c41a", failed: "#ff4d4f", error: "#fa541c", timeout: "#faad14", running: "#2563eb" };
 
   const trendOption = {
     tooltip: { trigger: "axis" },

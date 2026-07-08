@@ -14,6 +14,13 @@ SKIPPED = "skipped"
 
 TERMINAL_STATUSES = frozenset({PASSED, FAILED, ERROR, TIMEOUT, CANCELED, SKIPPED})
 
+# Transient (non-terminal) run statuses.
+QUEUED = "queued"
+CLAIMED = "claimed"
+RUNNING = "running"
+
+ACTIVE_STATUSES = frozenset({QUEUED, CLAIMED, RUNNING})
+
 
 @dataclass
 class AssertionResult:

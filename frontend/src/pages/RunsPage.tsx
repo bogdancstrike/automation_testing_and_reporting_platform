@@ -129,6 +129,9 @@ export default function RunsPage() {
           <Typography.Link onClick={() => setParams(p => ({ ...p, status: "queued", page: 1 }))}>
             <Typography.Text>Queued: <strong>{overview.totals.queued}</strong></Typography.Text>
           </Typography.Link>
+          <Typography.Link onClick={() => setParams(p => ({ ...p, status: "running", page: 1 }))}>
+            <Typography.Text>Running: <strong style={{ color: "#2563eb" }}>{overview.totals.running}</strong></Typography.Text>
+          </Typography.Link>
           <Typography.Link onClick={() => setParams(p => ({ ...p, status: "passed", page: 1 }))}>
             <Typography.Text>Passed: <strong style={{ color: "#52c41a" }}>{overview.totals.passed}</strong></Typography.Text>
           </Typography.Link>

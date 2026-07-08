@@ -63,7 +63,7 @@ export default function ScheduleDetailPage() {
     xAxis: { type: 'category', data: chartData.map((r: any) => ""), show: false },
     yAxis: { type: 'value', splitLine: { lineStyle: { type: 'dashed', color: '#f0f0f0' } } },
     series: [{
-      data: chartData.map((r: any) => ({ value: r.duration_ms || 0, itemStyle: { color: r.status === 'passed' ? '#52c41a' : (r.status === 'error' || r.status === 'failed' ? '#ff4d4f' : '#faad14') } })),
+      data: chartData.map((r: any) => ({ value: r.duration_ms || 0, itemStyle: { color: r.status === 'passed' ? '#52c41a' : (r.status === 'error' || r.status === 'failed' ? '#ff4d4f' : r.status === 'running' ? '#2563eb' : '#faad14') } })),
       type: 'bar', barMaxWidth: 20, itemStyle: { borderRadius: [2, 2, 0, 0] }
     }],
     grid: { left: 40, right: 10, top: 10, bottom: 0 },
@@ -85,7 +85,7 @@ export default function ScheduleDetailPage() {
     tooltip: { trigger: "item" }, legend: { bottom: 0 },
     series: [{
       type: "pie", radius: ["45%", "70%"], center: ["50%", "45%"],
-      data: Object.entries(statusCounts).map(([k, v]) => ({ name: k, value: v as number, itemStyle: { color: k === 'passed' ? '#52c41a' : k === 'failed' ? '#ff4d4f' : k === 'error' ? '#fa541c' : '#faad14' } })),
+      data: Object.entries(statusCounts).map(([k, v]) => ({ name: k, value: v as number, itemStyle: { color: k === 'passed' ? '#52c41a' : k === 'failed' ? '#ff4d4f' : k === 'error' ? '#fa541c' : k === 'running' ? '#2563eb' : '#faad14' } })),
     }],
   };
 
