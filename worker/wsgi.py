@@ -25,15 +25,21 @@ except Exception:  # pragma: no cover
 
 # 2) kafka-python 2.3.x compatibility: the QF ETL commits offsets with
 #    OffsetAndMetadata(offset, metadata); newer kafka-python added a required
-#    leader_epoch field. Give it a default so manual commits work. This MUST run
-#    before framework.etl (imported transitively by framework.app) is loaded.
-from collections import namedtuple as _nt  # noqa: E402
-
+#    leader_epoch field. Give it a default so manual commits work.
+#
+#    We must MUTATE the existing namedtuple in place, NOT rebind
+#    kafka.structs.OffsetAndMetadata to a fresh namedtuple: importing kafka.structs
+#    transitively imports kafka.coordinator.consumer, which has already done
+#    `from kafka.structs import OffsetAndMetadata` and holds a reference to the
+#    original class. commit_offsets_sync() asserts `isinstance(v, OffsetAndMetadata)`
+#    against that original class, so a replacement class fails the assert with an
+#    empty message -> "🔴 [COMMIT FAIL] unexpected:", offsets never commit, and the
+#    same runs get redelivered forever. Setting __new__.__defaults__ keeps class
+#    identity intact for every module that imported it. -1 is kafka-python's own
+#    "unknown leader epoch" sentinel (see coordinator/fetcher).
 import kafka.structs as _ks  # noqa: E402
 
-_ks.OffsetAndMetadata = _nt(
-    "OffsetAndMetadata", ["offset", "metadata", "leader_epoch"], defaults=[0]
-)
+_ks.OffsetAndMetadata.__new__.__defaults__ = (-1,)
 
 import sys  # noqa: E402
 from pathlib import Path  # noqa: E402
