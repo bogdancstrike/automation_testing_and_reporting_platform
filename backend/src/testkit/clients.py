@@ -355,24 +355,35 @@ class BrowserClient:
                     return wrapper
                 setattr(page, action, make_wrapper(original, action))
 
+        # `first`/`last` are read-only properties on Playwright's Locator (no
+        # setter), so they can't be monkey-patched onto the instance like the
+        # action methods below - a thin proxy is used instead.
         orig_locator = page.locator
-        def wrap_locator(loc, base_selector):
-            for act in ["click", "fill", "type", "check", "uncheck", "hover", "inner_text", "get_attribute", "first", "last", "nth"]:
-                orig_act = getattr(loc, act, None)
-                if orig_act:
-                    def make_loc_wrapper(o, a, selector):
-                        def lw(*la, **lkw):
-                            if a in ("first", "last", "nth"):
-                                new_selector = f"{selector}.{a}()"
-                                return wrap_locator(o(*la, **lkw), new_selector)
-                            with self._ctx.step(f"locator({selector}).{a}()"):
-                                return o(*la, **lkw)
-                        return lw
-                    setattr(loc, act, make_loc_wrapper(orig_act, act, base_selector))
-            return loc
+        ctx = self._ctx
+        loc_action_names = ("click", "fill", "type", "check", "uncheck", "hover", "inner_text", "get_attribute")
+
+        class _StepLocator:
+            def __init__(self, loc, selector):
+                self._loc = loc
+                self._selector = selector
+
+            def __getattr__(self, name):
+                attr = getattr(self._loc, name)
+                if name in ("first", "last"):
+                    return _StepLocator(attr, f"{self._selector}.{name}")
+                if name == "nth":
+                    def nth_wrapper(index, *a, **kw):
+                        return _StepLocator(attr(index, *a, **kw), f"{self._selector}.nth({index})")
+                    return nth_wrapper
+                if name in loc_action_names:
+                    def action_wrapper(*a, **kw):
+                        with ctx.step(f"locator({self._selector}).{name}()"):
+                            return attr(*a, **kw)
+                    return action_wrapper
+                return attr
 
         def locator_wrapper(*args, **kwargs):
-            return wrap_locator(orig_locator(*args, **kwargs), args[0] if args else "")
+            return _StepLocator(orig_locator(*args, **kwargs), args[0] if args else "")
         page.locator = locator_wrapper
 
         started = time.monotonic()
