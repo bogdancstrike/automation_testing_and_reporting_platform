@@ -129,16 +129,16 @@ export default function OverviewPage() {
       </Space>
 
       <Row gutter={[16, 16]}>
-        <Col xs={12} md={6}><StatCard label="Total runs" value={totals.total_runs || 0} icon={<PlayCircleOutlined />} accent="#2563eb" /></Col>
-        <Col xs={12} md={6}><StatCard label="Pass rate" value={ov?.pass_rate != null ? ov.pass_rate * 100 : 0} precision={1} suffix="%" icon={<CheckCircleOutlined />} accent="#16a34a" tintValue /></Col>
-        <Col xs={12} md={6}><StatCard label="Queue backlog" value={ov?.queue_backlog || 0} icon={<InboxOutlined />} accent="#0891b2" /></Col>
-        <Col xs={12} md={6}><StatCard label="Running" value={totals.running || 0} icon={<LoadingOutlined spin />} accent="#2563eb" tintValue /></Col>
-        <Col xs={12} md={6}><StatCard label="Active workers" value={ov?.active_workers || 0} icon={<ClusterOutlined />} accent="#7c3aed" /></Col>
-        <Col xs={12} md={6}><StatCard label="Failed" value={totals.failed || 0} icon={<CloseCircleOutlined />} accent="#dc2626" tintValue /></Col>
-        <Col xs={12} md={6}><StatCard label="Errors" value={totals.error || 0} icon={<WarningOutlined />} accent="#ea580c" tintValue /></Col>
-        <Col xs={12} md={6}><StatCard label="p50 duration" value={ov?.duration_ms?.p50 || 0} icon={<FieldTimeOutlined />} accent="#0891b2" formatter={(v) => formatDurationMs(Number(v))} /></Col>
-        <Col xs={12} md={6}><StatCard label="p95 duration" value={ov?.duration_ms?.p95 || 0} icon={<ThunderboltOutlined />} accent="#d97706" formatter={(v) => formatDurationMs(Number(v))} /></Col>
-        <Col xs={12} md={6}><StatCard label="Cleanup Fails" value={ov?.cleanup_failures || 0} icon={<WarningOutlined />} accent="#cf1322" tintValue /></Col>
+        <Col xs={12} md={6}><StatCard label="Total runs" value={totals.total_runs || 0} icon={<PlayCircleOutlined />} accent="#2563eb" onClick={() => nav("/runs")} /></Col>
+        <Col xs={12} md={6}><StatCard label="Pass rate" value={ov?.pass_rate != null ? ov.pass_rate * 100 : 0} precision={1} suffix="%" icon={<CheckCircleOutlined />} accent="#16a34a" tintValue onClick={() => nav("/runs?status=passed")} /></Col>
+        <Col xs={12} md={6}><StatCard label="Queue backlog" value={ov?.queue_backlog || 0} icon={<InboxOutlined />} accent="#0891b2" onClick={() => nav("/runs?status=queued")} /></Col>
+        <Col xs={12} md={6}><StatCard label="Running" value={totals.running || 0} icon={<LoadingOutlined spin />} accent="#2563eb" tintValue onClick={() => nav("/runs?status=running")} /></Col>
+        <Col xs={12} md={6}><StatCard label="Active workers" value={ov?.active_workers || 0} icon={<ClusterOutlined />} accent="#7c3aed" onClick={() => nav("/workers")} /></Col>
+        <Col xs={12} md={6}><StatCard label="Failed" value={totals.failed || 0} icon={<CloseCircleOutlined />} accent="#dc2626" tintValue onClick={() => nav("/runs?status=failed")} /></Col>
+        <Col xs={12} md={6}><StatCard label="Errors" value={totals.error || 0} icon={<WarningOutlined />} accent="#ea580c" tintValue onClick={() => nav("/runs?status=error")} /></Col>
+        <Col xs={12} md={6}><StatCard label="p50 duration" value={ov?.duration_ms?.p50 || 0} icon={<FieldTimeOutlined />} accent="#0891b2" formatter={(v) => formatDurationMs(Number(v))} onClick={() => nav("/runs?sort=duration_ms&order=desc")} /></Col>
+        <Col xs={12} md={6}><StatCard label="p95 duration" value={ov?.duration_ms?.p95 || 0} icon={<ThunderboltOutlined />} accent="#d97706" formatter={(v) => formatDurationMs(Number(v))} onClick={() => nav("/runs?sort=duration_ms&order=desc")} /></Col>
+        <Col xs={12} md={6}><StatCard label="Cleanup Fails" value={ov?.cleanup_failures || 0} icon={<WarningOutlined />} accent="#cf1322" tintValue onClick={() => nav("/runs?cleanup_failed=failed")} /></Col>
       </Row>
 
       <Row gutter={[16, 16]} style={{ marginTop: 16 }}>

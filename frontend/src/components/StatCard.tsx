@@ -13,6 +13,8 @@ type StatCardProps = {
   formatter?: (value: number | string) => ReactNode;
   /** When true, the value is tinted with the accent colour. */
   tintValue?: boolean;
+  /** When provided, the whole card becomes a button (cursor + hover) that runs this. */
+  onClick?: () => void;
 };
 
 /**
@@ -21,10 +23,18 @@ type StatCardProps = {
  * modern card language (see `.qtp-statcard` in index.css for hover/elevation).
  */
 export function StatCard({
-  label, value, icon, accent = "#2563eb", suffix, precision, hint, formatter, tintValue,
+  label, value, icon, accent = "#2563eb", suffix, precision, hint, formatter, tintValue, onClick,
 }: StatCardProps) {
   return (
-    <Card className="qtp-statcard" styles={{ body: { padding: 16 } }}>
+    <Card
+      className="qtp-statcard"
+      styles={{ body: { padding: 16 } }}
+      onClick={onClick}
+      role={onClick ? "button" : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={onClick ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(); } } : undefined}
+      style={onClick ? { cursor: "pointer" } : undefined}
+    >
       <div className="qtp-statcard-row">
         <div
           className="qtp-statcard-icon"

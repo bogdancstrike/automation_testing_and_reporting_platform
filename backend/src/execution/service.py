@@ -192,8 +192,16 @@ def _list_runs(db: Session, filters: dict[str, Any]) -> dict:
         stmt = stmt.where(TestRun.worker_name.ilike(f"%{filters['worker_name']}%"))
     if filters.get("duration_ms"):
         stmt = stmt.where(cast(TestRun.duration_ms, String).ilike(f"%{filters['duration_ms']}%"))
-    if filters.get("cleanup_failed") == "true":
-        stmt = stmt.where(TestRun.cleanup_failed == True)
+    if filters.get("cleanup_failed"):
+        vals = {v.strip() for v in str(filters["cleanup_failed"]).split(",") if v.strip()}
+        if "true" in vals:  # legacy param value meant "only cleanup failures"
+            vals.add("failed")
+        wants_failed = "failed" in vals
+        wants_passed = "passed" in vals
+        if wants_failed and not wants_passed:
+            stmt = stmt.where(TestRun.cleanup_failed == True)
+        elif wants_passed and not wants_failed:
+            stmt = stmt.where(TestRun.cleanup_failed == False)
     if filters.get("queued_at"):
         stmt = stmt.where(cast(TestRun.queued_at, String).ilike(f"%{filters['queued_at']}%"))
     if filters.get("tags"):
@@ -218,6 +226,7 @@ def _list_runs(db: Session, filters: dict[str, Any]) -> dict:
         "worker_name": TestRun.worker_name, "defect_type": TestRun.defect_type,
         "error_category": TestRun.error_category, "test_name": TestDefinition.name,
         "target_key": Target.key, "tags": cast(TestDefinition.tags, String),
+        "cleanup_failed": TestRun.cleanup_failed,
     })
     total = int(db.scalar(select(func.count()).select_from(stmt.order_by(None).subquery())) or 0)
     runs = list(db.scalars(stmt.offset((params.page - 1) * params.page_size).limit(params.page_size)).all())

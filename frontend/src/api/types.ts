@@ -152,6 +152,7 @@ export interface Overview {
   duration_ms: { p50?: number; p95?: number; avg?: number };
   queue_backlog: number;
   active_workers: number;
+  cleanup_failures?: number;
   trend: Record<string, any>[];
   per_target: { target_key?: string; total: number; passed: number; failed: number; health_rate?: number }[];
 }

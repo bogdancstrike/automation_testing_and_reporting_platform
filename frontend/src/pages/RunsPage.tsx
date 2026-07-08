@@ -1,7 +1,7 @@
 import { Table, Typography, Space, Switch, Tag, Button, App } from "antd";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { qtp } from "../api/qtp";
 import { StatusTag, DefectTag, Duration } from "../components/tags";
 import { antSortOrder, menuFilter, nextTableParams, textFilter } from "../components/remoteTable";
@@ -12,7 +12,19 @@ export default function RunsPage() {
   const { message, modal } = App.useApp();
   const qc = useQueryClient();
   const [live, setLive] = useState(true);
-  const [params, setParams] = useState<QueryParams>({ page: 1, page_size: 20, sort: "queued_at", order: "desc" });
+  const [searchParams] = useSearchParams();
+  // Seed initial filters/sort from the URL so Overview stat cards can deep-link
+  // (e.g. /runs?status=failed, /runs?cleanup_failed=failed, /runs?sort=duration_ms&order=desc).
+  const [params, setParams] = useState<QueryParams>(() => {
+    const seed: QueryParams = { page: 1, page_size: 20, sort: "queued_at", order: "desc" };
+    for (const key of ["status", "cleanup_failed", "trigger", "target", "defect_type"]) {
+      const v = searchParams.get(key);
+      if (v) seed[key] = v;
+    }
+    const sort = searchParams.get("sort");
+    if (sort) { seed.sort = sort; seed.order = searchParams.get("order") === "asc" ? "asc" : "desc"; }
+    return seed;
+  });
   const { data: page, isLoading } = useQuery({
     queryKey: ["runsPage", params],
     queryFn: () => qtp.runsPage(params),
@@ -117,7 +129,6 @@ export default function RunsPage() {
           <Button danger onClick={confirmDeleteAll} loading={deleteAllRuns.isPending}>Delete All Runs</Button>
           <Button onClick={() => rerunQueued.mutate()} loading={rerunQueued.isPending}>Re-run all queued</Button>
           <Button onClick={() => restartFailed.mutate()} loading={restartFailed.isPending}>Re-run all failed/errors</Button>
-          <Switch size="small" checked={params.cleanup_failed === "true"} onChange={(c) => setParams(p => ({ ...p, cleanup_failed: c ? "true" : undefined, page: 1 }))} checkedChildren="Cleanup Failed" unCheckedChildren="All Cleanups" />
           <span>Live <Switch size="small" checked={live} onChange={setLive} /></span>
         </Space>
       </Space>
@@ -172,18 +183,25 @@ export default function RunsPage() {
         ))}
         columns={[
           { title: "Scenario", dataIndex: "test_name", sorter: true, sortOrder: antSortOrder(params, "test_name"), ...textFilter("test", params, "Search scenario"), render: (v) => v || <em>—</em> },
-          { 
-            title: "Status", 
-            dataIndex: "status", 
-            sorter: true, 
-            sortOrder: antSortOrder(params, "status"), 
-            ...menuFilter("status", params, ["queued", "running", "passed", "failed", "error", "timeout", "canceled"].map((value) => ({ text: value, value }))), 
-            render: (s, r) => (
-              <Space direction="vertical" size={0}>
-                <StatusTag status={s} />
-                {r.cleanup_failed && <Tag color="warning" style={{ fontSize: 10, margin: 0, marginTop: 4 }}>Cleanup Failed</Tag>}
-              </Space>
-            )
+          {
+            title: "Status",
+            dataIndex: "status",
+            sorter: true,
+            sortOrder: antSortOrder(params, "status"),
+            ...menuFilter("status", params, ["queued", "running", "passed", "failed", "error", "timeout", "canceled"].map((value) => ({ text: value, value }))),
+            render: (s) => <StatusTag status={s} />
+          },
+          {
+            title: "Cleanup",
+            dataIndex: "cleanup_failed",
+            sorter: true,
+            sortOrder: antSortOrder(params, "cleanup_failed"),
+            ...menuFilter("cleanup_failed", params, [{ text: "passed", value: "passed" }, { text: "failed", value: "failed" }]),
+            render: (cf, r) => (
+              <Tag color={cf ? "error" : "success"} title={cf ? r.cleanup_error || "Cleanup failed" : undefined} style={{ margin: 0 }}>
+                {cf ? "failed" : "passed"}
+              </Tag>
+            ),
           },
           { title: "Trigger", dataIndex: "trigger", sorter: true, sortOrder: antSortOrder(params, "trigger"), ...menuFilter("trigger", params, ["manual", "schedule", "api", "discovery"].map((value) => ({ text: value, value }))) },
           { title: "Target", dataIndex: "target_key", sorter: true, sortOrder: antSortOrder(params, "target_key"), ...menuFilter("target", params, targets.map((t) => ({ text: t.key, value: t.key }))) },

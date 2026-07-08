@@ -155,9 +155,11 @@ body {
   z-index: 1001;
   transform: translateX(-100%);
   transition: transform 0.25s ease;
+}
+.qtp-sider.qtp-sider--mobile.qtp-sider--open {
+  transform: translateX(0);
   box-shadow: 0 12px 40px rgba(2, 6, 23, 0.45);
 }
-.qtp-sider.qtp-sider--mobile.qtp-sider--open { transform: translateX(0); }
 .qtp-scrim {
   position: fixed;
   inset: 0;
@@ -262,9 +264,20 @@ body {
 .qtp-content::-webkit-scrollbar-thumb:hover { background: rgba(100, 116, 139, 0.75); background-clip: content-box; }
 
 /* ── Responsive: laptop / tablet / mobile ─────────────────────────────── */
-/* Tablet & small laptop */
+/* Tablet & small laptop: the sidebar becomes a drawer (see QtpApp), so wide
+   tables should scroll inside their own card rather than the whole content pane. */
 @media (max-width: 991px) {
   .qtp-content { padding: 16px; }
+  /* Let columns size to their content and scroll, instead of cramming them into
+     the viewport (antd uses table-layout:fixed when a column has `ellipsis`,
+     which otherwise wraps headers letter-by-letter on narrow screens). */
+  .ant-table-wrapper .ant-table-content { overflow-x: auto; }
+  .ant-table-wrapper .ant-table-content > table {
+    min-width: max-content !important;
+    table-layout: auto !important;
+  }
+  .ant-table-wrapper .ant-table-content th,
+  .ant-table-wrapper .ant-table-content td { white-space: nowrap !important; }
 }
 
 /* Tablet portrait & phones */
@@ -274,10 +287,6 @@ body {
 
   /* Page-level toolbars and inline groups wrap instead of overflowing */
   .qtp-content .ant-space-horizontal { flex-wrap: wrap; }
-
-  /* Tables scroll horizontally rather than crushing their columns */
-  .ant-table-wrapper .ant-table-content { overflow-x: auto; }
-  .ant-table-wrapper .ant-table-content > table { min-width: 520px; }
 
   /* Request Builder: stack the horizontal split vertically */
   .qtp-builder .ant-splitter-horizontal { flex-direction: column; }
