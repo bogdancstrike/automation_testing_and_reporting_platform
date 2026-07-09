@@ -113,9 +113,15 @@ export default function StepTree({ steps }: StepTreeProps) {
       return {
         key: String(i),
         label: header,
-        children: children.length > 0 ? (
+        children: children.length > 0 || (isFailed && node.error) ? (
           <div style={{ paddingLeft: 24 }}>
             {children.map((c, idx) => renderChildNode(c, idx))}
+            {isFailed && node.error && (
+              <div style={{ padding: "8px 0", color: "#f5222d", fontSize: 13 }}>
+                <Typography.Text strong style={{ color: "#f5222d" }}>Unhandled Error: </Typography.Text>
+                {node.error}
+              </div>
+            )}
           </div>
         ) : (
           <Typography.Text type="secondary" style={{ paddingLeft: 24, fontSize: 13 }}>No inner steps recorded.</Typography.Text>

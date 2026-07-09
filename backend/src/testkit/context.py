@@ -118,7 +118,7 @@ class TestContext:
         started = time.monotonic()
         step_id = f"step-{len(self._steps) + 1}"
         prev, self._current_step = self._current_step, name
-        prev_id, getattr_current_step_id = getattr(self, '_current_step_id', None), step_id
+        prev_id = getattr(self, '_current_step_id', None)
         self._current_step_id = step_id
         
         status, error = PASSED, None
@@ -137,7 +137,7 @@ class TestContext:
             self._steps.append(StepResult(
                 name=name, status=status, duration_ms=dur, error=error,
                 step_id=step_id,
-                timings={"start_ms": start_ms, "is_step_block": True, "step_id": step_id}
+                timings={"start_ms": start_ms, "is_step_block": True, "step_id": step_id, "parent_step_id": prev_id}
             ))
             self._current_step = prev
             self._current_step_id = prev_id
