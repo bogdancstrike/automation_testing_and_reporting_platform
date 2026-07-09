@@ -65,13 +65,19 @@ def generate_rca(run: TestRun, definition: Scenario, ctx: TestContext, result: T
         }
 
         data = json.dumps(body).encode("utf-8")
+        
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + Config.LLM_OPENAI_API_KEY,
+            "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
+        }
+        if hasattr(Config, "LLM_OPENAI_COOKIE") and Config.LLM_OPENAI_COOKIE:
+            headers["Cookie"] = Config.LLM_OPENAI_COOKIE
+
         request = urllib.request.Request(
             Config.LLM_OPENAI_API,
             data=data,
-            headers={
-                "Content-Type": "application/json",
-                "Authorization": "Bearer " + Config.LLM_OPENAI_API_KEY,
-            },
+            headers=headers,
             method="POST",
         )
 
@@ -124,13 +130,19 @@ def generate_magic_assertions(response_data: dict) -> list[dict]:
         }
 
         data = json.dumps(body).encode("utf-8")
+        
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + Config.LLM_OPENAI_API_KEY,
+            "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
+        }
+        if hasattr(Config, "LLM_OPENAI_COOKIE") and Config.LLM_OPENAI_COOKIE:
+            headers["Cookie"] = Config.LLM_OPENAI_COOKIE
+
         request = urllib.request.Request(
             Config.LLM_OPENAI_API,
             data=data,
-            headers={
-                "Content-Type": "application/json",
-                "Authorization": "Bearer " + Config.LLM_OPENAI_API_KEY,
-            },
+            headers=headers,
             method="POST",
         )
 

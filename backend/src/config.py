@@ -150,6 +150,7 @@ class Config:
     LLM_FEATURES_ENABLED = _bool("LLM_FEATURES_ENABLED", False)
     LLM_OPENAI_API       = os.getenv("LLM_OPENAI_API", "https://freellmapi.doncik.ro/v1/chat/completions")
     LLM_OPENAI_API_KEY   = os.getenv("LLM_OPENAI_API_KEY", "dummy")
+    LLM_OPENAI_COOKIE    = os.getenv("LLM_OPENAI_COOKIE", "")
     LLM_MODEL            = os.getenv("LLM_MODEL", "auto")
 
 # Workaround for QF ETL framework hardcoding password=None
