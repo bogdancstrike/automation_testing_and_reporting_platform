@@ -73,24 +73,15 @@ def publish_run(run_id: str, capability: str = "http") -> None:
         span.set_attribute("run.id", run_id)
         span.set_attribute("run.capability", capability)
         span.set_attribute("kafka.topic", Config.KAFKA_RUNS_TOPIC)
-        # Inject the current W3C trace context into the message so the worker can
-        # continue the SAME distributed trace when it executes the run — the run's
-        # trace spans backend enqueue → worker consume → execute → every HTTP call.
-        trace_context: dict[str, str] = {}
-        try:
-            from opentelemetry.propagate import inject
-            inject(trace_context)
-        except Exception:  # pragma: no cover - tracing optional
-            pass
+        # The QF KafkaClient injects the current W3C trace context onto the Kafka
+        # message headers (see framework.tracing.inject_trace_headers), so the
+        # worker continues this SAME distributed trace when it consumes the run —
+        # the trace spans backend enqueue → worker consume → execute → every HTTP call.
         try:
             ensure_runs_topic()
             get_client().put_message(
                 Config.KAFKA_RUNS_TOPIC,
-                json.dumps({
-                    "run_id": run_id,
-                    "capability": capability,
-                    "trace_context": trace_context,
-                }),
+                json.dumps({"run_id": run_id, "capability": capability}),
                 key=run_id,
             )
             log.debug(f"published run {run_id} to {Config.KAFKA_RUNS_TOPIC}")

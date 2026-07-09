@@ -44,16 +44,11 @@ def execute_run_message(message: dict, consumer_name: str, metadatas: dict):
         log.warning("run message missing run_id; skipping")
         return None
 
-    # Continue the distributed trace started on the backend at enqueue time, so
-    # the whole run (enqueue → consume → execute → HTTP calls) is one Jaeger trace.
-    parent_ctx = None
-    try:
-        from opentelemetry.propagate import extract
-        parent_ctx = extract(message.get("trace_context") or {})
-    except Exception:  # pragma: no cover - tracing optional
-        parent_ctx = None
-
-    with tracer.start_as_current_span("worker.consume_run", context=parent_ctx) as span:
+    # The QF ETL runtime already extracts the W3C trace context from the Kafka
+    # message headers and runs this handler inside a `kafka.consume` span, so this
+    # span is automatically a child of the backend's enqueue trace — the whole run
+    # (enqueue → consume → execute → HTTP calls) is one Jaeger trace.
+    with tracer.start_as_current_span("worker.consume_run") as span:
         span.set_attribute("run.id", run_id)
         span.set_attribute("worker.instance", instance)
         span.set_attribute("worker.group", Config.WORKER_NAME)
