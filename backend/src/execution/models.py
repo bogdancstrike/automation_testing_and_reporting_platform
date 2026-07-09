@@ -45,6 +45,10 @@ class TestRun(Base):
     response: Mapped[dict] = mapped_column(JSONB, default=dict)
     metrics: Mapped[dict] = mapped_column(JSONB, default=dict)
     correlation_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    # W3C trace id (32 hex chars) of the distributed trace that executed this run
+    # end-to-end (backend enqueue → worker → every outbound HTTP call). Links the
+    # run to its Jaeger waterfall — the "Observability Bridge".
+    trace_id: Mapped[str | None] = mapped_column(String(32), nullable=True, index=True)
 
     queued_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
