@@ -111,16 +111,16 @@ class TestContext:
 
     @contextlib.contextmanager
     def step(self, name: str):
-        """Group actions/assertions into a named step shown in run detail.
-
-            with ctx.step("Check Health"):
-                ctx.http.get("/health").should.have_status(200)
-        """
+        """Group actions/assertions into a named step shown in run detail."""
         from src.testkit.fluent import AssertionFailure
         from src.testkit.result import ERROR, FAILED, PASSED, StepResult
 
         started = time.monotonic()
+        step_id = f"step-{len(self._steps) + 1}"
         prev, self._current_step = self._current_step, name
+        prev_id, getattr_current_step_id = getattr(self, '_current_step_id', None), step_id
+        self._current_step_id = step_id
+        
         status, error = PASSED, None
         self.log("info", f"step: {name}")
         try:
@@ -136,10 +136,11 @@ class TestContext:
             start_ms = int((started - getattr(self, '_scenario_start_time', started)) * 1000)
             self._steps.append(StepResult(
                 name=name, status=status, duration_ms=dur, error=error,
-                step_id=f"step-{len(self._steps) + 1}",
-                timings={"start_ms": start_ms}
+                step_id=step_id,
+                timings={"start_ms": start_ms, "is_step_block": True, "step_id": step_id}
             ))
             self._current_step = prev
+            self._current_step_id = prev_id
 
     def record_network_call(self, method: str, url: str, status_code: int, duration_ms: int, dns: int=0, ttfb: int=0, download: int=0, content_type: str="", content_length: int=0, payload: dict | None = None) -> None:
         import time
@@ -181,7 +182,9 @@ class TestContext:
                 "method": method, "url": url, "status_code": status_code,
                 "content_type": content_type, "content_length": content_length,
                 "is_network": True,
-                "payload": payload or {}
+                "payload": payload or {},
+                "step_id": f"net-{len(self._steps) + 1}",
+                "parent_step_id": getattr(self, '_current_step_id', None)
             }
         ))
 
@@ -198,7 +201,9 @@ class TestContext:
                 "start_ms": start_ms,
                 "is_event": True,
                 "event_type": event_type,
-                "details": details or {}
+                "details": details or {},
+                "step_id": f"evt-{len(self._steps) + 1}",
+                "parent_step_id": getattr(self, '_current_step_id', None)
             }
         ))
 
@@ -232,6 +237,7 @@ class TestContext:
         self._steps = []
         self._assertions = []
         self._current_step: StepResult | None = None
+        self._current_step_id: str | None = None
         self._last_response: Any = None
         self._network_history: dict[str, list[float]] = {}
 

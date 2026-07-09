@@ -8,6 +8,7 @@ import { StatusTag, DefectTag, Duration } from "../components/tags";
 import ExecutionFlow from "../components/ExecutionFlow";
 import WaterfallChart from "../components/WaterfallChart";
 import CodeSnippet from "../components/CodeSnippet";
+import StepTree from "../components/StepTree";
 import { formatLocalTime } from "../components/tags";
 import { AuditTable } from "../components/AuditTable";
 import { config } from "../config";
@@ -311,10 +312,12 @@ export default function RunDetailPage() {
           ),
         },
         {
-          key: "steps", label: `Steps Table (${run.steps.length})`,
-          children: <Table rowKey="name" size="small" pagination={false} dataSource={run.steps}
-            columns={[{ title: "Step", dataIndex: "name" }, { title: "Status", dataIndex: "status", render: (s) => <StatusTag status={s} /> },
-            { title: "Duration", dataIndex: "duration_ms", render: (m) => <Duration ms={m} /> }, { title: "Error", dataIndex: "error" }]} />,
+          key: "steps", label: `Step Tree (${run.steps.length})`,
+          children: (
+            <div style={{ marginTop: 12 }}>
+              <StepTree steps={run.steps} />
+            </div>
+          ),
         },
         {
           key: "comments", label: `Comments (${comments.length})`,
