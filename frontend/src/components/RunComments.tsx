@@ -5,9 +5,9 @@ import { qtp } from "../api/qtp";
 import { formatLocalTime } from "./tags";
 
 type Comment = {
-  author: string;
-  body: string;
-  created_at: string;
+  author?: string;
+  body?: string;
+  created_at?: string;
   tags?: string[];
 };
 
@@ -109,9 +109,9 @@ export default function RunComments({
             <div key={idx} style={{ display: "flex", gap: 12, position: "relative" }}>
               <Avatar
                 size={36}
-                style={{ background: avatarColor(c.author), flex: "0 0 auto", fontWeight: 600, zIndex: 1 }}
+                style={{ background: avatarColor(c.author || ""), flex: "0 0 auto", fontWeight: 600, zIndex: 1 }}
               >
-                {initials(c.author)}
+                {initials(c.author || "?")}
               </Avatar>
               <div
                 style={{
@@ -134,9 +134,9 @@ export default function RunComments({
                     borderBottom: "1px solid var(--qtp-surface-border)",
                   }}
                 >
-                  <Typography.Text strong>{c.author}</Typography.Text>
-                  <Typography.Text type="secondary" style={{ fontSize: 12 }} title={formatLocalTime(c.created_at)}>
-                    commented {timeAgo(c.created_at)}
+                  <Typography.Text strong>{c.author || "Unknown"}</Typography.Text>
+                  <Typography.Text type="secondary" style={{ fontSize: 12 }} title={c.created_at ? formatLocalTime(c.created_at) : undefined}>
+                    commented {timeAgo(c.created_at || "")}
                   </Typography.Text>
                   <span style={{ flex: 1 }} />
                   {(c.tags || []).map((t) => (
