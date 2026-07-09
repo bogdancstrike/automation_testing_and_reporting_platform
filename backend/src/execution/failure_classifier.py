@@ -9,6 +9,9 @@ from sqlalchemy.orm import Session
 
 from src.core.clock import utcnow
 from src.execution.models import FailureSignature, TestRun
+from framework.tracing import get_tracer
+
+tracer = get_tracer()
 
 # Defect types (see architecture section 19).
 DEFECT_TYPES = frozenset({
@@ -34,24 +37,30 @@ def signature_hash(definition_id: str, category: str | None, message: str | None
 
 def record_failure(db: Session, run: TestRun) -> tuple[str, str | None]:
     """Compute+persist the failure signature; return (hash, suggested_defect_type)."""
-    sig = signature_hash(run.scenario_id, run.error_category, run.error_message)
-    existing = db.scalars(
-        select(FailureSignature).where(FailureSignature.signature_hash == sig)
-    ).first()
-    now = utcnow()
-    if existing:
-        existing.occurrences += 1
-        existing.last_seen = now
-        suggested = existing.last_defect_type or "to_investigate"
-    else:
-        db.add(FailureSignature(
-            project_id=run.project_id, signature_hash=sig,
-            category=run.error_category or "unknown_error",
-            sample_message=run.error_message, occurrences=1,
-            last_defect_type=None, first_seen=now, last_seen=now,
-        ))
-        suggested = "to_investigate"
-    return sig, suggested
+    with tracer.start_as_current_span("execution.record_failure") as span:
+        span.set_attribute("run.id", run.id)
+        span.set_attribute("run.error_category", run.error_category or "unknown_error")
+        sig = signature_hash(run.scenario_id, run.error_category, run.error_message)
+        existing = db.scalars(
+            select(FailureSignature).where(FailureSignature.signature_hash == sig)
+        ).first()
+        now = utcnow()
+        if existing:
+            existing.occurrences += 1
+            existing.last_seen = now
+            suggested = existing.last_defect_type or "to_investigate"
+        else:
+            db.add(FailureSignature(
+                project_id=run.project_id, signature_hash=sig,
+                category=run.error_category or "unknown_error",
+                sample_message=run.error_message, occurrences=1,
+                last_defect_type=None, first_seen=now, last_seen=now,
+            ))
+            suggested = "to_investigate"
+        span.set_attribute("failure.signature", sig)
+        span.set_attribute("failure.is_new", existing is None)
+        span.set_attribute("failure.suggested_defect", suggested)
+        return sig, suggested
 
 
 def apply_defect(db: Session, run: TestRun, defect_type: str) -> None:

@@ -8,6 +8,9 @@ from src.catalog.models import Scenario
 from src.execution.models import TestRun
 from src.testkit.context import TestContext
 from src.testkit.result import TestResult
+from framework.tracing import get_tracer
+
+tracer = get_tracer()
 
 SYSTEM_MESSAGE = (
     "You are an AI assistant for a testing platform. Analyze the provided test execution evidence "
@@ -30,6 +33,15 @@ def generate_rca(run: TestRun, definition: Scenario, ctx: TestContext, result: T
     if not Config.LLM_FEATURES_ENABLED:
         return None
 
+    with tracer.start_as_current_span("execution.ai_rca") as span:
+        span.set_attribute("run.id", run.id)
+        span.set_attribute("llm.model", Config.LLM_MODEL)
+        rca = _generate_rca(run, definition, ctx, result, code_text)
+        span.set_attribute("rca.generated", bool(rca))
+        return rca
+
+
+def _generate_rca(run: TestRun, definition: Scenario, ctx: TestContext, result: TestResult, code_text: str) -> str | None:
     try:
         # Build context
         context_parts = []

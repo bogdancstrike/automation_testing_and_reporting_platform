@@ -15,6 +15,9 @@ from src.execution.service import enqueue_run
 from src.scheduling import serializers
 from src.scheduling.models import Schedule, ScheduleTest
 from src.scheduling.recurrence import compute_next
+from framework.tracing import get_tracer
+
+tracer = get_tracer()
 
 
 def _scenario_summary(d: Scenario) -> dict[str, Any]:
@@ -286,28 +289,32 @@ def delete_schedule(db: Session, schedule_id: str) -> dict:
 
 
 def process_due(db: Session) -> int:
-    now = utcnow()
-    stmt = (
-        select(Schedule)
-        .where(Schedule.is_enabled.is_(True), Schedule.next_run_at.isnot(None), Schedule.next_run_at <= now)
-        .with_for_update(skip_locked=True)
-    )
-    enqueued = 0
-    for s in db.scalars(stmt).all():
-        if s.end_at and now > s.end_at:
-            s.is_enabled = False
-            continue
-        tests = _tests_by_schedule(db, [s]).get(s.id, [])
-        defs = _load_definitions(db, [t["id"] for t in tests]) if tests else []
-        runnable = [d for d in defs if d.status != "missing_from_source"]
-        if not runnable:
-            s.is_enabled = False
-            continue
-        for definition in runnable:
-            enqueue_run(db, definition, trigger="schedule", environment=s.environment, schedule_id=s.id)
-        s.last_enqueued_at = now
-        s.next_run_at = compute_next(s, after=now)
-        if s.recurrence_type == "once":
-            s.is_enabled = False
-        enqueued += len(runnable)
-    return enqueued
+    with tracer.start_as_current_span("scheduling.process_due") as span:
+        now = utcnow()
+        stmt = (
+            select(Schedule)
+            .where(Schedule.is_enabled.is_(True), Schedule.next_run_at.isnot(None), Schedule.next_run_at <= now)
+            .with_for_update(skip_locked=True)
+        )
+        due = db.scalars(stmt).all()
+        span.set_attribute("scheduling.due_count", len(due))
+        enqueued = 0
+        for s in due:
+            if s.end_at and now > s.end_at:
+                s.is_enabled = False
+                continue
+            tests = _tests_by_schedule(db, [s]).get(s.id, [])
+            defs = _load_definitions(db, [t["id"] for t in tests]) if tests else []
+            runnable = [d for d in defs if d.status != "missing_from_source"]
+            if not runnable:
+                s.is_enabled = False
+                continue
+            for definition in runnable:
+                enqueue_run(db, definition, trigger="schedule", environment=s.environment, schedule_id=s.id)
+            s.last_enqueued_at = now
+            s.next_run_at = compute_next(s, after=now)
+            if s.recurrence_type == "once":
+                s.is_enabled = False
+            enqueued += len(runnable)
+        span.set_attribute("scheduling.enqueued", enqueued)
+        return enqueued

@@ -128,6 +128,17 @@ def run_scenario_in_subprocess(code_ref: str, ctx: Any, *, timeout_s: float) -> 
     """Execute a browser scenario in a fresh child process and fold its evidence
     back into ``ctx``. Returns a ``TestResult`` the runner persists as usual."""
     from src.testkit.result import ERROR, TIMEOUT, TestResult
+    from framework.tracing import get_tracer
+
+    tracer = get_tracer()
+    with tracer.start_as_current_span("execution.browser_subprocess") as span:
+        span.set_attribute("code.ref", code_ref)
+        span.set_attribute("browser.timeout_s", timeout_s)
+        return _run_scenario_in_subprocess(code_ref, ctx, timeout_s=timeout_s, _span=span)
+
+
+def _run_scenario_in_subprocess(code_ref: str, ctx: Any, *, timeout_s: float, _span: Any) -> Any:
+    from src.testkit.result import ERROR, TIMEOUT, TestResult
 
     job = _encode_job(code_ref, ctx)
     fd, result_path = tempfile.mkstemp(prefix="qtp-browser-", suffix=".json")
@@ -186,7 +197,9 @@ def run_scenario_in_subprocess(code_ref: str, ctx: Any, *, timeout_s: float) -> 
             ctx._logs.append(entry)
         if noise:
             ctx.log("debug", f"browser subprocess output: {noise[-1000:]}")
-        return _decode_result(payload)
+        decoded = _decode_result(payload)
+        _span.set_attribute("browser.result_status", decoded.status)
+        return decoded
     finally:
         sem.release()
         try:

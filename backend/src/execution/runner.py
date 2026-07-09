@@ -50,52 +50,60 @@ def mark_run_running(db: Session, run: TestRun, worker_name: str) -> None:
 
 def _build_context(db: Session, run: TestRun, definition: Scenario,
                    target: Target | None) -> TestContext:
-    ctx = TestContext(correlation_id=run.correlation_id)
-    ctx.secrets = get_secrets_for_project(db, run.project_id)
-    if target:
-        ctx.targets[target.key] = ResolvedTarget(
-            key=target.key, base_url=target.base_url,
-            default_headers=dict(target.default_headers or {}),
-        )
-        ctx.variables["base_url"] = target.base_url
+    with tracer.start_as_current_span("execution.build_context") as span:
+        ctx = TestContext(correlation_id=run.correlation_id)
+        ctx.secrets = get_secrets_for_project(db, run.project_id)
+        span.set_attribute("context.secrets_count", len(ctx.secrets))
+        span.set_attribute("context.has_target", target is not None)
+        if target:
+            ctx.targets[target.key] = ResolvedTarget(
+                key=target.key, base_url=target.base_url,
+                default_headers=dict(target.default_headers or {}),
+            )
+            ctx.variables["base_url"] = target.base_url
 
-    def _cancelled() -> bool:
-        db.refresh(run, ["cancel_requested"])
-        return bool(run.cancel_requested)
+        def _cancelled() -> bool:
+            db.refresh(run, ["cancel_requested"])
+            return bool(run.cancel_requested)
 
-    ctx.cancel_check = _cancelled
-    return ctx
+        ctx.cancel_check = _cancelled
+        return ctx
 
 
 def _run_code_test(code_ref: str, ctx: TestContext) -> TestResult:
-    module_name, _, class_name = code_ref.partition(":")
-    module = importlib.import_module(module_name)
-    cls = getattr(module, class_name)
-    instance = cls()
-    result: TestResult | None = None
-    try:
-        instance.validate_config(dict(getattr(cls.metadata, "default_config", {})))
-        instance.setup(ctx)
-        result = instance.execute(ctx)
-    except Exception as e:  # pragma: no cover - defensive
-        result = TestResult(status=ERROR, error_category="script_error", error_message=str(e))
-    finally:
-        # cleanup() runs on success AND failure (undo test-created data); a
-        # cleanup failure is logged but never changes the test's status.
+    with tracer.start_as_current_span("execution.code_test") as span:
+        module_name, _, class_name = code_ref.partition(":")
+        span.set_attribute("code.ref", code_ref)
+        span.set_attribute("code.class", class_name)
+        module = importlib.import_module(module_name)
+        cls = getattr(module, class_name)
+        instance = cls()
+        result: TestResult | None = None
         try:
-            instance.cleanup(ctx)
-        except Exception as e:
-            if result is not None:
-                result.cleanup_failed = True
-                result.cleanup_error = str(e)
-            ctx.log("warning", f"cleanup() failed: {e}")
-        try:
-            instance.teardown(ctx)
-        except Exception as e:
-            ctx.log("warning", f"teardown() failed: {e}")
-    if result is None:
-        result = TestResult(status=ERROR, error_category="system_error", error_message="worker interrupted")
-    return result
+            instance.validate_config(dict(getattr(cls.metadata, "default_config", {})))
+            instance.setup(ctx)
+            result = instance.execute(ctx)
+        except Exception as e:  # pragma: no cover - defensive
+            span.record_exception(e)
+            result = TestResult(status=ERROR, error_category="script_error", error_message=str(e))
+        finally:
+            # cleanup() runs on success AND failure (undo test-created data); a
+            # cleanup failure is logged but never changes the test's status.
+            try:
+                instance.cleanup(ctx)
+            except Exception as e:
+                if result is not None:
+                    result.cleanup_failed = True
+                    result.cleanup_error = str(e)
+                ctx.log("warning", f"cleanup() failed: {e}")
+            try:
+                instance.teardown(ctx)
+            except Exception as e:
+                ctx.log("warning", f"teardown() failed: {e}")
+        if result is None:
+            result = TestResult(status=ERROR, error_category="system_error", error_message="worker interrupted")
+        span.set_attribute("code_test.status", result.status)
+        return result
 
 
 def execute_run(db: Session, run: TestRun, worker_name: str) -> None:
@@ -155,6 +163,17 @@ def execute_run(db: Session, run: TestRun, worker_name: str) -> None:
 
 def _persist(db: Session, run: TestRun, definition: Scenario,
              ctx: TestContext, result: TestResult) -> None:
+    with tracer.start_as_current_span("execution.persist") as span:
+        span.set_attribute("run.id", run.id)
+        span.set_attribute("persist.steps", len(result.steps))
+        span.set_attribute("persist.assertions", len(result.assertions))
+        span.set_attribute("persist.logs", len(ctx.logs()))
+        _persist_impl(db, run, definition, ctx, result)
+        span.set_attribute("run.final_status", run.status)
+
+
+def _persist_impl(db: Session, run: TestRun, definition: Scenario,
+                  ctx: TestContext, result: TestResult) -> None:
     status = result.status if result.status in TERMINAL_STATUSES else ERROR
 
     if status in (FAILED, ERROR, TIMEOUT):

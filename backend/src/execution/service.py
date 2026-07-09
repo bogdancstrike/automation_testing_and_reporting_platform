@@ -33,28 +33,35 @@ def capability_for(test_type: str) -> str:
 def enqueue_run(db: Session, definition: Scenario, *, trigger: str = "manual",
                 environment: str = "default", schedule_id: str | None = None,
                 triggered_by: str | None = None) -> TestRun:
-    target = resolve_target(db, definition.project_id, definition.target_key)
-    run = TestRun(
-        project_id=definition.project_id,
-        scenario_id=definition.id,
-        revision_id=definition.current_revision_id,
-        target_id=target.id if target else None,
-        schedule_id=schedule_id,
-        status="queued",
-        trigger=trigger,
-        environment=environment,
-        triggered_by=triggered_by,
-        correlation_id=get_correlation_id() if trigger in ("manual", "api") else None,
-    )
-    db.add(run)
-    db.flush()
-    capability = capability_for(definition.type)
-    db.add(RunQueue(test_run_id=run.id, capability=capability))
-    db.flush()
-    # Stash for the transactional-outbox publish in session_scope(): the run is
-    # dispatched to a worker over Kafka only after this transaction commits.
-    db.info.setdefault("pending_runs", []).append((run.id, capability))
-    return run
+    with tracer.start_as_current_span("execution.enqueue_run") as span:
+        span.set_attribute("scenario.id", definition.id)
+        span.set_attribute("scenario.type", definition.type)
+        span.set_attribute("run.trigger", trigger)
+        span.set_attribute("run.environment", environment)
+        target = resolve_target(db, definition.project_id, definition.target_key)
+        capability = capability_for(definition.type)
+        span.set_attribute("run.capability", capability)
+        run = TestRun(
+            project_id=definition.project_id,
+            scenario_id=definition.id,
+            revision_id=definition.current_revision_id,
+            target_id=target.id if target else None,
+            schedule_id=schedule_id,
+            status="queued",
+            trigger=trigger,
+            environment=environment,
+            triggered_by=triggered_by,
+            correlation_id=get_correlation_id() if trigger in ("manual", "api") else None,
+        )
+        db.add(run)
+        db.flush()
+        db.add(RunQueue(test_run_id=run.id, capability=capability))
+        db.flush()
+        span.set_attribute("run.id", run.id)
+        # Stash for the transactional-outbox publish in session_scope(): the run is
+        # dispatched to a worker over Kafka only after this transaction commits.
+        db.info.setdefault("pending_runs", []).append((run.id, capability))
+        return run
 
 
 def run_now(db: Session, scenario_id: str, *, environment: str = "default", triggered_by: str | None = None) -> dict:

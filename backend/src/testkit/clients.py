@@ -13,6 +13,9 @@ import requests
 
 from src.config import Config
 from src.testkit.fluent import Response
+from framework.tracing import get_tracer
+
+tracer = get_tracer()
 
 
 class HttpClient:
@@ -60,11 +63,16 @@ class HttpClient:
         param_pairs = [(str(k), self._ctx.render(str(v))) for k, v in (params or {}).items()]
         url = self._url(path)
         self._ctx.log("info", f"{method.upper()} {url}")
-        raw = perform_request(
-            method=method, url=url, headers=hdrs, params=param_pairs, body=body,
-            timeout_ms=timeout_ms, follow_redirects=follow_redirects,
-            tls_verify=tls_verify, session=self._session,
-        )
+        with tracer.start_as_current_span("http.client_request") as span:
+            span.set_attribute("http.method", method.upper())
+            span.set_attribute("http.url", url)
+            raw = perform_request(
+                method=method, url=url, headers=hdrs, params=param_pairs, body=body,
+                timeout_ms=timeout_ms, follow_redirects=follow_redirects,
+                tls_verify=tls_verify, session=self._session,
+            )
+            span.set_attribute("http.status_code", raw.get("status_code", 0))
+            span.set_attribute("http.elapsed_ms", raw.get("elapsed_ms", 0))
         self._ctx._last_response = raw
         self._ctx.log("info", f"-> {raw.get('status_code')} in {raw.get('elapsed_ms')}ms")
         timings = raw.get("timings", {})
