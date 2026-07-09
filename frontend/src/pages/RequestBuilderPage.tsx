@@ -2,7 +2,7 @@ import { useState } from "react";
 import {
   Row, Col, Card, Select, Input, Button, Tabs, Table, Space, Typography,
   Tag, App, Modal, Form, Alert, Segmented, List, Popconfirm, InputNumber, Empty, Tooltip,
-  Layout, theme, Divider, Dropdown, MenuProps, Splitter,
+  Layout, theme, Divider, Dropdown, MenuProps, Splitter, Checkbox,
 } from "antd";
 import {
   SendOutlined, PlusOutlined, DeleteOutlined, SaveOutlined, ClockCircleOutlined,
@@ -86,6 +86,10 @@ export default function RequestBuilderPage() {
   const [schedOpen, setSchedOpen] = useState(false);
   const [renameOpen, setRenameOpen] = useState(false);
   const [targetContextId, setTargetContextId] = useState<string | null>(null);
+  
+  const [magicModalOpen, setMagicModalOpen] = useState(false);
+  const [magicAssertions, setMagicAssertions] = useState<any[]>([]);
+  const [magicSelected, setMagicSelected] = useState<number[]>([]);
   
   const [saveForm] = Form.useForm();
   const [schedForm] = Form.useForm();
@@ -202,6 +206,22 @@ export default function RequestBuilderPage() {
     mutationFn: () => qtp.sendRequest(buildConfig()),
     onSuccess: setResult,
     onError: (e: any) => message.error(e.message || "send failed")
+  });
+
+  const generateMagic = useMutation({
+    mutationFn: () => {
+      let r = result?.response || {};
+      if (mode === "flow" && Array.isArray(r.steps) && r.steps.length > 0) {
+        r = r.steps[r.steps.length - 1].response || {};
+      }
+      return qtp.generateAssertions(r);
+    },
+    onSuccess: (res) => {
+      setMagicAssertions(res.items || []);
+      setMagicSelected((res.items || []).map((_, i) => i));
+      setMagicModalOpen(true);
+    },
+    onError: (e: any) => message.error(e.message || "Failed to generate assertions"),
   });
 
   const create = useMutation({
@@ -531,7 +551,14 @@ export default function RequestBuilderPage() {
                     </div>
                   ),
                 },
-                { key: "assertions", label: `Assertions (${(currentStep.assertions || []).length})`, children: <AssertionEditor rows={currentStep.assertions || []} setRows={(r) => updateCurrentStep({ assertions: r })} /> },
+                { key: "assertions", label: `Assertions (${(currentStep.assertions || []).length})`, children: (
+                  <div>
+                    {result && result.response && (
+                      <Button size="small" type="primary" onClick={() => generateMagic.mutate()} loading={generateMagic.isPending} style={{ marginBottom: 12, background: 'linear-gradient(90deg, #1677ff, #722ed1)', border: 'none' }}>✨ Auto-Generate Assertions</Button>
+                    )}
+                    <AssertionEditor rows={currentStep.assertions || []} setRows={(r) => updateCurrentStep({ assertions: r })} />
+                  </div>
+                ) },
                 { key: "captures", label: `Captures (${(currentStep.captures || []).length})`, children: <CaptureEditor rows={currentStep.captures || []} setRows={(r) => updateCurrentStep({ captures: r })} /> },
               ]} />
             </Splitter.Panel>
@@ -577,6 +604,38 @@ export default function RequestBuilderPage() {
           {schedType === "interval" && <Form.Item name="interval_seconds" label="Interval (seconds)" rules={[{ required: true }]}><InputNumber min={5} style={{ width: "100%" }} /></Form.Item>}
           {schedType === "cron" && <Form.Item name="cron_expression" label="Cron" rules={[{ required: true }]}><Input placeholder="*/5 * * * *" /></Form.Item>}
         </Form>
+      </Modal>
+
+      <Modal title="✨ AI Generated Assertions" open={magicModalOpen} onCancel={() => setMagicModalOpen(false)}
+        width={700}
+        onOk={() => {
+          const selected = magicSelected.map(i => magicAssertions[i]).map(a => ({
+             type: a.source, path: a.path, operator: a.operator, expected: a.expected != null ? String(a.expected) : undefined
+          }));
+          updateCurrentStep({ assertions: [...currentStep.assertions, ...selected] });
+          setMagicModalOpen(false);
+          message.success(`${selected.length} assertions added`);
+        }}>
+        <Typography.Text type="secondary" style={{ display: "block", marginBottom: 16 }}>
+          The AI has inspected the response and recommends these checks. Select the ones you want to keep.
+        </Typography.Text>
+        <List
+          size="small"
+          dataSource={magicAssertions}
+          renderItem={(a: any, idx: number) => (
+            <List.Item style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <Space>
+                <Checkbox checked={magicSelected.includes(idx)} onChange={(e) => {
+                  if (e.target.checked) setMagicSelected([...magicSelected, idx]);
+                  else setMagicSelected(magicSelected.filter(i => i !== idx));
+                }} />
+                <Typography.Text style={{ fontFamily: "monospace", fontSize: 13 }}>
+                  {a.source}{a.path ? ` ${a.path}` : ""} {a.operator} {a.expected !== undefined ? JSON.stringify(a.expected) : ""}
+                </Typography.Text>
+              </Space>
+            </List.Item>
+          )}
+        />
       </Modal>
     </Layout>
   );

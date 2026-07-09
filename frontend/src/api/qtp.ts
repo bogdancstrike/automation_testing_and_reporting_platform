@@ -50,6 +50,7 @@ export const qtp = {
   tags: (q = "") => api.get<{ items: string[] }>(`/api/tags${qs({ q })}`).then(list<string>()),
 
   sendRequest: (config: Record<string, any>) => api.post<SendResult>("/api/request-tests/send", config),
+  generateAssertions: (response: any) => api.post<{ items: any[] }>("/api/request-tests/generate-assertions", { response }),
   createRequestTest: (b: { name: string; config: Record<string, any>; key?: string }) => api.post<TestDetail>("/api/request-tests", b),
   updateRequestTest: (id: string, b: { name?: string; config?: Record<string, any> }) => api.patch<TestDetail>(`/api/request-tests/${id}`, b),
   deleteRequestTest: (id: string) => api.del<any>(`/api/request-tests/${id}`),

@@ -206,6 +206,19 @@
     },
     {
       "namespace": "qtp",
+      "operation_name": "request_generate_assertions",
+      "model_name": "Empty",
+      "request_method": [
+        "POST"
+      ],
+      "api_url": "/api/request-tests/generate-assertions",
+      "exec_method": {
+        "module_name": "src.api.request_tests",
+        "method_name": "generate_assertions"
+      }
+    },
+    {
+      "namespace": "qtp",
       "operation_name": "request_create",
       "model_name": "Empty",
       "request_method": [

@@ -43,6 +43,15 @@ def send_request(app, operation, request, principal=None, **kwargs):
 
 
 @require_role(ROLE_TEST_AUTHOR)
+def generate_assertions(app, operation, request, principal=None, **kwargs):
+    from src.execution.llm import generate_magic_assertions
+    body = json_body(request)
+    resp_data = body.get("response", {})
+    assertions = generate_magic_assertions(resp_data)
+    return {"items": assertions}, 200
+
+
+@require_role(ROLE_TEST_AUTHOR)
 def create_request_test(app, operation, request, principal=None, **kwargs):
     with session_scope() as db:
         return service.create_request_test(db, json_body(request)), 201
