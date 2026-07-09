@@ -173,7 +173,7 @@ def list_runs(db: Session, filters: dict[str, Any]) -> dict:
 
 
 def _list_runs(db: Session, filters: dict[str, Any]) -> dict:
-    params = parse_page(filters, default_sort="queued_at", default_order="desc", max_page_size=100)
+    params = parse_page(filters, default_sort="last_run_at", default_order="desc", max_page_size=100)
     stmt = (
         select(TestRun)
         .outerjoin(Scenario, TestRun.scenario_id == Scenario.id)
@@ -234,7 +234,9 @@ def _list_runs(db: Session, filters: dict[str, Any]) -> dict:
 
     stmt = apply_sort(stmt, params, {
         "queued_at": TestRun.queued_at, "started_at": TestRun.started_at,
-        "finished_at": TestRun.finished_at, "duration_ms": TestRun.duration_ms,
+        "finished_at": TestRun.finished_at,
+        "last_run_at": func.coalesce(TestRun.finished_at, TestRun.started_at, TestRun.queued_at),
+        "duration_ms": TestRun.duration_ms,
         "status": TestRun.status, "trigger": TestRun.trigger,
         "worker_name": TestRun.worker_name, "defect_type": TestRun.defect_type,
         "error_category": TestRun.error_category, "test_name": Scenario.name,

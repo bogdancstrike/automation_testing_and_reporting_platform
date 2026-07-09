@@ -17,7 +17,7 @@ export default function RunsPage() {
   // Seed initial filters/sort from the URL so Overview stat cards can deep-link
   // (e.g. /runs?status=failed, /runs?cleanup_failed=failed, /runs?sort=duration_ms&order=desc).
   const [params, setParams] = useState<QueryParams>(() => {
-    const seed: QueryParams = { page: 1, page_size: 20, sort: "queued_at", order: "desc" };
+    const seed: QueryParams = { page: 1, page_size: 20, sort: "last_run_at", order: "desc" };
     for (const key of ["status", "cleanup_failed", "trigger", "target", "defect_type"]) {
       const v = searchParams.get(key);
       if (v) seed[key] = v;
@@ -188,9 +188,10 @@ export default function RunsPage() {
             defect_type: "defect_type",
             error_category: "error_category",
             queued_at: "queued_at",
+            last_run_at: "last_run_at",
             cleanup_failed: "cleanup_failed",
           },
-          { sort: "queued_at", order: "desc", pageSize: 20 },
+          { sort: "last_run_at", order: "desc", pageSize: 20 },
         ))}
         columns={[
           { title: "Scenario", dataIndex: "test_name", sorter: true, sortOrder: antSortOrder(params, "test_name"), ...textFilter("test", params, "Search scenario"), render: (v) => v || <em>—</em> },
@@ -221,7 +222,8 @@ export default function RunsPage() {
           { title: "Duration", dataIndex: "duration_ms", sorter: true, sortOrder: antSortOrder(params, "duration_ms"), ...textFilter("duration_ms", params, "Duration ms"), render: (m) => <Duration ms={m} /> },
           { title: "Defect", dataIndex: "defect_type", sorter: true, sortOrder: antSortOrder(params, "defect_type"), ...menuFilter("defect_type", params, ["product_bug", "automation_bug", "system_issue", "to_investigate", "no_defect"].map((value) => ({ text: value.replace(/_/g, " "), value }))), render: (d, r) => (["failed", "error", "timeout"].includes(r.status) ? <DefectTag defect={d} /> : null) },
           { title: "Category", dataIndex: "error_category", sorter: true, sortOrder: antSortOrder(params, "error_category"), ...textFilter("error_category", params, "Search category"), render: (v) => v || "—" },
-          { title: "Queued", dataIndex: "queued_at", sorter: true, sortOrder: antSortOrder(params, "queued_at"), ...textFilter("queued_at", params, "YYYY-MM-DD"), render: (v) => formatLocalTime(v) },
+          { title: "Queued at", dataIndex: "queued_at", sorter: true, sortOrder: antSortOrder(params, "queued_at"), ...textFilter("queued_at", params, "YYYY-MM-DD"), render: (v) => formatLocalTime(v) },
+          { title: "Last run at", dataIndex: "last_run_at", sorter: true, sortOrder: antSortOrder(params, "last_run_at"), defaultSortOrder: "descend", render: (v) => v ? formatLocalTime(v) : "—" },
           { 
             title: "Actions", 
             key: "actions", 

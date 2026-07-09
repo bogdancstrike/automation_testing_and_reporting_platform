@@ -26,6 +26,9 @@ def run_summary(r: TestRun, *, test_name: str | None = None, target_key: str | N
         "duration_ms": r.duration_ms,
         "queued_at": _iso(r.queued_at), "started_at": _iso(r.started_at),
         "finished_at": _iso(r.finished_at),
+        # Most recent meaningful timestamp for the run — when it last ran, falling
+        # back to when it started / was queued so the value is never null.
+        "last_run_at": _iso(r.finished_at or r.started_at or r.queued_at),
         "stats_reset_at": _iso(r.stats_reset_at), "stats_reset_by": r.stats_reset_by,
         "metrics": r.metrics or {},
     }

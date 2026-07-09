@@ -98,6 +98,7 @@ export interface RunSummary {
   queued_at?: string;
   started_at?: string;
   finished_at?: string;
+  last_run_at?: string;
   stats_reset_at?: string;
   stats_reset_by?: string;
   metrics?: Record<string, any>;
