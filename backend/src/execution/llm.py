@@ -15,7 +15,7 @@ SYSTEM_MESSAGE = (
     "- \"summary\": A 1-sentence plain-English summary of the root cause.\n"
     "- \"technical_details\": 2-3 sentences explaining the discrepancy, payloads, or stack trace.\n"
     "- \"suggested_fix\": A short actionable suggestion to fix the test or the product.\n"
-    "Do not output markdown code blocks (e.g. ```json), just the raw JSON object. Do not invent details."
+    "Ensure you output valid JSON."
 )
 
 def generate_rca(run: TestRun, definition: Scenario, ctx: TestContext, result: TestResult, code_text: str) -> str | None:
@@ -61,7 +61,8 @@ def generate_rca(run: TestRun, definition: Scenario, ctx: TestContext, result: T
                 {"role": "system", "content": SYSTEM_MESSAGE},
                 {"role": "user", "content": prompt}
             ],
-            "temperature": 0.2
+            "temperature": 0.2,
+            "response_format": { "type": "json_object" }
         }
 
         data = json.dumps(body).encode("utf-8")
@@ -89,14 +90,10 @@ def generate_rca(run: TestRun, definition: Scenario, ctx: TestContext, result: T
             
         payload = json.loads(raw)
         content = payload["choices"][0]["message"]["content"].strip()
-        if content.startswith("```json"):
-            content = content[7:]
-        if content.startswith("```"):
-            content = content[3:]
-        if content.endswith("```"):
-            content = content[:-3]
-        return content.strip()
+        
+        return content
     except Exception as e:
+        print(f"AI RCA failed to generate: {e}")
         return f"AI RCA failed to generate: {e}"
 
 def generate_magic_assertions(response_data: dict) -> list[dict]:
@@ -111,13 +108,13 @@ def generate_magic_assertions(response_data: dict) -> list[dict]:
         system_msg = (
             "You are an AI for a testing platform. A user just executed an HTTP request. "
             "Inspect the provided JSON response payload (including status_code, body_text) and generate a comprehensive suite of assertions. "
-            "Return STRICTLY a JSON array of assertion objects. "
-            "Each object must have exactly:\n"
+            "Return STRICTLY a JSON object with a single key 'assertions' containing an array of assertion objects. "
+            "Each assertion object must have exactly:\n"
             "- 'source' (string): one of 'status_code', 'json_path', 'header', 'body_text', 'response_time_ms'\n"
             "- 'path' (string, optional): the JSON path (e.g. '$.data.id') if source is json_path, or header name if header\n"
             "- 'operator' (string): one of 'equals', 'not_equals', 'contains', 'exists', 'not_exists', 'gt', 'lt', 'length_gte'\n"
             "- 'expected' (any, optional): the expected value (must be string, number, or boolean)\n"
-            "Do not output markdown code blocks. Just the raw JSON array."
+            "Ensure you output valid JSON."
         )
         
         body = {
@@ -126,7 +123,8 @@ def generate_magic_assertions(response_data: dict) -> list[dict]:
                 {"role": "system", "content": system_msg},
                 {"role": "user", "content": resp_str}
             ],
-            "temperature": 0.2
+            "temperature": 0.2,
+            "response_format": { "type": "json_object" }
         }
 
         data = json.dumps(body).encode("utf-8")
@@ -151,17 +149,16 @@ def generate_magic_assertions(response_data: dict) -> list[dict]:
             if status >= 300:
                 return []
             raw = response.read().decode("utf-8")
+        
+        print(f"RAW API RESPONSE:\n{raw}")
             
         payload = json.loads(raw)
         content = payload["choices"][0]["message"]["content"].strip()
-        if content.startswith("```json"):
-            content = content[7:]
-        if content.startswith("```"):
-            content = content[3:]
-        if content.endswith("```"):
-            content = content[:-3]
         
-        assertions = json.loads(content.strip())
+        print(f"LLM MAGIC ASSERTIONS RAW CONTENT:\n{content}")
+        
+        parsed = json.loads(content)
+        assertions = parsed.get("assertions", [])
         if isinstance(assertions, list):
             return assertions
         return []
