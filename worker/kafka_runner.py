@@ -44,7 +44,16 @@ def execute_run_message(message: dict, consumer_name: str, metadatas: dict):
         log.warning("run message missing run_id; skipping")
         return None
 
-    with tracer.start_as_current_span("worker.consume_run") as span:
+    # Continue the distributed trace started on the backend at enqueue time, so
+    # the whole run (enqueue → consume → execute → HTTP calls) is one Jaeger trace.
+    parent_ctx = None
+    try:
+        from opentelemetry.propagate import extract
+        parent_ctx = extract(message.get("trace_context") or {})
+    except Exception:  # pragma: no cover - tracing optional
+        parent_ctx = None
+
+    with tracer.start_as_current_span("worker.consume_run", context=parent_ctx) as span:
         span.set_attribute("run.id", run_id)
         span.set_attribute("worker.instance", instance)
         span.set_attribute("worker.group", Config.WORKER_NAME)

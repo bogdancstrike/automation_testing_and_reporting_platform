@@ -25,6 +25,20 @@ from src.core.secrets import get_secrets_for_project
 tracer = get_tracer()
 
 
+def _current_trace_id() -> str | None:
+    """Return the active span's W3C trace id as 32 hex chars, or None if there is
+    no valid recording trace (e.g. ENABLE_TRACING=false)."""
+    try:
+        from opentelemetry import trace as _otel_trace
+
+        ctx = _otel_trace.get_current_span().get_span_context()
+        if ctx and ctx.trace_id:
+            return format(ctx.trace_id, "032x")
+    except Exception:  # pragma: no cover - tracing optional
+        pass
+    return None
+
+
 def mark_run_running(db: Session, run: TestRun, worker_name: str) -> None:
     """Mark a run as visibly in progress within the caller's transaction."""
     run.status = RUNNING
@@ -90,6 +104,14 @@ def execute_run(db: Session, run: TestRun, worker_name: str) -> None:
         span.set_attribute("run.id", run.id)
         span.set_attribute("run.scenario_id", run.scenario_id)
         span.set_attribute("worker.name", worker_name)
+        # Capture this run's distributed-trace id (the same trace every outbound
+        # HTTP call joins) and persist it as first-class run evidence so the UI can
+        # deep-link to the Jaeger waterfall — the "Observability Bridge".
+        trace_id = _current_trace_id()
+        if trace_id:
+            run.trace_id = trace_id
+            span.set_attribute("run.trace_id", trace_id)
+            db.flush()
         definition = db.get(Scenario, run.scenario_id)
         revision = db.get(TestRevision, run.revision_id) if run.revision_id else None
         target = db.get(Target, run.target_id) if run.target_id else None

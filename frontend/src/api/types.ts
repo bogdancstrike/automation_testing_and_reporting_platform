@@ -91,6 +91,7 @@ export interface RunSummary {
   error_message?: string;
   defect_type?: string;
   failure_signature?: string;
+  trace_id?: string;
   cleanup_failed?: boolean;
   cleanup_error?: string;
   duration_ms?: number;

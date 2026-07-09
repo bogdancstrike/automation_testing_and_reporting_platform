@@ -109,8 +109,10 @@ def ensure_schema_compatibility() -> None:
         "ALTER TABLE test_runs ADD COLUMN IF NOT EXISTS stats_reset_at TIMESTAMP WITH TIME ZONE",
         "ALTER TABLE test_runs ADD COLUMN IF NOT EXISTS stats_reset_by VARCHAR(120)",
         "ALTER TABLE test_runs ADD COLUMN IF NOT EXISTS stats_reset_reason TEXT",
+        "ALTER TABLE test_runs ADD COLUMN IF NOT EXISTS trace_id VARCHAR(32)",
         "CREATE INDEX IF NOT EXISTS ix_test_runs_triggered_by ON test_runs (triggered_by)",
         "CREATE INDEX IF NOT EXISTS ix_test_runs_stats_reset_at ON test_runs (stats_reset_at)",
+        "CREATE INDEX IF NOT EXISTS ix_test_runs_trace_id ON test_runs (trace_id)",
         """
         CREATE TABLE IF NOT EXISTS schedule_tests (
             id UUID PRIMARY KEY,

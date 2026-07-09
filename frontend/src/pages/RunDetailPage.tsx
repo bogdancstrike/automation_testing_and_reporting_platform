@@ -87,26 +87,27 @@ export default function RunDetailPage() {
   const runRevision = testDefinition?.revisions?.find((r: any) => r.id === run.revision_id) || testDefinition?.revisions?.[testDefinition?.revisions?.length - 1] || testDefinition;
   const sourceCode = runRevision?.source_code || testDefinition?.source_code;
 
+  // Per-step "View Distributed Trace" button — shown on 5xx responses. Prefers
+  // the traceparent captured on the request, falling back to the run-level trace
+  // id (the whole run is a single distributed trace).
   const renderJaegerButton = (r: any) => {
     if (r?.status_code >= 500) {
       const headers = r?.timings?.payload?.request_headers || {};
       const traceparent = headers['traceparent'] || headers['Traceparent'];
-      if (traceparent) {
-        const traceId = traceparent.split('-')[1];
-        if (traceId) {
-          return (
-            <Button 
-              type="primary" 
-              danger 
-              icon={<ExperimentOutlined />} 
-              href={`${config.jaegerUrl}/trace/${traceId}`} 
-              target="_blank"
-              style={{ marginTop: 12, width: "100%" }}
-            >
-              View Distributed Trace
-            </Button>
-          );
-        }
+      const traceId = (traceparent && traceparent.split('-')[1]) || run.trace_id;
+      if (traceId) {
+        return (
+          <Button
+            type="primary"
+            danger
+            icon={<ExperimentOutlined />}
+            href={`${config.jaegerUrl}/trace/${traceId}`}
+            target="_blank"
+            style={{ marginTop: 12, width: "100%" }}
+          >
+            View Distributed Trace
+          </Button>
+        );
       }
     }
     return null;
@@ -134,6 +135,35 @@ export default function RunDetailPage() {
           <Descriptions.Item label="Queued">{formatLocalTime(run.queued_at)}</Descriptions.Item>
           {failed && <Descriptions.Item label="Failure">{run.error_category}: {errorMessage}</Descriptions.Item>}
         </Descriptions>
+        {run.trace_id && (
+          <div
+            style={{
+              marginTop: 12,
+              padding: "8px 12px",
+              borderRadius: 6,
+              border: `1px solid ${failed ? "#ffccc7" : "var(--qtp-surface-border)"}`,
+              background: failed ? "#fff2f0" : "rgba(37, 99, 235, 0.06)",
+            }}
+          >
+            <Space align="center" wrap>
+              <ExperimentOutlined style={{ color: failed ? "#cf1322" : "#1677ff" }} />
+              <Typography.Text strong>Distributed Trace</Typography.Text>
+              <Typography.Text code copyable={{ text: run.trace_id }} style={{ fontSize: 12 }}>
+                {run.trace_id}
+              </Typography.Text>
+              <Button
+                size="small"
+                type={failed ? "primary" : "default"}
+                danger={failed}
+                icon={<ExperimentOutlined />}
+                href={`${config.jaegerUrl}/trace/${run.trace_id}`}
+                target="_blank"
+              >
+                View Distributed Trace
+              </Button>
+            </Space>
+          </div>
+        )}
         {aiAnalysis && (
           <div style={{ marginTop: 16 }}>
             <Card 

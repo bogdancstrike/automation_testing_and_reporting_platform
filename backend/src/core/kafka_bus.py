@@ -73,11 +73,24 @@ def publish_run(run_id: str, capability: str = "http") -> None:
         span.set_attribute("run.id", run_id)
         span.set_attribute("run.capability", capability)
         span.set_attribute("kafka.topic", Config.KAFKA_RUNS_TOPIC)
+        # Inject the current W3C trace context into the message so the worker can
+        # continue the SAME distributed trace when it executes the run — the run's
+        # trace spans backend enqueue → worker consume → execute → every HTTP call.
+        trace_context: dict[str, str] = {}
+        try:
+            from opentelemetry.propagate import inject
+            inject(trace_context)
+        except Exception:  # pragma: no cover - tracing optional
+            pass
         try:
             ensure_runs_topic()
             get_client().put_message(
                 Config.KAFKA_RUNS_TOPIC,
-                json.dumps({"run_id": run_id, "capability": capability}),
+                json.dumps({
+                    "run_id": run_id,
+                    "capability": capability,
+                    "trace_context": trace_context,
+                }),
                 key=run_id,
             )
             log.debug(f"published run {run_id} to {Config.KAFKA_RUNS_TOPIC}")
