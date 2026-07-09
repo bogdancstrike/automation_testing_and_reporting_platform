@@ -134,6 +134,30 @@ def execute_run(db: Session, run: TestRun, worker_name: str) -> None:
 def _persist(db: Session, run: TestRun, definition: Scenario,
              ctx: TestContext, result: TestResult) -> None:
     status = result.status if result.status in TERMINAL_STATUSES else ERROR
+
+    if status in (FAILED, ERROR, TIMEOUT):
+        from src.config import Config
+        if Config.LLM_FEATURES_ENABLED:
+            from src.execution.llm import generate_rca
+            from src.catalog.models import TestRevision
+            import inspect
+            import importlib
+            
+            revision = db.get(TestRevision, run.revision_id) if run.revision_id else None
+            code_text = ""
+            if revision and revision.code_ref:
+                try:
+                    module_name, _, class_name = revision.code_ref.partition(":")
+                    module = importlib.import_module(module_name)
+                    cls = getattr(module, class_name)
+                    code_text = inspect.getsource(cls)
+                except Exception:
+                    pass
+
+            rca = generate_rca(run, definition, ctx, result, code_text)
+            if rca:
+                result.error_message = f"{result.error_message}\n\n[AI Root Cause Analysis]\n{rca}" if result.error_message else f"[AI Root Cause Analysis]\n{rca}"
+
     run.status = status
     run.finished_at = utcnow()
     run.duration_ms = result.metrics.get("elapsed_ms")

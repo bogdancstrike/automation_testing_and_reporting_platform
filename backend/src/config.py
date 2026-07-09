@@ -146,6 +146,12 @@ class Config:
     # QTP's own API base URL, used by the self-tests' 'qtp_self' target.
     SELF_TARGET_URL = os.getenv("SELF_TARGET_URL", "http://api:5100/qtp")
 
+    # ── LLM Features ───────────────────────────────────────────────────────
+    LLM_FEATURES_ENABLED = _bool("LLM_FEATURES_ENABLED", False)
+    LLM_OPENAI_API       = os.getenv("LLM_OPENAI_API", "https://freellmapi.doncik.ro/v1/chat/completions")
+    LLM_OPENAI_API_KEY   = os.getenv("LLM_OPENAI_API_KEY", "dummy")
+    LLM_MODEL            = os.getenv("LLM_MODEL", "auto")
+
 # Workaround for QF ETL framework hardcoding password=None
 # Initialize the RedisSingleton with the correct password before framework_etl imports it.
 if Config.REDIS_PASSWORD:

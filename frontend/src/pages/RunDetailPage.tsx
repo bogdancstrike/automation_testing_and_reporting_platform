@@ -70,6 +70,14 @@ export default function RunDetailPage() {
   const failed = ["failed", "error", "timeout"].includes(run.status);
   const resp = run.response || {};
   
+  let errorMessage = run.error_message || "";
+  let aiAnalysis = "";
+  if (errorMessage.includes("[AI Root Cause Analysis]")) {
+    const parts = errorMessage.split("[AI Root Cause Analysis]");
+    errorMessage = parts[0].trim();
+    aiAnalysis = parts[1].trim();
+  }
+  
   const runRevision = testDefinition?.revisions?.find((r: any) => r.id === run.revision_id) || testDefinition?.revisions?.[testDefinition?.revisions?.length - 1] || testDefinition;
   const sourceCode = runRevision?.source_code || testDefinition?.source_code;
 
@@ -93,8 +101,16 @@ export default function RunDetailPage() {
           <Descriptions.Item label="Duration"><Duration ms={run.duration_ms} /></Descriptions.Item>
           <Descriptions.Item label="Environment">{run.environment}</Descriptions.Item>
           <Descriptions.Item label="Queued">{formatLocalTime(run.queued_at)}</Descriptions.Item>
-          {failed && <Descriptions.Item label="Failure">{run.error_category}: {run.error_message}</Descriptions.Item>}
+          {failed && <Descriptions.Item label="Failure">{run.error_category}: {errorMessage}</Descriptions.Item>}
         </Descriptions>
+        {aiAnalysis && (
+          <div style={{ marginTop: 12 }}>
+            <Typography.Text strong style={{ color: '#1677ff' }}><ExperimentOutlined /> AI Root Cause Analysis:</Typography.Text>
+            <div style={{ background: "#e6f4ff", border: "1px solid #91caff", padding: "8px 12px", marginTop: 4, borderRadius: 4, whiteSpace: "pre-wrap", color: "#0958d9", fontSize: 13 }}>
+              {aiAnalysis}
+            </div>
+          </div>
+        )}
         {run.cleanup_failed && (
           <div style={{ marginTop: 12 }}>
             <Typography.Text type="danger" strong><WarningOutlined /> Cleanup Failed:</Typography.Text>
