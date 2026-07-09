@@ -2,6 +2,7 @@ import json
 import urllib.request
 import urllib.error
 import socket
+import re
 from src.config import Config
 from src.catalog.models import Scenario
 from src.execution.models import TestRun
@@ -17,6 +18,13 @@ SYSTEM_MESSAGE = (
     "- \"suggested_fix\": A short actionable suggestion to fix the test or the product.\n"
     "Ensure you output valid JSON."
 )
+
+def _clean_json_response(content: str) -> str:
+    content = content.strip()
+    match = re.search(r'```(?:json)?\s*(.*?)\s*```', content, re.DOTALL | re.IGNORECASE)
+    if match:
+        return match.group(1).strip()
+    return content
 
 def generate_rca(run: TestRun, definition: Scenario, ctx: TestContext, result: TestResult, code_text: str) -> str | None:
     if not Config.LLM_FEATURES_ENABLED:
@@ -89,9 +97,8 @@ def generate_rca(run: TestRun, definition: Scenario, ctx: TestContext, result: T
             raw = response.read().decode("utf-8")
             
         payload = json.loads(raw)
-        content = payload["choices"][0]["message"]["content"].strip()
-        
-        return content
+        content = payload["choices"][0]["message"]["content"]
+        return _clean_json_response(content)
     except Exception as e:
         print(f"AI RCA failed to generate: {e}")
         return f"AI RCA failed to generate: {e}"
@@ -153,11 +160,12 @@ def generate_magic_assertions(response_data: dict) -> list[dict]:
         print(f"RAW API RESPONSE:\n{raw}")
             
         payload = json.loads(raw)
-        content = payload["choices"][0]["message"]["content"].strip()
+        content = payload["choices"][0]["message"]["content"]
         
         print(f"LLM MAGIC ASSERTIONS RAW CONTENT:\n{content}")
         
-        parsed = json.loads(content)
+        cleaned = _clean_json_response(content)
+        parsed = json.loads(cleaned)
         assertions = parsed.get("assertions", [])
         if isinstance(assertions, list):
             return assertions
