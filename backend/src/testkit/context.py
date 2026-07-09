@@ -40,6 +40,7 @@ class TestContext:
     _http: Any = None
     _cli: Any = None
     _browser: Any = None
+    _faker: Any = None
 
     # ── Targets / variables ────────────────────────────────────────────────
     def target(self, key: str = "default") -> ResolvedTarget:
@@ -56,7 +57,12 @@ class TestContext:
         return self.variables.get(name, default)
 
     def render(self, text: str) -> str:
-        """Substitute {{var}} / {{secret}} tokens in a string."""
+        """Substitute ``{{var}}`` / ``{{secret}}`` / ``{{faker.<provider>}}`` tokens.
+
+        ``{{faker.email}}``, ``{{faker.name}}``, ``{{faker.uuid4}}`` etc. call the
+        matching Faker provider so UI/declarative request tests can inject realistic
+        random data without any Python. Each token evaluates fresh on every render.
+        """
         if not text:
             return text
 
@@ -66,6 +72,10 @@ class TestContext:
                 return str(self.variables[name])
             if name in self.secrets:
                 return str(self.secrets[name])
+            if name.startswith("faker."):
+                value = self._faker_value(name[len("faker."):])
+                if value is not None:
+                    return value
             return m.group(0)
 
         return _TEMPLATE.sub(_sub, text)
@@ -113,6 +123,40 @@ class TestContext:
             from src.testkit.clients import BrowserClient
             self._browser = BrowserClient(self)
         return self._browser
+
+    @property
+    def faker(self) -> Any:
+        """Native `Faker <https://faker.readthedocs.io>`_ instance for generating
+        realistic random test data — names, emails, UUIDs, addresses, and more::
+
+            user = {"name": ctx.faker.name(), "email": ctx.faker.email()}
+            ctx.http.post("/api/users", json=user)
+
+        Lazily created and reused for the whole scenario. Call
+        ``ctx.faker.seed_instance(1234)`` for reproducible data. Import-guarded so a
+        missing ``Faker`` fails the run with a clear message instead of a crash.
+        """
+        if self._faker is None:
+            try:
+                from faker import Faker
+            except ImportError as e:  # pragma: no cover - depends on image
+                raise RuntimeError(
+                    "Faker is not installed in this worker image; add 'Faker' to "
+                    "requirements to use ctx.faker / {{faker.*}} test-data generation"
+                ) from e
+            self._faker = Faker()
+        return self._faker
+
+    def _faker_value(self, provider: str) -> str | None:
+        """Resolve a ``{{faker.<provider>}}`` template token to a string, or None
+        if the provider is unknown/unavailable (token is then left untouched)."""
+        try:
+            attr = getattr(self.faker, provider, None)
+            if attr is None:
+                return None
+            return str(attr() if callable(attr) else attr)
+        except Exception:
+            return None
 
     @contextlib.contextmanager
     def step(self, name: str):

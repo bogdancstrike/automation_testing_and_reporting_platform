@@ -30,6 +30,9 @@ python-jose[cryptography]>=3.3.0
 # HTTP execution / discovery
 requests>=2.31.0
 
+# Test data generation (ctx.faker / {{faker.*}} templates)
+Faker>=24.0.0
+
 # Config / utils
 python-dotenv>=1.0.0
 croniter>=2.0.0

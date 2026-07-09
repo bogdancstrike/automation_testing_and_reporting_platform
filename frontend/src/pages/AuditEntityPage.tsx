@@ -32,7 +32,7 @@ export default function AuditEntityPage() {
     <div>
       <Breadcrumb style={{ marginBottom: 16 }}>
         <Breadcrumb.Item>
-          <a onClick={() => nav('/audit')}>Audit Ledger</a>
+          <a onClick={() => nav('/audit')}>Audit</a>
         </Breadcrumb.Item>
         <Breadcrumb.Item>
           {entityType.replace('_', ' ')} {idDisplay}

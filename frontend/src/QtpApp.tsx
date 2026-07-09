@@ -68,7 +68,7 @@ const NAV_GROUPS = [
     key: "administration",
     label: "Administration",
     children: [
-      { key: "/audit", icon: <AuditOutlined />, label: "Audit Ledger" },
+      { key: "/audit", icon: <AuditOutlined />, label: "Audit" },
     ],
   },
 ];
