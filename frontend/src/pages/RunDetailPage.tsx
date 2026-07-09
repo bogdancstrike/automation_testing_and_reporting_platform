@@ -71,11 +71,15 @@ export default function RunDetailPage() {
   const resp = run.response || {};
   
   let errorMessage = run.error_message || "";
-  let aiAnalysis = "";
+  let aiAnalysis: any = null;
   if (errorMessage.includes("[AI Root Cause Analysis]")) {
     const parts = errorMessage.split("[AI Root Cause Analysis]");
     errorMessage = parts[0].trim();
-    aiAnalysis = parts[1].trim();
+    try {
+      aiAnalysis = JSON.parse(parts[1].trim());
+    } catch(e) {
+      aiAnalysis = { summary: parts[1].trim(), technical_details: "", suggested_fix: "" };
+    }
   }
   
   const runRevision = testDefinition?.revisions?.find((r: any) => r.id === run.revision_id) || testDefinition?.revisions?.[testDefinition?.revisions?.length - 1] || testDefinition;
@@ -104,11 +108,35 @@ export default function RunDetailPage() {
           {failed && <Descriptions.Item label="Failure">{run.error_category}: {errorMessage}</Descriptions.Item>}
         </Descriptions>
         {aiAnalysis && (
-          <div style={{ marginTop: 12 }}>
-            <Typography.Text strong style={{ color: '#1677ff' }}><ExperimentOutlined /> AI Root Cause Analysis:</Typography.Text>
-            <div style={{ background: "#e6f4ff", border: "1px solid #91caff", padding: "8px 12px", marginTop: 4, borderRadius: 4, whiteSpace: "pre-wrap", color: "#0958d9", fontSize: 13 }}>
-              {aiAnalysis}
-            </div>
+          <div style={{ marginTop: 16 }}>
+            <Card 
+              size="small" 
+              title={<><ExperimentOutlined style={{ color: '#1677ff' }} /> <span style={{ color: '#1677ff' }}>AI Root Cause Analysis</span></>}
+              style={{ borderColor: '#91caff', background: '#f0f5ff', borderRadius: 6 }}
+              headStyle={{ borderBottom: '1px solid #91caff', background: '#e6f4ff', borderRadius: '6px 6px 0 0' }}
+            >
+              <Typography.Text strong style={{ fontSize: 14 }}>{aiAnalysis.summary}</Typography.Text>
+              
+              {aiAnalysis.technical_details && (
+                <div style={{ marginTop: 12 }}>
+                  <Typography.Text type="secondary" strong style={{ fontSize: 11, letterSpacing: '0.5px', textTransform: 'uppercase' }}>Technical Details</Typography.Text>
+                  <div style={{ marginTop: 2, color: '#333' }}>
+                    {aiAnalysis.technical_details}
+                  </div>
+                </div>
+              )}
+              
+              {aiAnalysis.suggested_fix && (
+                <div style={{ marginTop: 12 }}>
+                  <Typography.Text type="secondary" strong style={{ fontSize: 11, letterSpacing: '0.5px', textTransform: 'uppercase' }}>Suggested Fix</Typography.Text>
+                  <div style={{ marginTop: 4 }}>
+                    <Tag color="blue" style={{ whiteSpace: 'normal', height: 'auto', padding: '4px 8px' }}>
+                      {aiAnalysis.suggested_fix}
+                    </Tag>
+                  </div>
+                </div>
+              )}
+            </Card>
           </div>
         )}
         {run.cleanup_failed && (

@@ -10,9 +10,12 @@ from src.testkit.result import TestResult
 
 SYSTEM_MESSAGE = (
     "You are an AI assistant for a testing platform. Analyze the provided test execution evidence "
-    "(HTTP payloads, assertions, python stack trace, code, logs) and generate a plain-English "
-    "explanation of the root cause of the failure. Be concise and direct, e.g., 'The API returned "
-    "a 400 because the email field format was changed in the latest deployment.' Do not invent details. Limit to 3-5 sentences."
+    "(HTTP payloads, assertions, python stack trace, code, logs) and identify the root cause of the failure. "
+    "Return the result STRICTLY as a JSON object with exactly these keys:\n"
+    "- \"summary\": A 1-sentence plain-English summary of the root cause.\n"
+    "- \"technical_details\": 2-3 sentences explaining the discrepancy, payloads, or stack trace.\n"
+    "- \"suggested_fix\": A short actionable suggestion to fix the test or the product.\n"
+    "Do not output markdown code blocks (e.g. ```json), just the raw JSON object. Do not invent details."
 )
 
 def generate_rca(run: TestRun, definition: Scenario, ctx: TestContext, result: TestResult, code_text: str) -> str | None:
@@ -79,7 +82,13 @@ def generate_rca(run: TestRun, definition: Scenario, ctx: TestContext, result: T
             raw = response.read().decode("utf-8")
             
         payload = json.loads(raw)
-        content = payload["choices"][0]["message"]["content"]
+        content = payload["choices"][0]["message"]["content"].strip()
+        if content.startswith("```json"):
+            content = content[7:]
+        if content.startswith("```"):
+            content = content[3:]
+        if content.endswith("```"):
+            content = content[:-3]
         return content.strip()
     except Exception as e:
         return f"AI RCA failed to generate: {e}"
