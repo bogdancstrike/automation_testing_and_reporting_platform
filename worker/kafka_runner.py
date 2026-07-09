@@ -73,6 +73,14 @@ def execute_run_message(message: dict, consumer_name: str, metadatas: dict):
                 log.info(f"run {run_id} is already running; skipping (redelivery)")
                 return None
             span.set_attribute("test.definition_id", run.scenario_id)
+            # Surface the scenario name on the consume span so a Kafka-side trace
+            # is identifiable by what it ran, not just the run id.
+            from src.catalog.models import Scenario
+            definition = db.get(Scenario, run.scenario_id)
+            if definition:
+                span.set_attribute("test.key", definition.key)
+                span.set_attribute("test.name", definition.name)
+                span.update_name(f"worker.consume_run · {definition.name}")
             mark_run_running(db, run, instance)
             queue.heartbeat(db, instance, status="busy", current_run_id=run.id)
 

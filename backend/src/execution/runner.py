@@ -125,7 +125,11 @@ def execute_run(db: Session, run: TestRun, worker_name: str) -> None:
         target = db.get(Target, run.target_id) if run.target_id else None
         if definition:
             span.set_attribute("test.key", definition.key)
+            span.set_attribute("test.name", definition.name)
             span.set_attribute("test.type", definition.type)
+            # Surface the scenario in the span name so it's identifiable in Jaeger
+            # without expanding attributes.
+            span.update_name(f"execution.run · {definition.name}")
         if target:
             span.set_attribute("target.key", target.key)
 

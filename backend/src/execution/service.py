@@ -35,9 +35,12 @@ def enqueue_run(db: Session, definition: Scenario, *, trigger: str = "manual",
                 triggered_by: str | None = None) -> TestRun:
     with tracer.start_as_current_span("execution.enqueue_run") as span:
         span.set_attribute("scenario.id", definition.id)
+        span.set_attribute("scenario.key", definition.key)
+        span.set_attribute("scenario.name", definition.name)
         span.set_attribute("scenario.type", definition.type)
         span.set_attribute("run.trigger", trigger)
         span.set_attribute("run.environment", environment)
+        span.update_name(f"execution.enqueue_run · {definition.name}")
         target = resolve_target(db, definition.project_id, definition.target_key)
         capability = capability_for(definition.type)
         span.set_attribute("run.capability", capability)
@@ -59,8 +62,11 @@ def enqueue_run(db: Session, definition: Scenario, *, trigger: str = "manual",
         db.flush()
         span.set_attribute("run.id", run.id)
         # Stash for the transactional-outbox publish in session_scope(): the run is
-        # dispatched to a worker over Kafka only after this transaction commits.
-        db.info.setdefault("pending_runs", []).append((run.id, capability))
+        # dispatched to a worker over Kafka only after this transaction commits. The
+        # scenario key/name ride along so the publish span (the run trace's root) is
+        # labelled with the scenario in Jaeger.
+        db.info.setdefault("pending_runs", []).append(
+            (run.id, capability, definition.key, definition.name))
         return run
 
 
