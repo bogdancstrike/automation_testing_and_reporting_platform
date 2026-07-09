@@ -90,7 +90,7 @@ def generate_rca(run: TestRun, definition: Scenario, ctx: TestContext, result: T
             method="POST",
         )
 
-        with urllib.request.urlopen(request, timeout=20) as response:
+        with urllib.request.urlopen(request, timeout=60) as response:
             status = getattr(response, "status", response.getcode())
             if status >= 300:
                 return None
@@ -151,7 +151,7 @@ def generate_magic_assertions(response_data: dict) -> list[dict]:
             method="POST",
         )
 
-        with urllib.request.urlopen(request, timeout=20) as response:
+        with urllib.request.urlopen(request, timeout=60) as response:
             status = getattr(response, "status", response.getcode())
             if status >= 300:
                 return []
