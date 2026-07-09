@@ -61,7 +61,8 @@ def ensure_runs_topic() -> None:
         log.warning(f"could not ensure kafka runs topic (will retry on publish): {e}")
 
 
-def publish_run(run_id: str, capability: str = "http") -> None:
+def publish_run(run_id: str, capability: str = "http", *,
+                scenario_key: str | None = None, scenario_name: str | None = None) -> None:
     """Publish a run onto the runs topic, keyed by run id.
 
     Best-effort: a publish failure is logged but never raised, because the DB
@@ -73,6 +74,13 @@ def publish_run(run_id: str, capability: str = "http") -> None:
         span.set_attribute("run.id", run_id)
         span.set_attribute("run.capability", capability)
         span.set_attribute("kafka.topic", Config.KAFKA_RUNS_TOPIC)
+        # This span is the root of the run's distributed trace — label it with the
+        # scenario so Jaeger's trace list identifies each trace by what it ran.
+        if scenario_key:
+            span.set_attribute("scenario.key", scenario_key)
+        if scenario_name:
+            span.set_attribute("scenario.name", scenario_name)
+            span.update_name(f"execution.publish_run · {scenario_name}")
         # The QF KafkaClient injects the current W3C trace context onto the Kafka
         # message headers (see framework.tracing.inject_trace_headers), so the
         # worker continues this SAME distributed trace when it consumes the run —

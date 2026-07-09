@@ -72,8 +72,11 @@ def _publish_pending_runs(session: Session) -> None:
     # Imported here to avoid a core→kafka import at module load (keeps `core`
     # importable in tooling/tests that never touch Kafka).
     from src.core.kafka_bus import publish_run
-    for run_id, capability in pending:
-        publish_run(run_id, capability)
+    for item in pending:
+        run_id, capability = item[0], item[1]
+        scenario_key = item[2] if len(item) > 2 else None
+        scenario_name = item[3] if len(item) > 3 else None
+        publish_run(run_id, capability, scenario_key=scenario_key, scenario_name=scenario_name)
 
 
 def new_session() -> Session:
