@@ -10,6 +10,7 @@ import WaterfallChart from "../components/WaterfallChart";
 import CodeSnippet from "../components/CodeSnippet";
 import { formatLocalTime } from "../components/tags";
 import { AuditTable } from "../components/AuditTable";
+import { config } from "../config";
 
 const DEFECTS = ["product_bug", "automation_bug", "system_issue", "to_investigate", "no_defect"];
 const ACTIVE_RUN_REFETCH_MS = 1000;
@@ -84,6 +85,31 @@ export default function RunDetailPage() {
   
   const runRevision = testDefinition?.revisions?.find((r: any) => r.id === run.revision_id) || testDefinition?.revisions?.[testDefinition?.revisions?.length - 1] || testDefinition;
   const sourceCode = runRevision?.source_code || testDefinition?.source_code;
+
+  const renderJaegerButton = (r: any) => {
+    if (r?.status_code >= 500) {
+      const headers = r?.timings?.payload?.request_headers || {};
+      const traceparent = headers['traceparent'] || headers['Traceparent'];
+      if (traceparent) {
+        const traceId = traceparent.split('-')[1];
+        if (traceId) {
+          return (
+            <Button 
+              type="primary" 
+              danger 
+              icon={<ExperimentOutlined />} 
+              href={`${config.jaegerUrl}/trace/${traceId}`} 
+              target="_blank"
+              style={{ marginTop: 12, width: "100%" }}
+            >
+              View Distributed Trace
+            </Button>
+          );
+        }
+      }
+    }
+    return null;
+  };
 
   return (
     <div>
@@ -229,6 +255,7 @@ export default function RunDetailPage() {
                           <Descriptions.Item label="Time">{sResp.elapsed_ms ?? "—"} ms</Descriptions.Item>
                           <Descriptions.Item label="URL">{sResp.url || "—"}</Descriptions.Item>
                         </Descriptions>
+                        {renderJaegerButton(sResp)}
                         {step.captures && step.captures.length > 0 && (
                           <div style={{ marginTop: 12 }}>
                             <Typography.Text type="secondary">Captured Variables</Typography.Text>
@@ -257,6 +284,7 @@ export default function RunDetailPage() {
                     <Descriptions.Item label="Time">{resp.elapsed_ms ?? "—"} ms</Descriptions.Item>
                     <Descriptions.Item label="URL">{resp.url || "—"}</Descriptions.Item>
                   </Descriptions>
+                  {renderJaegerButton(resp)}
                 </Col>
               </Row>
             );

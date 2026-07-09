@@ -140,12 +140,19 @@ def _execute_http_step(config: dict[str, Any], ctx: TestContext, *, session: req
             resolve_and_check(current_url)
             dns_ms += int((time.monotonic() - dns_start) * 1000)
 
+            req_headers = dict(headers)
+            try:
+                from opentelemetry.propagate import inject
+                inject(req_headers)
+            except ImportError:
+                pass
+
             req_start = time.monotonic()
             resp = session.request(
                 current_method,
                 current_url,
                 params=params if hops == 0 else None,
-                headers=headers,
+                headers=req_headers,
                 data=current_body,
                 timeout=timeout_ms / 1000.0,
                 allow_redirects=False,
@@ -207,7 +214,7 @@ def _execute_http_step(config: dict[str, Any], ctx: TestContext, *, session: req
                 "content_length": content_length,
                 "is_network": True,
                 "payload": {
-                    "request_headers": headers,
+                    "request_headers": req_headers if 'req_headers' in locals() else headers,
                     "response_headers": headers_dict,
                     "request_body": current_body.decode("utf-8", errors="replace")[:2048] if isinstance(current_body, bytes) else str(current_body)[:2048] if current_body else None,
                 }

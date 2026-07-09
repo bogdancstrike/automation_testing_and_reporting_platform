@@ -3,6 +3,7 @@ interface QtpConfig {
   keycloakUrl: string;
   keycloakRealm: string;
   keycloakClientId: string;
+  jaegerUrl: string;
 }
 
 const injected = (window as any).__QTP__ || {};
@@ -12,4 +13,5 @@ export const config: QtpConfig = {
   keycloakUrl: injected.keycloakUrl || "http://localhost:8080",
   keycloakRealm: injected.keycloakRealm || "qtp",
   keycloakClientId: injected.keycloakClientId || "qtp-spa",
+  jaegerUrl: injected.jaegerUrl || "http://localhost:16686",
 };
