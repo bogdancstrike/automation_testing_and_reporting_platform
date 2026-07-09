@@ -4,15 +4,27 @@ import CodeSnippet from "./CodeSnippet";
 
 interface StepTreeProps {
   steps: any[];
+  logs?: any[];
 }
 
-export default function StepTree({ steps }: StepTreeProps) {
+export default function StepTree({ steps, logs = [] }: StepTreeProps) {
   if (!steps || steps.length === 0) return null;
 
   // Map parent step IDs to their children
   const childrenMap = new Map<string, any[]>();
   const parentBlocks: any[] = [];
   const orphans: any[] = [];
+
+  const logSteps = logs.map((log: any) => ({
+    isLog: true,
+    name: log.message,
+    level: log.level,
+    created_at: log.created_at,
+    timings: {
+      parent_step_id: log.context?.step_id,
+      start_ms: log.context?.start_ms || 0
+    }
+  }));
 
   steps.forEach((s) => {
     if (s.timings?.is_step_block) {
@@ -24,6 +36,17 @@ export default function StepTree({ steps }: StepTreeProps) {
       childrenMap.get(s.timings.parent_step_id)!.push(s);
     } else {
       orphans.push(s);
+    }
+  });
+
+  logSteps.forEach((log) => {
+    if (log.timings.parent_step_id) {
+      if (!childrenMap.has(log.timings.parent_step_id)) {
+        childrenMap.set(log.timings.parent_step_id, []);
+      }
+      childrenMap.get(log.timings.parent_step_id)!.push(log);
+    } else {
+      orphans.push(log);
     }
   });
 
@@ -62,6 +85,22 @@ export default function StepTree({ steps }: StepTreeProps) {
   };
 
   const renderChildNode = (child: any, index: number) => {
+    if (child.isLog) {
+      const color = child.level === "error" ? "#f5222d" : child.level === "warning" ? "#faad14" : "#8c8c8c";
+      return (
+        <div key={`log-${index}`} style={{ padding: "4px 0", borderBottom: "1px dashed #f0f0f0" }}>
+          <Space align="start">
+            <Typography.Text type="secondary" style={{ fontSize: 11, fontFamily: "monospace", width: 45, color }}>
+              {child.level.toUpperCase()}
+            </Typography.Text>
+            <Typography.Text style={{ fontSize: 13, color: child.level === "error" ? "#f5222d" : "#595959", whiteSpace: "pre-wrap" }}>
+              {child.name}
+            </Typography.Text>
+          </Space>
+        </div>
+      );
+    }
+
     const isAssertion = child.timings?.is_event && child.timings?.event_type === "assertion";
     const details = child.timings?.details;
     const isFailed = child.status === "failed" || child.status === "error";
@@ -94,7 +133,9 @@ export default function StepTree({ steps }: StepTreeProps) {
   const items = allTopLevel.map((node, i) => {
     const isBlock = node.timings?.is_step_block;
     const isFailed = node.status === "failed" || node.status === "error";
-    const children = isBlock ? childrenMap.get(node.timings?.step_id) || [] : [];
+    const children = (isBlock ? childrenMap.get(node.timings?.step_id) || [] : []).sort(
+      (a, b) => (a.timings?.start_ms || 0) - (b.timings?.start_ms || 0)
+    );
     
     // Parent header
     const header = (

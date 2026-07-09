@@ -76,6 +76,11 @@ class TestContext:
 
     # ── Logging ────────────────────────────────────────────────────────────
     def log(self, level: str, message: str, **ctx: Any) -> None:
+        import time
+        if getattr(self, '_current_step_id', None):
+            ctx["step_id"] = self._current_step_id
+        if hasattr(self, '_scenario_start_time'):
+            ctx["start_ms"] = int((time.monotonic() - self._scenario_start_time) * 1000)
         self._logs.append({"level": level, "message": self._redact(message), "context": ctx})
 
     def logs(self) -> list[dict[str, Any]]:
