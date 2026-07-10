@@ -1,5 +1,5 @@
 import { Table, Typography, Space, Switch, Tag, Button, App, Dropdown } from "antd";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { qtp } from "../api/qtp";
@@ -9,24 +9,36 @@ import type { QueryParams } from "../api/types";
 import { formatLocalTime } from "../components/tags";
 import { PageHeader } from "../components/PageHeader";
 
+// Build the runs filter/sort params from a URL query string. Shared by the
+// initial seed and the re-seed effect so deep-links behave identically.
+function seedRunParams(sp: URLSearchParams): QueryParams {
+  const seed: QueryParams = { page: 1, page_size: 20, sort: "last_run_at", order: "desc" };
+  for (const key of ["status", "cleanup_failed", "trigger", "target", "defect_type"]) {
+    const v = sp.get(key);
+    if (v) seed[key] = v;
+  }
+  const sort = sp.get("sort");
+  if (sort) { seed.sort = sort; seed.order = sp.get("order") === "asc" ? "asc" : "desc"; }
+  return seed;
+}
+
 export default function RunsPage() {
   const nav = useNavigate();
   const { message, modal } = App.useApp();
   const qc = useQueryClient();
   const [live, setLive] = useState(true);
   const [searchParams] = useSearchParams();
-  // Seed initial filters/sort from the URL so Overview stat cards can deep-link
-  // (e.g. /runs?status=failed, /runs?cleanup_failed=failed, /runs?sort=duration_ms&order=desc).
-  const [params, setParams] = useState<QueryParams>(() => {
-    const seed: QueryParams = { page: 1, page_size: 20, sort: "last_run_at", order: "desc" };
-    for (const key of ["status", "cleanup_failed", "trigger", "target", "defect_type"]) {
-      const v = searchParams.get(key);
-      if (v) seed[key] = v;
-    }
-    const sort = searchParams.get("sort");
-    if (sort) { seed.sort = sort; seed.order = searchParams.get("order") === "asc" ? "asc" : "desc"; }
-    return seed;
-  });
+  // Seed initial filters/sort from the URL so Overview stat cards and the
+  // command-palette quick views can deep-link (e.g. /runs?status=failed,
+  // /runs?cleanup_failed=failed, /runs?sort=duration_ms&order=desc).
+  const [params, setParams] = useState<QueryParams>(() => seedRunParams(searchParams));
+  // A quick-view deep-link fired while already on /runs changes the URL but does
+  // not remount this page, so re-seed from the query string when it changes.
+  const seededOnce = useRef(true);
+  useEffect(() => {
+    if (seededOnce.current) { seededOnce.current = false; return; }
+    setParams(seedRunParams(searchParams));
+  }, [searchParams]);
   const { data: page, isLoading } = useQuery({
     queryKey: ["runsPage", params],
     queryFn: () => qtp.runsPage(params),

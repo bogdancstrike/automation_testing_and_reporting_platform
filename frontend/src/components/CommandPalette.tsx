@@ -3,9 +3,11 @@ import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Command } from "cmdk";
 import {
-  AimOutlined, AuditOutlined, BookOutlined, ClockCircleOutlined, ClusterOutlined,
-  DashboardOutlined, ExperimentOutlined, FileTextOutlined, LogoutOutlined,
-  MoonOutlined, PlayCircleOutlined, SendOutlined, SunOutlined, UserOutlined,
+  AimOutlined, AuditOutlined, BookOutlined, BugOutlined, CalendarOutlined,
+  ClearOutlined, ClockCircleOutlined, CloseCircleOutlined, ClusterOutlined,
+  DashboardOutlined, ExperimentOutlined, FieldTimeOutlined, FileTextOutlined,
+  InboxOutlined, LogoutOutlined, MoonOutlined, PlayCircleOutlined, SendOutlined,
+  SunOutlined, UserOutlined, WarningOutlined,
 } from "@ant-design/icons";
 
 import { keycloak } from "../keycloak";
@@ -42,6 +44,19 @@ const PAGES: (StaticCommand & { to: string })[] = [
   { to: "/docs", label: "Developer Docs", icon: <BookOutlined />, keywords: "documentation guide help reference" },
   { to: "/audit", label: "Audit", icon: <AuditOutlined />, keywords: "events ledger log who did what" },
   { to: "/profile", label: "Profile", icon: <UserOutlined />, keywords: "account me user settings" },
+];
+
+// Pre-filtered run lists — deep-link into /runs with a query the page seeds
+// from (see RunsPage.seedRunParams). Every `to` uses a filter/sort the backend
+// actually supports (status is single-value; hence failed & errored are split).
+const QUICK_VIEWS: (StaticCommand & { id: string; to: string })[] = [
+  { id: "runs-failed", to: "/runs?status=failed", label: "See failed runs", icon: <CloseCircleOutlined />, keywords: "runs failed failing red broken" },
+  { id: "runs-error", to: "/runs?status=error", label: "See errored runs", icon: <WarningOutlined />, keywords: "runs errors errored exception crash" },
+  { id: "runs-queued", to: "/runs?status=queued", label: "See queued runs", icon: <InboxOutlined />, keywords: "runs queued pending backlog waiting" },
+  { id: "runs-triage", to: "/runs?defect_type=to_investigate", label: "See runs to investigate", icon: <BugOutlined />, keywords: "runs triage defect investigate untriaged" },
+  { id: "runs-cleanup", to: "/runs?cleanup_failed=failed", label: "See runs with cleanup failures", icon: <ClearOutlined />, keywords: "runs cleanup teardown leaked resources failed" },
+  { id: "runs-slowest", to: "/runs?sort=duration_ms&order=desc", label: "See slowest runs", icon: <FieldTimeOutlined />, keywords: "runs slow slowest duration performance latency" },
+  { id: "runs-scheduled", to: "/runs?trigger=schedule", label: "See scheduled runs", icon: <CalendarOutlined />, keywords: "runs scheduled schedule cron automated triggered" },
 ];
 
 // Split `q` into terms; an item matches when its haystack contains all of them.
@@ -114,6 +129,7 @@ export function CommandPalette({ open, onOpenChange, mode, setMode }: CommandPal
   });
 
   const pages = useMemo(() => PAGES.filter((p) => matches(`${p.label} ${p.keywords}`, q)), [q]);
+  const quickViews = useMemo(() => QUICK_VIEWS.filter((v) => matches(`${v.label} ${v.keywords}`, q)), [q]);
   const docs = useMemo(
     () => (q ? DOC_SECTIONS.filter((s) => matches(s.title, q)).slice(0, 6) : []),
     [q],
@@ -149,8 +165,8 @@ export function CommandPalette({ open, onOpenChange, mode, setMode }: CommandPal
   const runs = runSearch.data?.items ?? [];
   const searching = searchEnabled && (scenarioSearch.isFetching || runSearch.isFetching);
   const nothing =
-    pages.length === 0 && actions.length === 0 && docs.length === 0 &&
-    scenarios.length === 0 && runs.length === 0 && !searching;
+    pages.length === 0 && quickViews.length === 0 && actions.length === 0 &&
+    docs.length === 0 && scenarios.length === 0 && runs.length === 0 && !searching;
 
   return (
     <Command.Dialog
@@ -180,6 +196,17 @@ export function CommandPalette({ open, onOpenChange, mode, setMode }: CommandPal
               <Command.Item key={p.to} value={`page:${p.to}`} onSelect={() => go(p.to)}>
                 <span className="qtp-cmdk-icon">{p.icon}</span>
                 <span className="qtp-cmdk-label">{p.label}</span>
+              </Command.Item>
+            ))}
+          </Command.Group>
+        )}
+
+        {quickViews.length > 0 && (
+          <Command.Group heading="Quick views">
+            {quickViews.map((v) => (
+              <Command.Item key={v.id} value={`view:${v.id}`} onSelect={() => go(v.to)}>
+                <span className="qtp-cmdk-icon">{v.icon}</span>
+                <span className="qtp-cmdk-label">{v.label}</span>
               </Command.Item>
             ))}
           </Command.Group>
