@@ -1,10 +1,33 @@
-import { Collapse, Space, Typography, Tag, Row, Col } from "antd";
+import { Collapse, Space, Typography, Tag } from "antd";
 import { CheckCircleFilled, CloseCircleFilled, WarningFilled } from "@ant-design/icons";
 import CodeSnippet from "./CodeSnippet";
 
 interface StepTreeProps {
   steps: any[];
   logs?: any[];
+}
+
+/** Classify a timeline entry so the trace reads correctly (these are auto-captured
+ *  network calls / browser actions / events — not authored steps). */
+function entryMeta(node: any): { label: string; color: string } {
+  if (node.isLog) {
+    const lvl = String(node.level || "info").toLowerCase();
+    const color = lvl === "error" ? "var(--qtp-status-fail)" : lvl === "warning" ? "var(--qtp-status-timeout)" : "var(--qtp-text-tertiary)";
+    return { label: lvl === "info" ? "Log" : lvl.toUpperCase(), color };
+  }
+  const t = node.timings || {};
+  if (t.is_network) return { label: "Network", color: "var(--qtp-status-queued)" };
+  if (t.is_event) {
+    switch (t.event_type) {
+      case "assertion": return { label: "Assertion", color: "var(--qtp-brand)" };
+      case "console": return { label: node.status === "failed" ? "Console error" : "Console", color: "var(--qtp-status-timeout)" };
+      case "navigation": return { label: "Navigation", color: "var(--qtp-text-secondary)" };
+      case "warning": return { label: "Warning", color: "var(--qtp-status-timeout)" };
+      default: return { label: "Event", color: "var(--qtp-text-secondary)" };
+    }
+  }
+  if (t.is_step_block) return { label: "Action", color: "var(--qtp-status-running)" };
+  return { label: "Step", color: "var(--qtp-text-secondary)" };
 }
 
 export default function StepTree({ steps, logs = [] }: StepTreeProps) {
@@ -55,10 +78,23 @@ export default function StepTree({ steps, logs = [] }: StepTreeProps) {
     (a, b) => (a.timings?.start_ms || 0) - (b.timings?.start_ms || 0)
   );
 
+  // Trace composition summary — makes it clear these are auto-captured, not authored steps.
+  const counts = { action: 0, network: 0, event: 0 };
+  steps.forEach((s) => {
+    if (s.timings?.is_network) counts.network++;
+    else if (s.timings?.is_event) counts.event++;
+    else counts.action++;
+  });
+  const summaryParts = [
+    counts.action ? `${counts.action} action${counts.action === 1 ? "" : "s"}` : null,
+    counts.network ? `${counts.network} network` : null,
+    counts.event ? `${counts.event} event${counts.event === 1 ? "" : "s"}` : null,
+  ].filter(Boolean);
+
   const renderStatusIcon = (status: string) => {
-    if (status === "passed") return <CheckCircleFilled style={{ color: "#52c41a" }} />;
-    if (status === "failed" || status === "error") return <CloseCircleFilled style={{ color: "#f5222d" }} />;
-    if (status === "timeout") return <WarningFilled style={{ color: "#faad14" }} />;
+    if (status === "passed") return <CheckCircleFilled style={{ color: "var(--qtp-status-pass)" }} />;
+    if (status === "failed" || status === "error") return <CloseCircleFilled style={{ color: "var(--qtp-status-fail)" }} />;
+    if (status === "timeout") return <WarningFilled style={{ color: "var(--qtp-status-timeout)" }} />;
     return <Tag color="default">{status}</Tag>;
   };
 
@@ -75,7 +111,7 @@ export default function StepTree({ steps, logs = [] }: StepTreeProps) {
     }
 
     return (
-      <div style={{ marginTop: 8, padding: 12, background: "#f5f5f5", borderRadius: 6, borderLeft: "4px solid #d9d9d9" }}>
+      <div style={{ marginTop: 8, padding: 12, background: "var(--qtp-subtle-bg)", borderRadius: 6, borderLeft: "4px solid var(--qtp-surface-border-strong)" }}>
         <Typography.Text type="secondary" style={{ fontSize: 12, display: "block", marginBottom: 4 }}>
           Assertion Failure Detail
         </Typography.Text>
@@ -86,14 +122,14 @@ export default function StepTree({ steps, logs = [] }: StepTreeProps) {
 
   const renderChildNode = (child: any, index: number) => {
     if (child.isLog) {
-      const color = child.level === "error" ? "#f5222d" : child.level === "warning" ? "#faad14" : "#8c8c8c";
+      const color = child.level === "error" ? "var(--qtp-status-fail)" : child.level === "warning" ? "var(--qtp-status-timeout)" : "var(--qtp-text-tertiary)";
       return (
-        <div key={`log-${index}`} style={{ padding: "4px 0", borderBottom: "1px dashed #f0f0f0" }}>
+        <div key={`log-${index}`} style={{ padding: "4px 0", borderBottom: "1px dashed var(--qtp-surface-border)" }}>
           <Space align="start">
-            <Typography.Text type="secondary" style={{ fontSize: 11, fontFamily: "monospace", width: 45, color }}>
+            <Typography.Text type="secondary" style={{ fontSize: 11, fontFamily: "var(--qtp-mono, monospace)", width: 45, color }}>
               {child.level.toUpperCase()}
             </Typography.Text>
-            <Typography.Text style={{ fontSize: 13, color: child.level === "error" ? "#f5222d" : "#595959", whiteSpace: "pre-wrap" }}>
+            <Typography.Text style={{ fontSize: 13, color: child.level === "error" ? "var(--qtp-status-fail)" : "var(--qtp-text-secondary)", whiteSpace: "pre-wrap" }}>
               {child.name}
             </Typography.Text>
           </Space>
@@ -106,11 +142,11 @@ export default function StepTree({ steps, logs = [] }: StepTreeProps) {
     const isFailed = child.status === "failed" || child.status === "error";
 
     return (
-      <div key={index} style={{ padding: "8px 0", borderBottom: "1px solid #f0f0f0" }}>
+      <div key={index} style={{ padding: "8px 0", borderBottom: "1px solid var(--qtp-surface-border)" }}>
         <Space align="start">
           <div style={{ marginTop: 2 }}>{renderStatusIcon(child.status)}</div>
           <div>
-            <Typography.Text strong={isAssertion} style={{ color: isFailed ? "#f5222d" : undefined }}>
+            <Typography.Text strong={isAssertion} style={{ color: isFailed ? "var(--qtp-status-fail)" : undefined }}>
               {isAssertion ? "Expected result: " : ""}
               {child.name}
             </Typography.Text>
@@ -119,9 +155,9 @@ export default function StepTree({ steps, logs = [] }: StepTreeProps) {
                 {child.duration_ms}ms
               </Typography.Text>
             )}
-            
+
             {isFailed && child.error && !isAssertion && (
-              <div style={{ marginTop: 4, color: "#f5222d", fontSize: 13 }}>{child.error}</div>
+              <div style={{ marginTop: 4, color: "var(--qtp-status-fail)", fontSize: 13 }}>{child.error}</div>
             )}
             {isFailed && isAssertion && renderAssertionDiff(details)}
           </div>
@@ -133,20 +169,26 @@ export default function StepTree({ steps, logs = [] }: StepTreeProps) {
   const items = allTopLevel.map((node, i) => {
     const isBlock = node.timings?.is_step_block;
     const isFailed = node.status === "failed" || node.status === "error";
+    const meta = entryMeta(node);
     const children = (isBlock ? childrenMap.get(node.timings?.step_id) || [] : []).sort(
       (a, b) => (a.timings?.start_ms || 0) - (b.timings?.start_ms || 0)
     );
-    
+
     // Parent header
     const header = (
       <Space>
-        {renderStatusIcon(node.status)}
-        <Typography.Text strong style={{ color: isFailed ? "#f5222d" : undefined }}>
-          {i + 1}. {node.name}
+        {!node.isLog && renderStatusIcon(node.status)}
+        <Tag bordered={false} style={{ color: meta.color, background: "var(--qtp-subtle-bg)", fontSize: 11, marginInlineEnd: 4 }}>
+          {meta.label}
+        </Tag>
+        <Typography.Text strong style={{ color: isFailed ? "var(--qtp-status-fail)" : undefined }}>
+          {node.name}
         </Typography.Text>
-        <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-          {node.duration_ms}ms
-        </Typography.Text>
+        {node.duration_ms > 0 && (
+          <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+            {node.duration_ms}ms
+          </Typography.Text>
+        )}
       </Space>
     );
 
@@ -158,8 +200,8 @@ export default function StepTree({ steps, logs = [] }: StepTreeProps) {
           <div style={{ paddingLeft: 24 }}>
             {children.map((c, idx) => renderChildNode(c, idx))}
             {isFailed && node.error && (
-              <div style={{ padding: "8px 0", color: "#f5222d", fontSize: 13 }}>
-                <Typography.Text strong style={{ color: "#f5222d" }}>Unhandled Error: </Typography.Text>
+              <div style={{ padding: "8px 0", color: "var(--qtp-status-fail)", fontSize: 13 }}>
+                <Typography.Text strong style={{ color: "var(--qtp-status-fail)" }}>Unhandled Error: </Typography.Text>
                 {node.error}
               </div>
             )}
@@ -179,10 +221,20 @@ export default function StepTree({ steps, logs = [] }: StepTreeProps) {
   });
 
   return (
-    <Collapse 
-      defaultActiveKey={items.filter(it => it.label.props.children[1].props.style?.color === "#f5222d").map(it => it.key)}
-      items={items} 
-      style={{ background: "#fff" }}
-    />
+    <div>
+      <Typography.Paragraph type="secondary" style={{ fontSize: 12.5, marginBottom: 10 }}>
+        Auto-captured execution trace{summaryParts.length ? ` — ${summaryParts.join(" · ")}` : ""}. Browser actions,
+        network calls, console messages, and assertions are recorded automatically; use{" "}
+        <Typography.Text code>ctx.step("…")</Typography.Text> to group them into named steps.
+      </Typography.Paragraph>
+      <Collapse
+        defaultActiveKey={items.filter((it: any) => {
+          const failed = allTopLevel[Number(it.key)]?.status;
+          return failed === "failed" || failed === "error";
+        }).map((it) => it.key)}
+        items={items}
+        style={{ background: "var(--qtp-surface-bg)" }}
+      />
+    </div>
   );
 }

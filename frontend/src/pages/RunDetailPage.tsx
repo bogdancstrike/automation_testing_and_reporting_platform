@@ -288,7 +288,7 @@ export default function RunDetailPage() {
           ),
         },
         {
-          key: "steps", label: `Step Tree (${run.steps.length})`,
+          key: "steps", label: `Trace (${run.steps.length})`,
           children: (
             <div style={{ marginTop: 12 }}>
               <StepTree steps={run.steps} logs={logs} />

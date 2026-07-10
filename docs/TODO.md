@@ -161,7 +161,8 @@ _Last updated: 2026-07-10._
 - [ ] `components/FilterBar.tsx` — active-filter chips + unified search (§6.2)
 - [ ] `components/ChartCard.tsx` + `Section.tsx` + `Callout.tsx` primitives
 
-## Phase 3 — Page-by-page ⬜ not started (detail pages still show `Typography.Title level={3}`)
+## Phase 3 — Page-by-page 🟡 in progress (detail pages still show `Typography.Title level={3}`)
+- [x] **Run "Step Tree" → "Trace"**: it was showing auto-captured instrumentation (network calls, monkey-patched browser actions, console/navigation/assertion events) as flat numbered "steps" — a single-method Playwright scenario read as "7 steps". Fixed `StepTree.tsx`: per-entry type badges (Network/Action/Console/Navigation/Assertion/Log), a trace-composition summary line, tokenized colors (was hardcoded `#fff`/`#f5222d`/`#52c41a` → broke dark mode), and renamed the tab to "Trace". Not a data bug — the trace is a feature (like Playwright's trace viewer); the UI just mislabeled it.
 - [ ] Detail pages → PageHeader + breadcrumb: ScenarioDetail, ScheduleDetail, TargetDetail, WorkerDetail, AuditEntity
 - [ ] `ExecutionFlow.tsx` — tokenize node/edge/canvas colors (currently hardcoded light hex → breaks dark mode)
 - [ ] Run detail AI-analysis / cleanup / trace callouts → token-driven `<Callout>` (hardcoded `#fff2f0`/`#91caff` break dark)
