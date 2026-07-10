@@ -220,6 +220,7 @@ Runs are asynchronous by default. The backend records the run immediately as `qu
 
 - Docker
 - Docker Compose
+- `make` (optional) — enables the [Makefile shortcuts](#makefile-shortcuts) (`make up`, `make down`, …)
 - `curl` and `jq` for API examples
 
 ### Start the stack
@@ -227,6 +228,8 @@ Runs are asynchronous by default. The backend records the run immediately as `qu
 ```bash
 docker compose up -d --build
 ```
+
+> **Fast start:** the repo ships a `Makefile`. With `make` installed, `make up` runs exactly the command above — see [Makefile shortcuts](#makefile-shortcuts).
 
 This launches a local QTP stack with:
 
@@ -249,13 +252,13 @@ docker compose ps
 ### Tail logs
 
 ```bash
-# Backend logs
-docker compose logs -f backend
+# API logs        (make logs-api)
+docker compose logs -f api
 
-# Worker logs
+# Worker logs     (make logs-worker)
 docker compose logs -f worker
 
-# Frontend logs
+# Frontend logs   (make logs-frontend)
 docker compose logs -f frontend
 ```
 
@@ -270,6 +273,26 @@ To remove local volumes as well:
 ```bash
 docker compose down -v
 ```
+
+### Makefile shortcuts
+
+The repository ships a self-documenting `Makefile` that wraps Docker Compose, the backend/worker/frontend dev servers, and common utilities — so you don't have to remember the long commands. The targets you'll reach for most:
+
+| Command | What it does |
+| --- | --- |
+| `make up` | Build images and start the whole stack (detached) |
+| `make down` | Stop and remove containers (Postgres/Keycloak data is kept) |
+| `make reset` | Stop and remove containers **and volumes** — wipes all DB data |
+| `make restart` | Restart all running services |
+| `make ps` | Show service status |
+| `make logs` | Follow logs from every service (`make logs-api` / `logs-worker` / `logs-frontend` for one) |
+| `make restart-api` | Rebuild-free restart of the API (also `make restart-worker`) |
+| `make init-db` | Create the schema and seed data |
+| `make db-shell` | Open a `psql` shell on Postgres |
+| `make discover` | Trigger scenario discovery against the running API |
+| `make open` | Open the web UI in your browser |
+
+Run `make` (or `make help`) for the complete target list — including the local-dev and test targets — and `make usage` for a guided walkthrough with service URLs, credentials, and copy-paste snippets. Every target maps to a real command, and `make -n <target>` prints that command without running it.
 
 ---
 
@@ -1314,7 +1337,7 @@ List endpoints typically support pagination, sorting, and filtering parameters s
 
 ## Local Development
 
-Docker Compose is the recommended path for local development. If you need to run services manually, use the following baseline commands and adapt paths/env vars to your repo.
+Docker Compose is the recommended path for local development. If you need to run services manually, use the following baseline commands and adapt paths/env vars to your repo. Each step also has a `Makefile` shortcut, shown beneath its commands.
 
 ### Backend
 
@@ -1327,12 +1350,16 @@ python scripts/init_db.py
 gunicorn -c gunicorn.conf.py wsgi:app
 ```
 
+> **Shortcut:** `make backend-setup` (creates the venv + installs deps), then `make backend-run`.
+
 ### Worker
 
 ```bash
 cd worker
 PYTHONPATH=../backend ../backend/.venv/bin/gunicorn -c gunicorn.conf.py wsgi:app
 ```
+
+> **Shortcut:** `make worker-run`.
 
 ### Frontend
 
@@ -1342,13 +1369,15 @@ npm install
 npm run dev
 ```
 
+> **Shortcut:** `make frontend-setup` (npm install), then `make frontend-dev`.
+
 ### Common local commands
 
 ```bash
-# Rebuild everything
+# Rebuild everything     (make up)
 docker compose up -d --build
 
-# Run discovery
+# Run discovery          (make discover)
 curl -sf -X POST http://localhost:5100/qtp/api/scenarios/discover \
   -H "Authorization: Bearer system-bearer-token" | jq
 
