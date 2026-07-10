@@ -12,6 +12,8 @@ import { qtp } from "../api/qtp";
 import { StatusTag, DefectTag, formatDurationMs } from "../components/tags";
 import { StatCard } from "../components/StatCard";
 import { PageHeader } from "../components/PageHeader";
+import { EmptyState } from "../components/EmptyState";
+import { CheckCircleFilled } from "@ant-design/icons";
 import { useMode } from "../theme/mode";
 import { chartThemeName, chartStatusColor } from "../theme/chartTheme";
 import { apiSortOrder, menuFilter, textFilter } from "../components/remoteTable";
@@ -157,12 +159,12 @@ export default function OverviewPage() {
       <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
         <Col xs={24} lg={16}>
           <Card title="Run execution trend" size="small">
-            {trend.length ? <ReactECharts option={trendOption} theme={echartTheme} style={{ height: 280 }} /> : <Empty description="No runs yet" />}
+            {trend.length ? <ReactECharts option={trendOption} theme={echartTheme} style={{ height: 280 }} /> : <EmptyState title="No runs yet" hint="Runs in the selected window will chart here." />}
           </Card>
         </Col>
         <Col xs={24} lg={8}>
           <Card title="Defect distribution" size="small">
-            {Object.keys(defectDist).length ? <ReactECharts option={pieOption} theme={echartTheme} style={{ height: 280 }} /> : <Empty description="No failures" />}
+            {Object.keys(defectDist).length ? <ReactECharts option={pieOption} theme={echartTheme} style={{ height: 280 }} /> : <EmptyState icon={<CheckCircleFilled style={{ color: "var(--qtp-status-pass)" }} />} title="No failures" hint="Nothing to triage in this window." />}
           </Card>
         </Col>
       </Row>
@@ -170,7 +172,7 @@ export default function OverviewPage() {
       <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
         <Col xs={24} lg={12}>
           <Card title="Runs by target" size="small">
-            {perTarget.length ? <ReactECharts option={targetBarOption} theme={echartTheme} style={{ height: 280 }} /> : <Empty description="No target runs" />}
+            {perTarget.length ? <ReactECharts option={targetBarOption} theme={echartTheme} style={{ height: 280 }} /> : <EmptyState title="No target runs" />}
           </Card>
         </Col>
         <Col xs={24} lg={12}>
@@ -200,7 +202,7 @@ export default function OverviewPage() {
                   },
                 },
               ]}
-              locale={{ emptyText: <Empty description="No target runs" /> }}
+              locale={{ emptyText: <EmptyState compact title="No target runs" /> }}
             />
           </Card>
         </Col>
@@ -236,7 +238,7 @@ export default function OverviewPage() {
                 { title: "Defect", dataIndex: "defect_type", sorter: true, sortOrder: prefixedSortOrder(failureTableParams, "recent_failed", "defect_type"), ...menuFilter("recent_failed_defect_type", failureTableParams, ["product_bug", "automation_bug", "system_issue", "to_investigate", "no_defect"].map((value) => ({ text: value.replace(/_/g, " "), value }))), render: (d) => <DefectTag defect={d} /> },
                 { title: "Time", dataIndex: "finished_at", sorter: true, sortOrder: prefixedSortOrder(failureTableParams, "recent_failed", "finished_at"), ...textFilter("recent_failed_finished_at", failureTableParams, "YYYY-MM-DD"), render: (v) => formatLocalTime(v) }
               ]}
-              locale={{ emptyText: <Empty description="No failures 🎉" /> }}
+              locale={{ emptyText: <EmptyState compact icon={<CheckCircleFilled style={{ color: "var(--qtp-status-pass)" }} />} title="No failures 🎉" /> }}
             />
           </Card>
         </Col>

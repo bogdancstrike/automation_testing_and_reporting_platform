@@ -133,15 +133,10 @@ body {
   margin-top: 1px;
 }
 .qtp-logo-mark {
-  display: inline-grid;
-  place-items: center;
+  display: block;
   width: 34px;
   height: 34px;
-  border-radius: 9px;
-  background: linear-gradient(135deg, #6366f1, #4f46e5);
-  box-shadow: 0 6px 18px rgba(79, 70, 229, 0.45);
-  font-weight: 800;
-  font-size: 17px;
+  object-fit: contain;
   flex-shrink: 0;
 }
 .qtp-sider .ant-menu {
@@ -252,6 +247,32 @@ body {
 .qtp-appbar-crumbs { font-size: 13px; font-weight: 500; }
 .qtp-appbar-crumbs .ant-breadcrumb-link a { color: var(--qtp-text-secondary); }
 .qtp-appbar-crumbs .ant-breadcrumb li:last-child .ant-breadcrumb-link { color: var(--qtp-text); font-weight: 600; }
+
+/* ── Empty states ─────────────────────────────────────────────────────── */
+.qtp-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 40px 16px;
+  gap: 6px;
+}
+.qtp-empty--compact { padding: 20px 12px; }
+.qtp-empty-icon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  margin-bottom: 4px;
+  border-radius: 12px;
+  font-size: 22px;
+  color: var(--qtp-text-tertiary);
+  background: var(--qtp-subtle-bg);
+}
+.qtp-empty-title { font-size: 13.5px; font-weight: 550; color: var(--qtp-text-secondary); }
+.qtp-empty-hint { font-size: 12.5px; color: var(--qtp-text-tertiary); max-width: 320px; }
+.qtp-empty-action { margin-top: 8px; }
 
 /* ── Surfaces / cards ─────────────────────────────────────────────────── */
 .qtp-page-heading {
@@ -409,8 +430,18 @@ body {
   padding: 14px;
 }
 .qtp-docs-brand {
+  display: flex;
+  align-items: center;
+  gap: 9px;
   font-weight: 750;
   margin-bottom: 16px;
+}
+.qtp-docs-logo {
+  display: block;
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  flex-shrink: 0;
 }
 .qtp-docs-nav-title,
 .qtp-docs-toc-title {

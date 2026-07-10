@@ -209,7 +209,10 @@ export default function DocsPage() {
       <Row gutter={48} align="top" wrap={false}>
         <Col xs={0} lg={5} className="qtp-docs-nav-col" style={{ position: 'sticky', top: '24px', height: 'calc(100vh - 48px)', overflowY: 'auto' }}>
           <aside className="qtp-docs-side-nav" aria-label="Documentation navigation">
-            <div className="qtp-docs-brand" style={{ fontSize: '1.2rem', fontWeight: 600, marginBottom: '24px', color: token.colorText }}>QTP Developer Guide</div>
+            <div className="qtp-docs-brand" style={{ fontSize: '1.2rem', fontWeight: 600, marginBottom: '24px', color: token.colorText }}>
+              <img className="qtp-docs-logo" src="/qtp-logo.svg" alt="" />
+              <span>QTP Developer Guide</span>
+            </div>
             {navGroups.map((group) => (
               <nav key={group.title} style={{ marginBottom: '24px' }}>
                 <div className="qtp-docs-nav-title" style={{ fontSize: '0.85rem', textTransform: 'uppercase', color: token.colorTextSecondary, fontWeight: 600, marginBottom: '8px' }}>{group.title}</div>

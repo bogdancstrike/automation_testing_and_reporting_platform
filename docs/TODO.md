@@ -121,3 +121,63 @@ _Last updated: 2026-07-07._
 - [x] `/schedules` can create schedules with multiple scenarios; `/schedules/{id}` lists all included scenarios and recent runs for the shared schedule
 - [x] Add the requested qtp_self scenario suites in `backend/scenarios/automation/qtp_self/`: 10 each for `CliTest`, `PlaywrightTest`, `SeleniumTest`, and `PythonTest`
 - [x] Update the worker image/runtime dependencies for Playwright and Selenium workloads
+
+---
+
+# UI/UX Enterprise Migration Progress
+
+Tracks execution of **docs/migrate_UI.md** (Linear/Datadog/Jira-grade overhaul).
+Baseline screenshots: `docs/screenshots/` · after-state: `docs/screenshots/after/`.
+Decisions (§12): indigo accent · neutral near-black dark · rounded-rect status
+badges · Inter + JetBrains Mono · cmdk · themed static charts (Tier A) · fumadocs
+Option A. Verified by building on Vite dev (5173) + Playwright screenshots.
+
+_Last updated: 2026-07-10._
+
+## Phase 0 — Foundation (design tokens) ✅ done
+- [x] `theme/tokens.ts` — single source of truth (indigo brand, near-black dark, unified status palette, shadow/radius/type scale)
+- [x] `theme/antdTheme.ts` — AntD ConfigProvider from tokens (13px base, 34px controls, flat elevation)
+- [x] `theme/cssVars.ts` + `applyCssVars` — CSS custom properties on `<html>` from tokens
+- [x] `theme/chartTheme.ts` — ECharts themes (`qtp-light`/`qtp-dark`) from tokens; one green/red across charts + badges
+- [x] `theme/mode.ts` — `ModeContext`/`useMode` so charts/badges react to theme
+- [x] Ship the typeface: `@fontsource-variable/inter` + `@fontsource/jetbrains-mono` loaded in `main.tsx` (was declared but never loaded)
+- [x] `index.css` — token-synced `:root` vars (light+dark), indigo logo/accent, visible focus rings, `tabular-nums`, lighter shadows
+- [x] Wire into `QtpApp.tsx` (buildAntdTheme + applyCssVars + ModeContext)
+
+## Phase 1 — App shell & navigation ✅ done
+- [x] `components/PageHeader.tsx` — breadcrumb + single title + subtitle + actions slot
+- [x] App-bar shows route-derived breadcrumb (group › page); removed the bold duplicate title/meta block
+- [x] Killed duplicate titles on: Overview, Runs, Scenarios, Schedules, Targets, Workers, Audit, Run detail
+- [x] Run detail leads with `Runs / <entity>` breadcrumb + inline status badge + action slot (no back-button clutter)
+- [x] Scenarios: removed the two oversized "Matching tests / Current page" cards (count moved into the header subtitle)
+
+## Phase 2 — Data-display primitives 🟡 in progress
+- [x] Themed ECharts applied to Overview (trend/defect/target charts, light+dark)
+- [x] `components/EmptyState.tsx` + global `renderEmpty` — replaces AntD gray-printer illustrations; Overview empties themed
+- [x] **Debounced auto-search** (~350ms/keystroke) on all column search filters (`remoteTable.textFilter/textFilterLocal`) and the Audit search box + column filters — no Search-button/Enter needed
+- [ ] `components/StatusBadge.tsx` — one rounded-rect + dot badge; migrate `StatusTag`/`DefectTag` + ad-hoc AntD `Tag` usages (Cleanup, assertions ✓/✗, Audit actions)
+- [ ] `components/DataTable.tsx` — single-line rows (ellipsis+tooltip), hover-revealed row actions, density toggle, skeleton rows
+- [ ] `components/MetricTile.tsx` — Overview KPI hierarchy (primary strip + sparkline + delta vs previous window)
+- [ ] `components/FilterBar.tsx` — active-filter chips + unified search (§6.2)
+- [ ] `components/ChartCard.tsx` + `Section.tsx` + `Callout.tsx` primitives
+
+## Phase 3 — Page-by-page ⬜ not started (detail pages still show `Typography.Title level={3}`)
+- [ ] Detail pages → PageHeader + breadcrumb: ScenarioDetail, ScheduleDetail, TargetDetail, WorkerDetail, AuditEntity
+- [ ] `ExecutionFlow.tsx` — tokenize node/edge/canvas colors (currently hardcoded light hex → breaks dark mode)
+- [ ] Run detail AI-analysis / cleanup / trace callouts → token-driven `<Callout>` (hardcoded `#fff2f0`/`#91caff` break dark)
+- [ ] Token-ize remaining hardcoded hex across `pages/`+`components/` (was 177 occurrences; target 0)
+
+## Phase 4 — High-friction surfaces (deep dives) ⬜ not started
+- [ ] §2.3 Comments → `<Discussion>` (markdown, @mentions, edit/delete, resolve state, optimistic insert; tokenize avatar palette)
+- [ ] §2.4 Request Builder → shared `<ResponseViewer>` (highlighted body + JSON tree + raw/pretty + copy, no 5k truncation); implement Headers tab; `<ParamsTable>` with enable toggles; method colors off the status ramp; Environments; Copy as cURL
+- [ ] §2.5 Docs → fumadocs Option A (MDX + search), tokenized; retire hand-rolled `.qtp-docs-*`
+- [ ] §2.6 Audit → event-stream layout + field-level `ValueDiff` (drop raw-JSON `#fafafa` expand); correlation grouping; one navigation
+
+## Phase 5 — Power & polish ⬜ not started
+- [ ] `CommandPalette.tsx` on `cmdk` (⌘K) + global keyboard shortcuts
+- [ ] Skeletons, toasts standardization, a11y pass (focus/aria/contrast), reduced-motion
+
+## Notes / follow-ups
+- Auto-search delay is 350ms; tune if it feels slow/fast.
+- `PAGE_META` in `QtpApp.tsx` now unused (breadcrumb derives from NAV) — remove in a cleanup pass.
+- Non-nav routes (`/profile`) fall back to the "Overview" breadcrumb in the app bar — add a route→crumb map.

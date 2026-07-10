@@ -14,6 +14,7 @@ import { qtp } from "./api/qtp";
 import { buildAntdTheme } from "./theme/antdTheme";
 import { applyCssVars } from "./theme/cssVars";
 import { ModeContext } from "./theme/mode";
+import { EmptyState } from "./components/EmptyState";
 import OverviewPage from "./pages/OverviewPage";
 import CatalogPage from "./pages/CatalogPage";
 import ScenarioDetailPage from "./pages/ScenarioDetailPage";
@@ -143,9 +144,9 @@ function AppShell({ mode, setMode }: { mode: ThemeMode; setMode: (mode: ThemeMod
         collapsedWidth={isMobile ? 0 : 80}
       >
         <div className="qtp-logo">
-          <span className="qtp-logo-mark">Q</span>
+          <img className="qtp-logo-mark" src="/qtp-logo.svg" alt="Quality Testing Platform" />
           {(isMobile || !collapsed) && (
-            <span>
+            <span aria-hidden="true">
               <strong>Quality</strong>
               <small>Testing Platform</small>
             </span>
@@ -256,7 +257,7 @@ export default function QtpApp() {
   const appTheme = useMemo(() => buildAntdTheme(mode), [mode]);
 
   return (
-    <ConfigProvider theme={appTheme}>
+    <ConfigProvider theme={appTheme} renderEmpty={() => <EmptyState compact />}>
       <ModeContext.Provider value={mode}>
         <AntApp>
           <AppShell mode={mode} setMode={setMode} />

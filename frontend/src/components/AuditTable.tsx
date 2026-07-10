@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import dayjs from 'dayjs'
 import {
@@ -18,24 +18,34 @@ function fmt(value?: string | null) {
   return value ? dayjs(value).format('YYYY-MM-DD HH:mm:ss') : '-'
 }
 
-function textFilterDropdown(placeholder: string) {
-  return ({ setSelectedKeys, selectedKeys, confirm, clearFilters }: FilterDropdownProps) => (
+function AuditFilterInput({ placeholder, setSelectedKeys, selectedKeys, confirm, clearFilters }: FilterDropdownProps & { placeholder: string }) {
+  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  const handle = (value: string) => {
+    setSelectedKeys(value ? [value] : [])
+    if (timer.current) clearTimeout(timer.current)
+    timer.current = setTimeout(() => confirm({ closeDropdown: false }), 350)
+  }
+  return (
     <div style={{ padding: 8 }} onKeyDown={(e) => e.stopPropagation()}>
       <Input
         autoFocus
         placeholder={placeholder}
         value={selectedKeys[0] as string}
-        onChange={(e) => setSelectedKeys(e.target.value ? [e.target.value] : [])}
+        onChange={(e) => handle(e.target.value)}
         onPressEnter={() => confirm()}
         style={{ width: 200, marginBottom: 8, display: 'block' }}
         allowClear
       />
       <Space>
         <Button type="primary" size="small" onClick={() => confirm()} icon={<SearchOutlined />}>Search</Button>
-        <Button size="small" onClick={() => { clearFilters?.(); confirm() }}>Reset</Button>
+        <Button size="small" onClick={() => { if (timer.current) clearTimeout(timer.current); clearFilters?.(); confirm() }}>Reset</Button>
       </Space>
     </div>
   )
+}
+
+function textFilterDropdown(placeholder: string) {
+  return (props: FilterDropdownProps) => <AuditFilterInput placeholder={placeholder} {...props} />
 }
 
 const ACTION_FILTERS = [
@@ -153,6 +163,7 @@ function getAuditDescription(record: AuditEventDto, nav: ReturnType<typeof useNa
 export function AuditTable({ baseFilters, onRowClick }: { baseFilters?: Partial<AuditFilterState>; onRowClick?: (record: AuditEventDto) => void }) {
   const nav = useNavigate()
   const [params, setParams] = useState<AuditFilterState>({ sort_by: 'created_at', sort_dir: 'desc', page: 1, page_size: 20, ...baseFilters })
+  const searchTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const audit = useQuery({
     queryKey: ['audit', params],
     queryFn: () => qtp.listAudit({ ...params }),
@@ -275,10 +286,15 @@ export function AuditTable({ baseFilters, onRowClick }: { baseFilters?: Partial<
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <Flex justify="space-between">
         <Space>
-          <Input.Search
+          <Input
             placeholder="Search action or actor..."
             allowClear
-            onSearch={(val) => setParams(p => ({ ...p, q: val, page: 1 }))}
+            prefix={<SearchOutlined style={{ color: 'var(--qtp-text-tertiary)' }} />}
+            onChange={(e) => {
+              const val = e.target.value
+              if (searchTimer.current) clearTimeout(searchTimer.current)
+              searchTimer.current = setTimeout(() => setParams(p => ({ ...p, q: val || undefined, page: 1 })), 350)
+            }}
             style={{ width: 250 }}
           />
         </Space>
