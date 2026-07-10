@@ -1,9 +1,102 @@
-# QTP — Quality Testing Platform
+# ==============================================================================
+# >>> USAGE GUIDE
+#  QTP — Quality Testing Platform · Makefile
 #
-# Convenience wrapper around the real commands (docker compose, gunicorn, npm,
-# pytest). Run `make` or `make help` for the target list.
+#  A thin, self-documenting wrapper over the real toolchain (docker compose,
+#  gunicorn, npm, pytest). Every target maps to a command you could run by
+#  hand — `make -n <target>` prints that command without executing it.
 #
-# Override any variable on the CLI, e.g.  make up COMPOSE="docker-compose"
+#    make            list all targets (same as `make help`)
+#    make usage      reprint this guide
+#
+#  ----------------------------------------------------------------------------
+#  QUICK START  (Docker — recommended)
+#  ----------------------------------------------------------------------------
+#    make up         build images + start the whole stack (detached)
+#    make ps         check service status
+#    make open       open the web UI (http://localhost:5173)
+#    make logs       follow logs from all services (Ctrl-C to stop)
+#    make down       stop & remove containers (Postgres/Keycloak data is kept)
+#
+#  First boot pulls images and runs DB init; give it a minute. The `init`
+#  service creates the schema before `api` and `worker` start.
+#
+#  ----------------------------------------------------------------------------
+#  SERVICE URLS & CREDENTIALS  (defaults)
+#  ----------------------------------------------------------------------------
+#    Web UI (frontend) ... http://localhost:5173     app login: admin / admin
+#    API ................. http://localhost:5100/qtp/api
+#    Keycloak ............ http://localhost:8080      admin / admin
+#    Kafka UI ............ http://localhost:8081
+#    Jaeger (traces) ..... http://localhost:16686
+#    Postgres ............ localhost:5432   (user qtp / pass qtp / db qtp)
+#    API system bearer ... system-bearer-token
+#
+#  ----------------------------------------------------------------------------
+#  COMMON WORKFLOWS
+#  ----------------------------------------------------------------------------
+#  Rebuild after changing backend/worker code or requirements.txt:
+#    make up                       rebuilds changed images and recreates them
+#  Rebuild/replace a single service:
+#    docker compose up -d --build api
+#  Restart one service without rebuilding:
+#    make restart-api   |   make restart-worker
+#  Watch one service:
+#    make logs-api   |   make logs-worker   |   make logs-frontend
+#  Start fresh — DESTROYS all DB data, then rebuild:
+#    make reset && make up
+#  Re-run scenario discovery against the running API:
+#    make discover
+#  Get inside a container / the database:
+#    make sh-api                   bash shell in the API container
+#    make db-shell                 psql into Postgres (qtp / qtp)
+#  Scale the worker pool (default 3 replicas):
+#    docker compose up -d --scale worker=5
+#
+#  ----------------------------------------------------------------------------
+#  LOCAL DEV  (run app processes on the host; keep infra in Docker)
+#  ----------------------------------------------------------------------------
+#  Needs Python 3.12 and Node 20. Infra (Postgres / Kafka / Keycloak) still runs
+#  in Docker. Typical loop across three terminals:
+#    make up                       once — bring the stack up (infra + all)
+#    make backend-setup            once — create venv + install QF wheel & deps
+#    make backend-run              terminal 1 — API (gunicorn) on :5100
+#    make worker-run               terminal 2 — Kafka worker
+#    make frontend-setup           once — npm install
+#    make frontend-dev             terminal 3 — Vite dev server (HMR) on :5173
+#
+#  ----------------------------------------------------------------------------
+#  TESTS & CHECKS
+#  ----------------------------------------------------------------------------
+#    make test                     backend pytest (after `make backend-setup`)
+#    make test-unit                unit tests only
+#    make test-integration         integration tests only
+#    make frontend-typecheck       tsc --noEmit
+#
+#  ----------------------------------------------------------------------------
+#  RAW SNIPPETS  (handy things the targets don't wrap)
+#  ----------------------------------------------------------------------------
+#  Trigger a scenario run and poll it to completion (CI-style gate):
+#    RUN_ID=$(curl -fsS -X POST \
+#      http://localhost:5100/qtp/api/scenarios/<scenario-key>/run \
+#      -H "Authorization: Bearer system-bearer-token" | jq -r .id)
+#    while :; do \
+#      S=$(curl -fsS http://localhost:5100/qtp/api/runs/$RUN_ID \
+#            -H "Authorization: Bearer system-bearer-token" | jq -r .status); \
+#      echo "$S"; case "$S" in passed|failed|error|timeout|canceled) break;; esac; \
+#      sleep 3; done
+#  Filter logs to errors across the whole stack:
+#    docker compose logs -f | grep -Ei "error|traceback|exception"
+#
+#  ----------------------------------------------------------------------------
+#  CONFIG  (override on the CLI or via the environment)
+#  ----------------------------------------------------------------------------
+#    make up        COMPOSE="docker-compose"        use compose v1
+#    make discover  API_BASE=http://host:5100/qtp BEARER=xyz
+#    make backend-setup PYTHON=python3.12
+#    Variables: COMPOSE PYTHON BACKEND_VENV QF_WHEEL API_BASE BEARER FRONTEND_URL
+# <<< USAGE GUIDE
+# ==============================================================================
 
 # ── Config ───────────────────────────────────────────────────────────────
 COMPOSE      ?= docker compose
@@ -17,14 +110,23 @@ FRONTEND_URL ?= http://localhost:5173
 
 .DEFAULT_GOAL := help
 
-# ── Help ─────────────────────────────────────────────────────────────────
-.PHONY: help
-help: ## Show this help
+# ── Help & usage ──────────────────────────────────────────────────────────
+.PHONY: help usage guide
+help: ## List every target (this screen)
 	@awk 'BEGIN {FS = ":.*##"} \
 		/^##@/ {printf "\n\033[1m%s\033[0m\n", substr($$0, 5); next} \
 		/^[a-zA-Z0-9_.-]+:.*##/ {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}' \
 		$(MAKEFILE_LIST)
 	@echo ""
+	@echo "  Tip: 'make usage' prints a full guide — workflows, URLs & snippets."
+	@echo ""
+
+usage: ## Print the full usage guide (workflows, URLs, snippets)
+	@sed -n '/^# >>> USAGE GUIDE/,/^# <<< USAGE GUIDE/p' $(firstword $(MAKEFILE_LIST)) \
+		| grep -v 'USAGE GUIDE' \
+		| sed 's/^# \{0,1\}//'
+
+guide: usage ## Alias for usage
 
 ##@ Docker stack
 .PHONY: up start stop down reset restart build ps
