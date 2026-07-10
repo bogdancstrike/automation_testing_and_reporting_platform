@@ -97,7 +97,7 @@ _Last updated: 2026-07-07._
 - [ ] Frontend component/E2E tests
 
 ## Docs
-- [x] `architecture.md`, `implementation_plan.md` updated (Testkube+ReportPortal framing, targets, cleanup hook, docs tab)
+- [x] `architecture.md`, `implementation_plan.md` updated (execution + reporting unification, targets, cleanup hook, docs tab)
 - [x] `docs/TODO.md` (this file)
 - [x] Root `README.md` with quickstart (`docker compose up`, URLs, admin/admin)
 

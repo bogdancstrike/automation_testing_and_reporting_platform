@@ -68,37 +68,54 @@ const navGroups = [
 
 const apiEndpoints = [
   ["GET", "/api/me", "Current developer identity, roles, and permissions."],
+  ["GET", "/api/projects", "List projects (workspaces) visible to the caller."],
   ["GET", "/api/targets", "List registered applications under test."],
   ["POST", "/api/targets", "Register a target for a service or environment."],
   ["GET", "/api/targets/{id}", "Read a single target and its configuration."],
   ["PATCH", "/api/targets/{id}", "Update a target's base URL, headers, or tags."],
+  ["DELETE", "/api/targets/{id}", "Delete a target."],
   ["GET", "/api/targets/{id}/tests", "List scenarios that belong to a target."],
+  ["GET", "/api/targets/{id}/runs", "List runs for a target."],
   ["GET", "/api/targets/{id}/stats", "Pass/fail ratios and trends for a target."],
+  ["POST", "/api/targets/{id}/reset-stats", "Reset a target's cached statistics."],
   ["POST", "/api/targets/{id}/run-all", "Queue every scenario for a target (add ?sync=true to block)."],
-  ["GET", "/api/tests", "List scenario definitions (the UI route is /scenarios)."],
-  ["POST", "/api/tests/discover", "Import code-backed scenarios from the repository."],
-  ["GET", "/api/tests/{id}", "Read a scenario, its revisions, and recent runs."],
-  ["POST", "/api/tests/{id}/run", "Queue a run immediately for one scenario."],
-  ["PUT", "/api/tests/{id}/tags", "Replace the tag set on a scenario."],
+  ["GET", "/api/scenarios", "List scenario definitions (the UI route is /scenarios)."],
+  ["POST", "/api/scenarios/discover", "Import code-backed scenarios from the repository."],
+  ["GET", "/api/scenarios/{id}", "Read a scenario, its revisions, and recent runs."],
+  ["DELETE", "/api/scenarios/{id}", "Delete a scenario."],
+  ["POST", "/api/scenarios/{id}/run", "Queue a run immediately for one scenario."],
+  ["PUT", "/api/scenarios/{id}/tags", "Replace the tag set on a scenario."],
+  ["GET", "/api/scenarios/{id}/comments", "List triage comments on a scenario."],
+  ["POST", "/api/scenarios/{id}/comments", "Add a comment (with optional tags) to a scenario."],
   ["POST", "/api/request-tests/send", "Execute a Request Builder config ad hoc (no save)."],
+  ["POST", "/api/request-tests/generate-assertions", "AI-suggest assertions from a captured response."],
   ["POST", "/api/request-tests", "Persist a Request Builder scenario."],
-  ["PATCH", "/api/request-tests/{id}", "Update a saved Request Builder scenario."],
+  ["PATCH", "/api/request-tests/{id}", "Update a saved Request Builder scenario (new revision)."],
+  ["DELETE", "/api/request-tests/{id}", "Delete a saved Request Builder scenario."],
   ["GET", "/api/runs", "Search execution history — filtered, sorted, paginated on the server."],
+  ["DELETE", "/api/runs", "Delete all runs (destructive)."],
   ["GET", "/api/runs/{id}", "Read steps, assertions, response, timings, and failure metadata."],
+  ["DELETE", "/api/runs/{id}", "Permanently delete a specific run."],
   ["GET", "/api/runs/{id}/logs", "Stream the structured log lines for a run."],
+  ["GET", "/api/runs/{id}/comments", "List triage comments on a run."],
+  ["POST", "/api/runs/{id}/comments", "Add a comment (with optional tags) to a run."],
   ["POST", "/api/runs/{id}/cancel", "Request cancellation of a queued or running execution."],
-  ["POST", "/api/runs/{id}/re-run", "Queue a fresh run from the same revision."],
+  ["POST", "/api/runs/{id}/restart", "Restart this run in place (re-queue the same run)."],
+  ["POST", "/api/runs/{id}/re-run", "Queue a fresh run from the same scenario revision."],
   ["PUT", "/api/runs/{id}/defect", "Classify a failure (product_bug, automation_bug, …)."],
   ["POST", "/api/runs/re-run-queued", "Re-dispatch every stuck queued run."],
   ["POST", "/api/runs/restart-failed", "Re-queue every failed/errored run."],
-  ["DELETE", "/api/runs/{id}", "Permanently delete a specific run."],
   ["GET", "/api/schedules", "List schedules and their next fire times."],
   ["POST", "/api/schedules", "Create a schedule for one or more scenarios."],
   ["GET", "/api/schedules/{id}", "Read a schedule, its scenarios, and recent aggregate runs."],
+  ["PATCH", "/api/schedules/{id}", "Update a schedule (cadence, scenarios, enabled)."],
+  ["DELETE", "/api/schedules/{id}", "Delete a schedule."],
   ["GET", "/api/dashboards/overview", "Operational metrics over a time window."],
   ["GET", "/api/dashboards/failures", "Failure signatures, defect split, recent failed runs."],
   ["GET", "/api/workers", "Live worker fleet — capabilities, current run, heartbeat."],
   ["GET", "/api/tags", "All tags in use, for building filters."],
+  ["GET", "/api/audit", "Global audit event ledger (who did what, when)."],
+  ["GET", "/api/audit/{type}/{id}", "Audit trail for one entity (run, scenario, schedule, …)."],
 ];
 
 const scenarioTypes = [
@@ -209,16 +226,16 @@ export default function DocsPage() {
       <Row gutter={48} align="top" wrap={false}>
         <Col xs={0} lg={5} className="qtp-docs-nav-col" style={{ position: 'sticky', top: '24px', height: 'calc(100vh - 48px)', overflowY: 'auto' }}>
           <aside className="qtp-docs-side-nav" aria-label="Documentation navigation">
-            <div className="qtp-docs-brand" style={{ fontSize: '1.2rem', fontWeight: 600, marginBottom: '24px', color: token.colorText }}>
+            <div className="qtp-docs-brand" style={{ fontSize: '0.9rem', fontWeight: 650, marginBottom: '14px', color: token.colorText }}>
               <img className="qtp-docs-logo" src="/qtp-logo.svg" alt="" />
               <span>QTP Developer Guide</span>
             </div>
             {navGroups.map((group) => (
-              <nav key={group.title} style={{ marginBottom: '24px' }}>
-                <div className="qtp-docs-nav-title" style={{ fontSize: '0.85rem', textTransform: 'uppercase', color: token.colorTextSecondary, fontWeight: 600, marginBottom: '8px' }}>{group.title}</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <nav key={group.title} style={{ marginBottom: '14px' }}>
+                <div className="qtp-docs-nav-title" style={{ fontSize: '0.68rem', textTransform: 'uppercase', letterSpacing: '0.06em', color: token.colorTextTertiary, fontWeight: 700, marginBottom: '4px' }}>{group.title}</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
                   {group.items.map((id) => (
-                    <a key={id} href={`#${id}`} style={{ color: token.colorText, textDecoration: 'none', fontSize: '0.95rem' }}>{slugTitle(id)}</a>
+                    <a key={id} href={`#${id}`} style={{ color: token.colorTextSecondary, textDecoration: 'none', fontSize: '0.8rem', lineHeight: 1.35 }}>{slugTitle(id)}</a>
                   ))}
                 </div>
               </nav>
@@ -268,11 +285,11 @@ export default function DocsPage() {
               assertions, request/response payloads, logs, timings, and a network waterfall.
             </Paragraph>
             <Paragraph>
-              Conceptually, QTP fuses two tools that are usually separate:
+              Conceptually, QTP unifies two capabilities that usually live in separate tools:
             </Paragraph>
             <ul>
-              <li><strong>An execution control plane</strong> (Testkube-style): it owns scenario definitions, schedules, a durable run queue, and horizontally-scaled workers that do the actual running.</li>
-              <li><strong>A reporting system</strong> (ReportPortal-style): a centralized history of every run with dashboards, failure grouping by signature, and defect-type triage.</li>
+              <li><strong>An execution control plane</strong>: it owns scenario definitions, schedules, a durable run queue, and horizontally-scaled workers that do the actual running.</li>
+              <li><strong>A reporting system</strong>: a centralized history of every run with dashboards, failure grouping by signature, and defect-type triage.</li>
             </ul>
             <Paragraph>
               The result: one place to define what "working" means, one place to run it, and one place to see why it
@@ -319,8 +336,8 @@ export default function DocsPage() {
             <H3>How your code flows through the system</H3>
             <ol className="qtp-docs-steps" style={{ paddingLeft: '20px', margin: '20px 0' }}>
               <li style={{ marginBottom: '10px' }}>You push a scenario file to your repo.</li>
-              <li style={{ marginBottom: '10px' }}>A CI step (or a click in the UI) calls <code>/api/tests/discover</code>. QTP imports the file, reads its <code>metadata</code>, and registers or revises the scenario.</li>
-              <li style={{ marginBottom: '10px' }}>A schedule fires, a CI job calls <code>/api/tests/&#123;id&#125;/run</code>, or you click <strong>Run</strong>. The backend writes a <code>queued</code> run and publishes its id to Kafka.</li>
+              <li style={{ marginBottom: '10px' }}>A CI step (or a click in the UI) calls <code>/api/scenarios/discover</code>. QTP imports the file, reads its <code>metadata</code>, and registers or revises the scenario.</li>
+              <li style={{ marginBottom: '10px' }}>A schedule fires, a CI job calls <code>/api/scenarios/&#123;id&#125;/run</code>, or you click <strong>Run</strong>. The backend writes a <code>queued</code> run and publishes its id to Kafka.</li>
               <li style={{ marginBottom: '10px' }}>A worker with the right capability claims the run, resolves the Target's base URL, and executes your <code>test(ctx)</code>.</li>
               <li style={{ marginBottom: '10px' }}>Every request, assertion, log line, and timing is streamed back. The run ends in a terminal state and becomes permanent, queryable evidence.</li>
             </ol>
@@ -432,7 +449,7 @@ class FetchUser(HttpTest):
               </li>
               <li style={{ marginBottom: '16px' }}>
                 <strong>Discover it.</strong> Open <strong>Scenarios</strong> and click <strong>Discover code scenarios</strong> (or
-                call <code>POST /api/tests/discover</code> from CI). QTP imports the file and registers{' '}
+                call <code>POST /api/scenarios/discover</code> from CI). QTP imports the file and registers{' '}
                 <code>example.fetch_user</code>.
               </li>
               <li style={{ marginBottom: '16px' }}>
@@ -988,7 +1005,7 @@ jobs:
           QTP_TOKEN: \${{ secrets.QTP_TOKEN }}
           SCENARIO_ID: "checkout.e2e"
         run: |
-          RUN_ID=$(curl -sf -X POST "$QTP_URL/api/tests/$SCENARIO_ID/run" \\
+          RUN_ID=$(curl -sf -X POST "$QTP_URL/api/scenarios/$SCENARIO_ID/run" \\
             -H "Authorization: Bearer $QTP_TOKEN" -H "Content-Type: application/json" \\
             -d '{"tags": ["github-actions"]}' | jq -r '.id')
           echo "run: $RUN_ID"
@@ -1011,7 +1028,7 @@ jobs:
     SCENARIO_ID: "checkout.e2e"
   script:
     - |
-      RUN_ID=$(curl -sf -X POST "$QTP_URL/api/tests/$SCENARIO_ID/run" \\
+      RUN_ID=$(curl -sf -X POST "$QTP_URL/api/scenarios/$SCENARIO_ID/run" \\
         -H "Authorization: Bearer $QTP_TOKEN" -H "Content-Type: application/json" \\
         -d '{"tags": ["gitlab-ci"]}' | jq -r '.id')
       STATUS="queued"
@@ -1022,7 +1039,7 @@ jobs:
       done
       [ "$STATUS" = "passed" ] || exit 1`}</Code>
             <Callout title="Discover on push" type="info">
-              Add a step that calls <code>POST /api/tests/discover</code> right after your app deploys, so new or changed
+              Add a step that calls <code>POST /api/scenarios/discover</code> right after your app deploys, so new or changed
               scenarios are registered before the gate runs them. To run a whole target's suite synchronously, use{' '}
               <code>POST /api/targets/&#123;id&#125;/run-all?sync=true</code> and inspect the returned per-scenario results.
             </Callout>

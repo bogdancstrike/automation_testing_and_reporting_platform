@@ -17,8 +17,8 @@ QTP, short for **Quality Testing Platform**, centralizes automated verification 
 
 At its core, QTP combines:
 
-1. **A Testkube-style execution control plane** — scenario definitions, revisions, schedules, targets, a durable run queue, and horizontally scalable workers.
-2. **A ReportPortal-style reporting and triage layer** — persistent run history, dashboards, step timelines, assertion evidence, failure signatures, and defect classification.
+1. **An execution control plane** — scenario definitions, revisions, schedules, targets, a durable Kafka-backed run queue, and horizontally scalable workers.
+2. **A reporting and triage layer** — persistent run history, dashboards, step timelines, assertion evidence, deterministic failure signatures, and defect classification.
 3. **A developer-native Python authoring framework** — scenarios are ordinary Python classes with first-class helpers for HTTP, CLI, browser, custom Python logic, variables, secrets, logging, cleanup, and evidence capture.
 4. **A no-code Request Builder** — Postman-like HTTP workflow creation directly in the UI, saved as first-class QTP scenarios.
 
@@ -142,7 +142,7 @@ QTP is a modulith-style platform with independently scalable entrypoints:
 - **Kafka queue** — run dispatch topic used to decouple user/API requests from worker execution.
 - **Workers** — horizontally scalable execution processes that consume run IDs, resolve targets, execute scenarios, and stream evidence to PostgreSQL.
 - **PostgreSQL** — system of record for targets, scenarios, revisions, schedules, runs, steps, assertions, logs, and diagnostics.
-- **Redis** — optional state/locking/cache layer used by the runtime where configured.
+- **Redis** — required by the QF ETL worker runtime that backs the Kafka consumer (coordination/state); also available for caching where configured.
 - **Keycloak** — OIDC identity provider for user authentication and role-based access.
 - **React frontend** — developer UI for authoring, running, inspecting, scheduling, and triaging scenarios.
 
@@ -186,12 +186,12 @@ sequenceDiagram
     participant W as Worker
     participant T as Target App
 
-    Dev->>API: POST /api/tests/discover
+    Dev->>API: POST /api/scenarios/discover
     API->>API: Import Python modules
     API->>API: Read TestMetadata
     API->>DB: Create/update Scenario + Revision
 
-    Dev->>API: POST /api/tests/{id}/run
+    Dev->>API: POST /api/scenarios/{id}/run
     API->>DB: Create Run(status=queued)
     API->>K: Publish run_id
 
@@ -289,7 +289,7 @@ docker compose down -v
 For local development and CI examples, the stack supports a system bearer token:
 
 ```bash
-curl -s http://localhost:5100/qtp/api/tests \
+curl -s http://localhost:5100/qtp/api/scenarios \
   -H "Authorization: Bearer system-bearer-token" | jq
 ```
 
@@ -386,7 +386,7 @@ Discovery rules:
 Run discovery from the UI or API:
 
 ```bash
-curl -sf -X POST http://localhost:5100/qtp/api/tests/discover \
+curl -sf -X POST http://localhost:5100/qtp/api/scenarios/discover \
   -H "Authorization: Bearer system-bearer-token" | jq
 ```
 
@@ -1090,14 +1090,14 @@ Your CI pipeline should not execute the tests directly. It should:
 ### Discover on push or deploy
 
 ```bash
-curl -sf -X POST "$QTP_URL/api/tests/discover" \
+curl -sf -X POST "$QTP_URL/api/scenarios/discover" \
   -H "Authorization: Bearer $QTP_TOKEN"
 ```
 
 ### Trigger one scenario and poll
 
 ```bash
-RUN_ID=$(curl -sf -X POST "$QTP_URL/api/tests/$SCENARIO_ID/run" \
+RUN_ID=$(curl -sf -X POST "$QTP_URL/api/scenarios/$SCENARIO_ID/run" \
   -H "Authorization: Bearer $QTP_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"tags": ["ci"]}' | jq -r '.id')
@@ -1139,10 +1139,10 @@ jobs:
         run: |
           sudo apt-get update && sudo apt-get install -y jq
 
-          curl -sf -X POST "$QTP_URL/api/tests/discover" \
+          curl -sf -X POST "$QTP_URL/api/scenarios/discover" \
             -H "Authorization: Bearer $QTP_TOKEN"
 
-          RUN_ID=$(curl -sf -X POST "$QTP_URL/api/tests/$SCENARIO_ID/run" \
+          RUN_ID=$(curl -sf -X POST "$QTP_URL/api/scenarios/$SCENARIO_ID/run" \
             -H "Authorization: Bearer $QTP_TOKEN" \
             -H "Content-Type: application/json" \
             -d '{"tags": ["github-actions"]}' | jq -r '.id')
@@ -1172,10 +1172,10 @@ qtp_e2e:
     SCENARIO_ID: checkout.e2e
   script:
     - |
-      curl -sf -X POST "$QTP_URL/api/tests/discover" \
+      curl -sf -X POST "$QTP_URL/api/scenarios/discover" \
         -H "Authorization: Bearer $QTP_TOKEN"
 
-      RUN_ID=$(curl -sf -X POST "$QTP_URL/api/tests/$SCENARIO_ID/run" \
+      RUN_ID=$(curl -sf -X POST "$QTP_URL/api/scenarios/$SCENARIO_ID/run" \
         -H "Authorization: Bearer $QTP_TOKEN" \
         -H "Content-Type: application/json" \
         -d '{"tags": ["gitlab-ci"]}' | jq -r '.id')
@@ -1213,6 +1213,7 @@ List endpoints typically support pagination, sorting, and filtering parameters s
 | Method | Endpoint | Use |
 | --- | --- | --- |
 | `GET` | `/api/me` | Current developer identity, roles, and permissions. |
+| `GET` | `/api/projects` | List projects (workspaces) visible to the caller. |
 
 ### Targets
 
@@ -1222,41 +1223,53 @@ List endpoints typically support pagination, sorting, and filtering parameters s
 | `POST` | `/api/targets` | Register a target for a service or environment. |
 | `GET` | `/api/targets/{id}` | Read one target and its configuration. |
 | `PATCH` | `/api/targets/{id}` | Update a target base URL, headers, or tags. |
+| `DELETE` | `/api/targets/{id}` | Delete a target. |
 | `GET` | `/api/targets/{id}/tests` | List scenarios that belong to a target. |
+| `GET` | `/api/targets/{id}/runs` | List runs for a target. |
 | `GET` | `/api/targets/{id}/stats` | Pass/fail ratios and trends for a target. |
+| `POST` | `/api/targets/{id}/reset-stats` | Reset a target's cached statistics. |
 | `POST` | `/api/targets/{id}/run-all` | Queue every scenario for a target. Add `?sync=true` to block. |
 
 ### Scenarios
 
 | Method | Endpoint | Use |
 | --- | --- | --- |
-| `GET` | `/api/tests` | List scenario definitions. UI route: `/scenarios`. |
-| `POST` | `/api/tests/discover` | Import code-backed scenarios from the repository. |
-| `GET` | `/api/tests/{id}` | Read a scenario, its revisions, and recent runs. |
-| `POST` | `/api/tests/{id}/run` | Queue one scenario immediately. |
-| `PUT` | `/api/tests/{id}/tags` | Replace the tag set on a scenario. |
+| `GET` | `/api/scenarios` | List scenario definitions. UI route: `/scenarios`. |
+| `POST` | `/api/scenarios/discover` | Import code-backed scenarios from the repository. |
+| `GET` | `/api/scenarios/{id}` | Read a scenario, its revisions, and recent runs. |
+| `DELETE` | `/api/scenarios/{id}` | Delete a scenario. |
+| `POST` | `/api/scenarios/{id}/run` | Queue one scenario immediately. |
+| `PUT` | `/api/scenarios/{id}/tags` | Replace the tag set on a scenario. |
+| `GET` | `/api/scenarios/{id}/comments` | List triage comments on a scenario. |
+| `POST` | `/api/scenarios/{id}/comments` | Add a comment (with optional tags) to a scenario. |
 
 ### Request Builder
 
 | Method | Endpoint | Use |
 | --- | --- | --- |
 | `POST` | `/api/request-tests/send` | Execute a Request Builder config ad hoc without saving. |
+| `POST` | `/api/request-tests/generate-assertions` | AI-suggest assertions from a captured response. |
 | `POST` | `/api/request-tests` | Persist a Request Builder scenario. |
-| `PATCH` | `/api/request-tests/{id}` | Update a saved Request Builder scenario. |
+| `PATCH` | `/api/request-tests/{id}` | Update a saved Request Builder scenario (new revision). |
+| `DELETE` | `/api/request-tests/{id}` | Delete a saved Request Builder scenario. |
 
 ### Runs
 
 | Method | Endpoint | Use |
 | --- | --- | --- |
 | `GET` | `/api/runs` | Search execution history with server-side filters, sorting, and pagination. |
+| `DELETE` | `/api/runs` | Delete every run (destructive). |
 | `GET` | `/api/runs/{id}` | Read steps, assertions, response, timings, and failure metadata. |
+| `DELETE` | `/api/runs/{id}` | Permanently delete one run. |
 | `GET` | `/api/runs/{id}/logs` | Stream structured log lines for a run. |
+| `GET` | `/api/runs/{id}/comments` | List triage comments on a run. |
+| `POST` | `/api/runs/{id}/comments` | Add a comment (with optional tags) to a run. |
 | `POST` | `/api/runs/{id}/cancel` | Request cancellation of a queued or running execution. |
-| `POST` | `/api/runs/{id}/re-run` | Queue a fresh run from the same revision. |
+| `POST` | `/api/runs/{id}/restart` | Restart this run in place (re-queue the same run). |
+| `POST` | `/api/runs/{id}/re-run` | Queue a fresh run from the same scenario revision. |
 | `PUT` | `/api/runs/{id}/defect` | Classify a failure. |
 | `POST` | `/api/runs/re-run-queued` | Re-dispatch every stuck queued run. |
 | `POST` | `/api/runs/restart-failed` | Re-queue every failed or errored run. |
-| `DELETE` | `/api/runs/{id}` | Permanently delete one run. |
 
 ### Schedules
 
@@ -1265,8 +1278,10 @@ List endpoints typically support pagination, sorting, and filtering parameters s
 | `GET` | `/api/schedules` | List schedules and next fire times. |
 | `POST` | `/api/schedules` | Create a schedule for one or more scenarios. |
 | `GET` | `/api/schedules/{id}` | Read a schedule, its scenarios, and recent aggregate runs. |
+| `PATCH` | `/api/schedules/{id}` | Update a schedule (cadence, scenarios, enabled). |
+| `DELETE` | `/api/schedules/{id}` | Delete a schedule. |
 
-### Dashboards and platform state
+### Dashboards, audit, and platform state
 
 | Method | Endpoint | Use |
 | --- | --- | --- |
@@ -1274,6 +1289,10 @@ List endpoints typically support pagination, sorting, and filtering parameters s
 | `GET` | `/api/dashboards/failures` | Failure signatures, defect split, and recent failed runs. |
 | `GET` | `/api/workers` | Live worker fleet, capabilities, current run, and heartbeat. |
 | `GET` | `/api/tags` | All tags in use, for filters and schedules. |
+| `GET` | `/api/audit` | Global audit event ledger (who did what, when). |
+| `GET` | `/api/audit/{type}/{id}` | Audit trail for one entity (run, scenario, schedule, …). |
+
+> Health/readiness probes live outside `/api`: `GET /qtp/health`, `GET /qtp/liveness`, `GET /qtp/readiness`.
 
 ---
 
@@ -1327,11 +1346,11 @@ npm run dev
 docker compose up -d --build
 
 # Run discovery
-curl -sf -X POST http://localhost:5100/qtp/api/tests/discover \
+curl -sf -X POST http://localhost:5100/qtp/api/scenarios/discover \
   -H "Authorization: Bearer system-bearer-token" | jq
 
 # List scenarios
-curl -sf http://localhost:5100/qtp/api/tests \
+curl -sf http://localhost:5100/qtp/api/scenarios \
   -H "Authorization: Bearer system-bearer-token" | jq
 
 # List runs

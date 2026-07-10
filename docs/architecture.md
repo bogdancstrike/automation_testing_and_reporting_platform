@@ -4,17 +4,18 @@ _Last updated: 2026-07-07._
 
 Quality Testing Platform, short name QTP, is an automation testing platform and
 test framework for running, scheduling, observing, and analyzing automated tests
-against **any target application**. It combines two ideas that today live in two
-separate tools:
+against **any target application**. It brings execution and reporting together in
+one platform, so teams run and correlate a single system instead of stitching an
+orchestrator to a separate results store:
 
-- **Testkube-style execution** — a central control plane that owns test
-  definitions, schedules, a durable execution queue, and workers that run tests
-  (HTTP, browser, CLI/containerized tools, and custom Python) on demand or on a
-  recurrence.
-- **ReportPortal-style reporting** — a centralized store of every run with
-  history, dashboards, analytics, failure grouping, and human/assisted defect
-  triage, so results from many tests and many target apps are analyzed in one
-  place.
+- **Execution** — a central control plane that owns test definitions, revisions,
+  schedules, targets, a durable execution queue, and horizontally scalable workers
+  that run tests (HTTP, browser, CLI/containerized tools, and custom Python) on
+  demand or on a recurrence.
+- **Reporting & triage** — a centralized store of every run with history,
+  dashboards, analytics, deterministic failure grouping, execution traces, and
+  human/assisted defect triage, so results from many tests and many target apps
+  are analyzed in one place.
 
 QTP supports two ways of authoring tests, both of which point at an
 application-under-test by URL:
@@ -81,31 +82,34 @@ itself; every test names the app it exercises by URL, resolved from a target or
 environment (code tests) or typed in the request builder (UI tests). This is
 what makes QTP a general testing platform rather than a suite for one app.
 
-## 2. Positioning: Testkube And ReportPortal
+## 2. What QTP Unifies
 
-QTP deliberately merges the two capabilities into one modulith so operators do
-not run and correlate two systems.
+QTP folds execution and reporting into a single modulith, so operators run and
+correlate one system instead of stitching together an orchestrator and a separate
+results store. In one platform it provides:
 
-| Capability | Testkube analog | ReportPortal analog | QTP |
-| --- | --- | --- | --- |
-| Test orchestration and scheduling | Yes | No | Yes |
-| Pluggable executors (HTTP, browser, CLI/container tools) | Yes | No | Yes, via adapters incl. a CLI/container executor |
-| On-demand + scheduled + triggered runs | Yes | No | Yes |
-| Centralized result store with history | Partial | Yes | Yes |
-| Dashboards, widgets, analytics | Partial | Yes | Yes |
-| Failure grouping / auto-analysis | No | Yes (ML) | Yes (deterministic failure signatures + assisted triage) |
-| Defect-type triage taxonomy | No | Yes | Yes |
-| Ingest results from tests QTP did not run | No | Yes (agents/API) | Yes, via result ingestion API |
-| Postman-like request builder with body assertions | No | No | Yes |
+- test **orchestration and scheduling** — on-demand, scheduled (interval / cron /
+  once), and triggered runs;
+- **pluggable executors** — HTTP, browser (Playwright / Selenium), a first-class
+  CLI/container executor for arbitrary tools (newman, k6, cypress, your own
+  binary), and free-form Python;
+- a **centralized result store** with full history, dashboards, and analytics;
+- **deterministic failure grouping** by signature plus assisted root-cause
+  analysis — no ML cluster or external search engine required;
+- a **defect-type triage taxonomy** (product bug, automation bug, system issue,
+  to investigate, no defect);
+- a **Postman-like request builder** with assertions on the response body and
+  metadata, not just the status code;
+- native **execution telemetry** — waterfall timings, network capture, N+1
+  duplicate-call detection, console/page errors, and distributed trace linking.
 
-The two design implications that follow from this positioning:
+Two design principles follow:
 
-- Execution must be **extensible to arbitrary tools** (Testkube runs newman,
-  k6, cypress, etc. as containers). QTP includes a first-class CLI/container
-  executor so it does not have to reimplement every framework.
-- Reporting must be **fed from more than QTP's own workers** (ReportPortal's core
-  value is centralization). QTP therefore accepts imported results in addition
-  to results it produces itself.
+- Execution is **extensible to arbitrary tools** through the CLI/container
+  executor, so QTP never has to reimplement every test framework.
+- The result model is **general** — every run, whoever produced it, is a
+  first-class record; the schema reserves space to ingest externally-produced
+  results (see §14, planned) alongside runs QTP executes itself.
 
 ## 3. Runtime Stack
 
@@ -236,7 +240,7 @@ src/
       http.py
       playwright.py
       selenium.py
-      cli.py              # CLI/container executor (Testkube-style)
+      cli.py              # CLI/container executor (arbitrary tools)
       python_script.py
   catalog/
     models.py             # targets, scenarios, revisions, suites
@@ -427,7 +431,7 @@ Specialized bases narrow the integration surface:
 - `BasePlaywrightTest` owns browser, context, page lifecycle, screenshots,
   videos, traces, and network logs.
 - `BaseSeleniumTest` owns WebDriver lifecycle and optional remote grid config.
-- `BaseCliTest` (the Testkube-style executor) runs an arbitrary command or
+- `BaseCliTest` (the CLI/container executor) runs an arbitrary command or
   container image against the target, captures stdout/stderr and exit code, and
   parses a results file (JUnit XML or JSON) into steps and assertions. This lets
   QTP run existing tools such as newman, k6, or cypress without reimplementing
@@ -635,10 +639,15 @@ Recommended recurrence fields:
 
 ## 13. Suites
 
+> **Status: planned / design.** Suites are not yet implemented — there is no
+> `suite_runs` table or `/api/suites` endpoint in the current build. Schedules
+> already cover the common "run this group on a cadence" need (a schedule can
+> target multiple scenarios); the section below is the intended design.
+
 A suite is an ordered group of tests with optional parallelism and fail-fast
 behavior, producing a `suite_run` that aggregates the child `test_runs`. Suites
-are the QTP analog of a ReportPortal "launch": a single reportable unit that
-groups many results. Suite behavior:
+are a single reportable unit that groups many child results into one launch.
+Suite behavior:
 
 - ordered execution by default, with an optional parallelism degree;
 - `fail_fast` to stop remaining items after the first failure;
@@ -649,7 +658,12 @@ groups many results. Suite behavior:
 
 ## 14. Result Ingestion
 
-To match ReportPortal's centralization, QTP accepts results produced outside its
+> **Status: planned / design.** External result ingestion is not yet
+> implemented — there is no `/api/imports` endpoint or `ingestion/parsers.py` in
+> the current build. Today every run is produced by a QTP worker. The model below
+> is the intended design for accepting externally-produced results.
+
+To keep every result in one place, QTP accepts results produced outside its
 own workers — for example a CI pipeline that already ran pytest, JUnit, or a k6
 job. Ingested results become first-class runs so they appear in history,
 dashboards, failure grouping, and triage alongside QTP-executed runs.
@@ -760,39 +774,41 @@ possibly `test_runs` by month on `created_at` or `started_at`.
 
 ## 16. API Surface
 
-QTP API paths use `/api` below the QF namespace. The namespace is `qtp`.
+API paths sit under the QF namespace `qtp`, so the full base is `/qtp/api`
+(e.g. `http://localhost:5100/qtp/api/runs`). Routes are declared as QF **dynamic
+endpoints** in `backend/maps/endpoint.json`, which binds each `api_url` +
+`request_method` to a handler in `src/api/*`. There are 52 endpoints today.
 
-Core endpoints:
+**Authentication is delegated to Keycloak (OIDC)** — the SPA obtains and refreshes
+tokens directly from Keycloak (`realm=qtp`, client `qtp-spa`, audience `qtp-api`);
+the API only *verifies* the bearer token. There is no `/api/auth/login` endpoint.
+
+Core endpoints (grouped; `{id}`/`{type}` are path params):
 
 | Endpoint | Purpose |
 | --- | --- |
-| `GET /health`, `GET /liveness`, `GET /readiness` | Service health. |
-| `POST /api/auth/login`, `POST /api/auth/refresh` | Obtain and refresh JWTs. |
-| `GET /api/me` | Current user, roles, project access. |
-| `GET /api/projects` | Project list. |
-| `GET /api/targets`, `POST /api/targets`, `PATCH /api/targets/{id}` | Manage apps-under-test. |
-| `GET /api/tests` | Search and filter test definitions. |
-| `POST /api/tests/discover` | Import code-based tests from configured modules. |
-| `GET /api/tests/{id}` | Test detail, revisions, latest status. |
-| `POST /api/tests/{id}/run` | Start an immediate run. |
-| `POST /api/request-tests/send` | Send an unsaved on-demand request. |
-| `POST /api/request-tests` | Save a request as a managed test. |
-| `PATCH /api/request-tests/{id}` | Create a new revision of a request test. |
-| `GET /api/suites`, `POST /api/suites`, `POST /api/suites/{id}/run` | Manage and run suites. |
-| `GET /api/runs` | Search runs by project, test, target, status, trigger, date. |
-| `GET` / `DELETE` | `/api/runs/{id}` | Read run metadata, or permanently delete the run. |
-| `DELETE`| `/api/runs` | Permanently delete all runs across all targets. |
-| `GET`  | `/api/runs/{id}/logs` | Paginated structured logs. |
-| `POST /api/runs/{id}/cancel` | Cancel queued or running run. |
-| `PUT /api/runs/{id}/defect` | Set/confirm the defect type for a failed run. |
-| `POST /api/imports` | Ingest externally-produced results (JUnit/JSON). |
-| `GET /api/schedules`, `POST /api/schedules`, `PATCH /api/schedules/{id}`, `DELETE /api/schedules/{id}` | Manage recurrence. |
-| `GET /api/dashboards/overview` | KPI cards and chart aggregates. |
-| `GET /api/dashboards/failures` | Failure and defect analytics. |
-| `GET /api/workers` | Worker status and capabilities. |
-| `GET /api/audit` | Audit explorer. |
+| `GET /qtp/health`, `/qtp/liveness`, `/qtp/readiness` | Service health / probes. |
+| `GET /api/me`, `GET /api/projects` | Current identity + roles; project list. |
+| `GET/POST /api/targets`, `GET/PATCH/DELETE /api/targets/{id}` | Manage apps-under-test. |
+| `GET /api/targets/{id}/tests`, `/runs`, `/stats`; `POST /api/targets/{id}/reset-stats`, `/run-all` | Target scenarios, runs, analytics, and bulk run. |
+| `GET /api/scenarios`, `POST /api/scenarios/discover` | Search definitions; import code-based scenarios. |
+| `GET/DELETE /api/scenarios/{id}`, `POST /api/scenarios/{id}/run`, `PUT /api/scenarios/{id}/tags` | Scenario detail, delete, run, tag. |
+| `GET/POST /api/scenarios/{id}/comments` | Scenario triage comments. |
+| `POST /api/request-tests/send`, `/generate-assertions` | Ad-hoc Request Builder send; AI-suggest assertions. |
+| `POST /api/request-tests`, `PATCH/DELETE /api/request-tests/{id}` | Persist / revise / delete a UI request scenario. |
+| `GET /api/runs`, `DELETE /api/runs` | Search history; delete all runs. |
+| `GET/DELETE /api/runs/{id}`, `GET /api/runs/{id}/logs`, `GET/POST /api/runs/{id}/comments` | Run evidence, logs, comments. |
+| `POST /api/runs/{id}/cancel`, `/restart`, `/re-run`; `PUT /api/runs/{id}/defect` | Cancel, restart-in-place, re-run from revision, triage. |
+| `POST /api/runs/re-run-queued`, `/restart-failed` | Bulk re-dispatch of stuck / failed runs. |
+| `GET/POST /api/schedules`, `GET/PATCH/DELETE /api/schedules/{id}` | Manage recurrence (interval / cron / once). |
+| `GET /api/dashboards/overview`, `/failures` | KPI aggregates; failure & defect analytics. |
+| `GET /api/workers`, `GET /api/tags` | Worker fleet; tag catalogue. |
+| `GET /api/audit`, `GET /api/audit/{type}/{id}` | Global event ledger; per-entity audit trail. |
 
-Handlers validate payloads with Pydantic schemas before calling services.
+> **Suites** (§13) and **external result ingestion** (§14) are design concepts;
+> they are not yet exposed as REST endpoints — there is no `/api/suites` or
+> `/api/imports` in `endpoint.json` today.
+
 Responses are serialized through explicit serializer functions so the API does
 not leak ORM internals.
 
@@ -891,11 +907,11 @@ navigable guide — not a link to an external wiki — covering:
   with a full copy-pasteable example and where the file lives
   (`tests/automations/...`).
 - **Register it**: how discovery imports configured modules, the idempotent
-  create/revision behavior, and how to trigger `POST /api/tests/discover` from
+  create/revision behavior, and how to trigger `POST /api/scenarios/discover` from
   the UI.
 - **Create a request test from the UI**: the request builder, target/URL,
   assertions on the response body/headers/timing, save, and edit.
-- **Run it**: on demand (`Run now` / `POST /api/tests/{id}/run`) and on a
+- **Run it**: on demand (`Run now` / `POST /api/scenarios/{id}/run`) and on a
   recurrence (schedules: interval/cron), with the exact API payloads.
 - **The assertion catalogue**: every source and operator, with JSON examples.
 - **Extend the platform**: adding a new adapter/executor and a new dashboard
@@ -966,7 +982,7 @@ expensive dashboard cards.
 ## 19. Failure Classification And Defect Triage
 
 QTP separates the mechanical **failure category** (what broke) from the
-human-meaningful **defect type** (why it matters), mirroring ReportPortal.
+human-meaningful **defect type** (why it matters).
 
 Each failed run produces a normalized failure record with a category:
 
@@ -1007,8 +1023,8 @@ between runs.
 
 When a failed run matches an existing failure signature that a human previously
 triaged, QTP suggests that defect type on the new run (`defect_triage.py`) and
-optionally auto-applies it under a project policy. This is the deterministic
-analog of ReportPortal's auto-analyzer: no ML or ElasticSearch required, driven
+optionally auto-applies it under a project policy. This is a deterministic
+auto-analyzer: no ML or search cluster required, driven
 by the signature join key. Users confirm or override the suggestion in run
 detail, and the confirmed type updates the signature's "last known defect type."
 
