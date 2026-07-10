@@ -5,6 +5,7 @@ import {
   DashboardOutlined, ExperimentOutlined, SendOutlined, PlayCircleOutlined,
   ClockCircleOutlined, AimOutlined, ClusterOutlined, BookOutlined,
   UserOutlined, LogoutOutlined, MoonOutlined, SunOutlined, MenuOutlined,
+  SearchOutlined,
 } from "@ant-design/icons";
 import { Routes, Route, useNavigate, useLocation, Navigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -32,6 +33,7 @@ import ProfilePage from "./pages/ProfilePage";
 import AuditExplorerPage from "./pages/AuditExplorerPage";
 import AuditEntityPage from "./pages/AuditEntityPage";
 import { AuditOutlined } from "@ant-design/icons";
+import { CommandPalette, isMacPlatform } from "./components/CommandPalette";
 
 const { Header, Sider, Content } = Layout;
 
@@ -103,6 +105,7 @@ function storedTheme(): ThemeMode {
 function AppShell({ mode, setMode }: { mode: ThemeMode; setMode: (mode: ThemeMode) => void }) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const { token } = theme.useToken();
@@ -183,6 +186,16 @@ function AppShell({ mode, setMode }: { mode: ThemeMode; setMode: (mode: ThemeMod
             />
           </div>
           <Space size={10}>
+            <button
+              type="button"
+              className="qtp-omni-trigger"
+              onClick={() => setPaletteOpen(true)}
+              aria-label="Open command palette"
+            >
+              <SearchOutlined />
+              <span className="qtp-omni-trigger-label">Search</span>
+              <kbd className="qtp-omni-kbd">{isMacPlatform ? "⌘" : "Ctrl"} K</kbd>
+            </button>
             <Tooltip title={darkMode ? "Switch to light mode" : "Switch to dark mode"}>
               <Button
                 aria-label={darkMode ? "Switch to light mode" : "Switch to dark mode"}
@@ -234,6 +247,7 @@ function AppShell({ mode, setMode }: { mode: ThemeMode; setMode: (mode: ThemeMod
           </Routes>
         </Content>
       </Layout>
+      <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} mode={mode} setMode={setMode} />
     </Layout>
   );
 }

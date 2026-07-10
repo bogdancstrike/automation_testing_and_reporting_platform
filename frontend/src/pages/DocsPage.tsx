@@ -31,7 +31,9 @@ import CodeSnippet from "../components/CodeSnippet";
 
 const { Paragraph, Text } = Typography;
 
-const sections = [
+/** Documentation anchors, also consumed by the command palette (Ctrl/⌘K) so
+ *  "search docs" stays in sync with the page's own section list. */
+export const sections = [
   { id: "overview", title: "Overview" },
   { id: "scope-use-cases", title: "Scope & Use Cases" },
   { id: "architecture", title: "Architecture & Integration" },
