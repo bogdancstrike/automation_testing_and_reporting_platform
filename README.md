@@ -1,5 +1,7 @@
 <div align="center">
-  <h1>🎯 Quality Testing Platform (QTP)</h1>
+  <img src="frontend/public/qtp-logo.svg" alt="QTP logo" width="220" />
+
+  <h1>Quality Testing Platform (QTP)</h1>
   <p><b>A developer-first automation testing control plane and Python authoring framework for running, scheduling, observing, and analyzing tests against any target application.</b></p>
 
   ![Python](https://img.shields.io/badge/Python-3.12+-blue.svg?logo=python)
