@@ -123,6 +123,7 @@ body {
   font-size: 15px;
   border-bottom: 1px solid rgba(148, 163, 184, 0.10);
   margin-bottom: 6px;
+  background: transparent;
 }
 .qtp-logo strong { font-weight: 700; letter-spacing: -0.01em; }
 .qtp-logo small {
@@ -138,6 +139,7 @@ body {
   height: 34px;
   object-fit: contain;
   flex-shrink: 0;
+  background: transparent;
 }
 .qtp-sider .ant-menu {
   background: transparent;
@@ -442,6 +444,7 @@ body {
   height: 20px;
   object-fit: contain;
   flex-shrink: 0;
+  background: transparent;
 }
 .qtp-docs-nav-title,
 .qtp-docs-toc-title {
