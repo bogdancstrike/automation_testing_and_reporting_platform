@@ -13,7 +13,7 @@ import {
 import { keycloak } from "../keycloak";
 import { qtp } from "../api/qtp";
 import { StatusTag } from "./tags";
-import { sections as DOC_SECTIONS } from "../pages/DocsPage";
+import { DOC_INDEX } from "../pages/DocsPage";
 import type { Mode } from "../theme/tokens";
 
 // Open the palette from anywhere (e.g. the header search button) without
@@ -117,7 +117,8 @@ export function CommandPalette({ open, onOpenChange, mode, setMode }: CommandPal
   const searchEnabled = open && debounced.length >= 2;
   const scenarioSearch = useQuery({
     queryKey: ["palette-scenarios", debounced],
-    queryFn: () => qtp.testsPage({ name: debounced, page_size: 6, sort: "name", order: "asc" }),
+    // `q` matches name, key, owner, and target — broader than a name-only filter.
+    queryFn: () => qtp.testsPage({ q: debounced, page_size: 6, sort: "name", order: "asc" }),
     enabled: searchEnabled,
     staleTime: 15_000,
   });
@@ -130,8 +131,9 @@ export function CommandPalette({ open, onOpenChange, mode, setMode }: CommandPal
 
   const pages = useMemo(() => PAGES.filter((p) => matches(`${p.label} ${p.keywords}`, q)), [q]);
   const quickViews = useMemo(() => QUICK_VIEWS.filter((v) => matches(`${v.label} ${v.keywords}`, q)), [q]);
+  // Search doc content (title + curated keywords + snippet), not just titles.
   const docs = useMemo(
-    () => (q ? DOC_SECTIONS.filter((s) => matches(s.title, q)).slice(0, 6) : []),
+    () => (q ? DOC_INDEX.filter((s) => matches(`${s.title} ${s.keywords} ${s.snippet}`, q)).slice(0, 6) : []),
     [q],
   );
 
@@ -262,7 +264,10 @@ export function CommandPalette({ open, onOpenChange, mode, setMode }: CommandPal
                 onSelect={() => go(`/docs#${s.id}`)}
               >
                 <span className="qtp-cmdk-icon"><FileTextOutlined /></span>
-                <span className="qtp-cmdk-label">{s.title}</span>
+                <span className="qtp-cmdk-text">
+                  <span className="qtp-cmdk-label">{s.title}</span>
+                  <span className="qtp-cmdk-snippet">{s.snippet}</span>
+                </span>
               </Command.Item>
             ))}
           </Command.Group>

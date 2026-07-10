@@ -31,34 +31,42 @@ import CodeSnippet from "../components/CodeSnippet";
 
 const { Paragraph, Text } = Typography;
 
-/** Documentation anchors, also consumed by the command palette (Ctrl/⌘K) so
- *  "search docs" stays in sync with the page's own section list. */
-export const sections = [
-  { id: "overview", title: "Overview" },
-  { id: "scope-use-cases", title: "Scope & Use Cases" },
-  { id: "architecture", title: "Architecture & Integration" },
-  { id: "mental-model", title: "Core Concepts" },
-  { id: "lifecycle", title: "Scenario Lifecycle" },
-  { id: "quickstart", title: "Developer Quickstart" },
-  { id: "project-layout", title: "Repository Layout & Discovery" },
-  { id: "targets", title: "Targets & Environments" },
-  { id: "authoring-http", title: "Authoring: HTTP APIs" },
-  { id: "authoring-python", title: "Authoring: Python Logic" },
-  { id: "authoring-browser", title: "Authoring: Browser Tests" },
-  { id: "authoring-cli", title: "Authoring: CLI Tools" },
-  { id: "assertions", title: "Assertions Reference" },
-  { id: "variables-secrets", title: "Variables, Templating & Secrets" },
-  { id: "steps-evidence", title: "Steps, Logging & Evidence" },
-  { id: "request-builder", title: "Request Builder" },
-  { id: "scheduling", title: "Scheduling" },
-  { id: "execution", title: "Execution & Results" },
-  { id: "defect-triage", title: "Defect Triage" },
-  { id: "ci", title: "CI/CD Integration" },
-  { id: "api", title: "API Reference" },
-  { id: "patterns", title: "Patterns & Best Practices" },
-  { id: "extend", title: "Extending QTP" },
-  { id: "troubleshooting", title: "Troubleshooting & FAQ" },
+/**
+ * Documentation index — one entry per section anchor. `keywords` mirrors the
+ * important terms in each section's prose so the command palette (Ctrl/⌘K) can
+ * search doc *content*, not just titles; `snippet` is the one-line result blurb.
+ * The page's own nav derives from this list, so it stays the single source.
+ */
+export interface DocEntry { id: string; title: string; keywords: string; snippet: string; }
+
+export const DOC_INDEX: DocEntry[] = [
+  { id: "overview", title: "Overview", snippet: "Why QTP exists: one control plane to define, run, and inspect checks.", keywords: "consolidate control plane reporting execution history evidence scattered verification postman single place" },
+  { id: "scope-use-cases", title: "Scope & Use Cases", snippet: "What QTP is for — CD gates, synthetic monitoring, E2E, contract checks — and what it isn't.", keywords: "continuous delivery gate synthetic monitoring smoke production end-to-end contract schema environment promotion reliability triage black-box not unit not load" },
+  { id: "architecture", title: "Architecture & Integration", snippet: "The moving parts: control plane, scheduler, Kafka+Postgres queue, capability-aware workers.", keywords: "control plane scheduler kafka run queue postgres workers capabilities greenlet advisory lock asynchronous queued running repository discovery decouple" },
+  { id: "mental-model", title: "Core Concepts", snippet: "The five entities — Target, Scenario, Revision, Run, Schedule — and how they nest.", keywords: "mental model target scenario revision run schedule entities relationships immutable snapshot pins revision history nest" },
+  { id: "lifecycle", title: "Scenario Lifecycle", snippet: "The five lifecycle hooks and fail-fast assertion semantics.", keywords: "validate_config setup test cleanup teardown hooks fail-fast assertion first failed stops error versus failed always runs" },
+  { id: "quickstart", title: "Developer Quickstart", snippet: "Run your first scenario end-to-end in four steps.", keywords: "get started first scenario create target write discover run inspect example fetch_user four steps jsonplaceholder" },
+  { id: "project-layout", title: "Repository Layout & Discovery", snippet: "Where code scenarios live, discovery rules, and the metadata contract.", keywords: "repository layout discovery backend scenarios automation directory per target underscore helpers skipped metadata contract key globally unique TestMetadata validate_config import" },
+  { id: "targets", title: "Targets & Environments", snippet: "Targets abstract an environment so scenarios never hard-code a URL.", keywords: "targets environments environment-agnostic base_url default_headers key resolve staging production relative absolute urls strategy per environment" },
+  { id: "authoring-http", title: "Authoring: HTTP APIs", snippet: "HttpTest — the client surface plus single-step and stateful multi-step workflows.", keywords: "HttpTest ctx.http get post put patch delete head json data text headers params auth timeout_ms follow_redirects rest graphql multi-step ctx.step set_var capture should have_status" },
+  { id: "authoring-python", title: "Authoring: Python Logic", snippet: "PythonTest — arbitrary Python with explicit ctx.assert_that evidence.", keywords: "PythonTest blank canvas assert_that requests database queue kafka sdk custom business logic import library evidence expected actual" },
+  { id: "authoring-browser", title: "Authoring: Browser Tests", snippet: "Browser tests with Playwright (or Selenium) and an auto-captured network waterfall.", keywords: "PlaywrightTest ctx.browser chromium page SeleniumTest webdriver grid legacy waterfall network console page errors N+1 duplicate visit have_title show_text have_visible" },
+  { id: "authoring-cli", title: "Authoring: CLI Tools", snippet: "CliTest — run shell commands or binaries and assert on exit code, output, and duration.", keywords: "CliTest ctx.cli run shell command binary container exit code stdout stderr duration curl k6 newman succeed fail have_exit_code output_contains output_matches complete_within_ms" },
+  { id: "assertions", title: "Assertions Reference", snippet: "The assertion + operator engine shared by code, Request Builder, and assert_that.", keywords: "assertions reference operators equals not_equals contains matches regex gt gte lt lte length in exists response.should respond_within_ms have_header json have_field JSONPath dotted bracket path be_an_array be_an_object one_of operator taxonomy" },
+  { id: "variables-secrets", title: "Variables, Templating & Secrets", snippet: "{{token}} templating, run variables, and redacted secret references.", keywords: "variables templating secrets token set_var get_var auth bearer apikey basic tokenSecretRef header redacted masked credentials capture flow between steps" },
+  { id: "steps-evidence", title: "Steps, Logging & Evidence", snippet: "ctx.step, ctx.log, and the automatic HTTP evidence attached to every run.", keywords: "ctx.step ctx.log structured logging debug info warning error http evidence request response payload timing waterfall timeline tabs assertions response logs steps flow N+1" },
+  { id: "request-builder", title: "Request Builder", snippet: "The no-code, Postman-style multi-step HTTP scenario builder.", keywords: "request builder no-code postman visual steps auth assertions captures json config POST /api/request-tests send ad hoc programmatic saved first-class" },
+  { id: "scheduling", title: "Scheduling", snippet: "Fire suites on an interval or cron and roll results into a suite health signal.", keywords: "schedule interval cron ScheduleRun aggregate rollup suite health continuous monitoring post-deploy gate nightly regression hourly canary select target tags smoke p0 p1" },
+  { id: "execution", title: "Execution & Results", snippet: "The run state machine, statuses, and the failed-vs-error distinction.", keywords: "execution results run status queued running passed failed error timeout canceled terminal active state machine cleanup column re-run cancel re-queue stuck failed versus error" },
+  { id: "defect-triage", title: "Defect Triage", snippet: "Classify failures by defect type and group recurring failures by signature.", keywords: "defect triage failure analysis classify product_bug automation_bug system_issue to_investigate no_defect signature hash occurrence flaky dashboards overview failures defect type split" },
+  { id: "ci", title: "CI/CD Integration", snippet: "Gate deployments — trigger QTP, poll, fail the pipeline (GitHub Actions, GitLab CI).", keywords: "ci cd integration gate deployment github actions gitlab pipeline poll bearer token authorization trigger discover run-all sync curl jq exit 1" },
+  { id: "api", title: "API Reference", snippet: "The REST API — everything the UI does, with the full endpoint table.", keywords: "api reference rest bearer token base path localhost 5100 qtp page page_size sort order per-field filters endpoints curl" },
+  { id: "patterns", title: "Patterns & Best Practices", snippet: "Best practices for reliable, maintainable scenarios.", keywords: "patterns best practices one scenario one behavior assert payload not just status clean up delete hard-code urls secrets steps story tag scheduling deterministic relative timeouts" },
+  { id: "extend", title: "Extending QTP", snippet: "Add new scenario types or reusable base classes for bespoke protocols.", keywords: "extending extend grpc amqp proprietary transport custom protocol new scenario type base class default_type capability worker image shared helpers underscore module" },
+  { id: "troubleshooting", title: "Troubleshooting & FAQ", snippet: "Fixes for common issues: discovery, stuck queued runs, blocked requests, error vs failed.", keywords: "troubleshooting faq scenario not appear discovery stuck queued worker heartbeat capability playwright http requests timeout blocked ssrf loopback 127.0.0.1 egress error versus failed logs response tab" },
 ];
+
+const sections = DOC_INDEX.map(({ id, title }) => ({ id, title }));
 
 const navGroups = [
   { title: "Introduction", items: ["overview", "scope-use-cases", "architecture", "mental-model", "lifecycle"] },
