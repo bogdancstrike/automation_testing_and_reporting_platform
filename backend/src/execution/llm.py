@@ -12,6 +12,18 @@ from framework.tracing import get_tracer
 
 tracer = get_tracer()
 
+
+class LLMEndpointError(RuntimeError):
+    """The LLM endpoint did not return an OpenAI-compatible response."""
+
+
+class _NoRedirectHandler(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
+_NO_REDIRECT_OPENER = urllib.request.build_opener(_NoRedirectHandler())
+
 SYSTEM_MESSAGE = (
     "You are an AI assistant for a testing platform. Analyze the provided test execution evidence "
     "(HTTP payloads, assertions, python stack trace, code, logs) and identify the root cause of the failure. "
@@ -28,6 +40,66 @@ def _clean_json_response(content: str) -> str:
     if match:
         return match.group(1).strip()
     return content
+
+
+def _endpoint_status_error(status: int) -> LLMEndpointError:
+    if 300 <= status < 400:
+        return LLMEndpointError(
+            "LLM endpoint redirected to login (authentication required). "
+            "Verify native API-key access or refresh LLM_OPENAI_COOKIE."
+        )
+    if status in (401, 403):
+        return LLMEndpointError(
+            f"LLM endpoint returned HTTP {status} (authentication failed). "
+            "Verify LLM_OPENAI_API_KEY."
+        )
+    return LLMEndpointError(f"LLM endpoint returned HTTP {status}.")
+
+
+def _request_chat_completion(body: dict) -> dict:
+    headers = {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "Authorization": "Bearer " + Config.LLM_OPENAI_API_KEY,
+        "User-Agent": "QTP/1.0",
+    }
+    if Config.LLM_OPENAI_COOKIE:
+        headers["Cookie"] = Config.LLM_OPENAI_COOKIE
+
+    request = urllib.request.Request(
+        Config.LLM_OPENAI_API,
+        data=json.dumps(body).encode("utf-8"),
+        headers=headers,
+        method="POST",
+    )
+
+    try:
+        with _NO_REDIRECT_OPENER.open(request, timeout=60) as response:
+            status = getattr(response, "status", None)
+            if status is None:
+                status = response.getcode()
+            if status >= 300:
+                raise _endpoint_status_error(status)
+
+            content_type = (
+                response.headers.get("Content-Type", "")
+                .partition(";")[0]
+                .strip()
+                .lower()
+            )
+            if content_type != "application/json" and not content_type.endswith("+json"):
+                raise LLMEndpointError(
+                    "LLM endpoint expected application/json, received "
+                    f"{content_type or 'no content type'}."
+                )
+            raw = response.read().decode("utf-8")
+    except urllib.error.HTTPError as error:
+        raise _endpoint_status_error(error.code) from error
+
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError as error:
+        raise LLMEndpointError("LLM endpoint returned invalid JSON.") from error
 
 def generate_rca(run: TestRun, definition: Scenario, ctx: TestContext, result: TestResult, code_text: str) -> str | None:
     if not Config.LLM_FEATURES_ENABLED:
@@ -85,32 +157,12 @@ def _generate_rca(run: TestRun, definition: Scenario, ctx: TestContext, result: 
             "response_format": { "type": "json_object" }
         }
 
-        data = json.dumps(body).encode("utf-8")
-        
-        headers = {
-            "Content-Type": "application/json",
-            "Authorization": "Bearer " + Config.LLM_OPENAI_API_KEY,
-            "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
-        }
-        if hasattr(Config, "LLM_OPENAI_COOKIE") and Config.LLM_OPENAI_COOKIE:
-            headers["Cookie"] = Config.LLM_OPENAI_COOKIE
-
-        request = urllib.request.Request(
-            Config.LLM_OPENAI_API,
-            data=data,
-            headers=headers,
-            method="POST",
-        )
-
-        with urllib.request.urlopen(request, timeout=60) as response:
-            status = getattr(response, "status", response.getcode())
-            if status >= 300:
-                return None
-            raw = response.read().decode("utf-8")
-            
-        payload = json.loads(raw)
+        payload = _request_chat_completion(body)
         content = payload["choices"][0]["message"]["content"]
         return _clean_json_response(content)
+    except LLMEndpointError as e:
+        print(f"AI RCA unavailable: {e}")
+        return f"AI RCA unavailable: {e}"
     except Exception as e:
         print(f"AI RCA failed to generate: {e}")
         return f"AI RCA failed to generate: {e}"
@@ -146,32 +198,7 @@ def generate_magic_assertions(response_data: dict) -> list[dict]:
             "response_format": { "type": "json_object" }
         }
 
-        data = json.dumps(body).encode("utf-8")
-        
-        headers = {
-            "Content-Type": "application/json",
-            "Authorization": "Bearer " + Config.LLM_OPENAI_API_KEY,
-            "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
-        }
-        if hasattr(Config, "LLM_OPENAI_COOKIE") and Config.LLM_OPENAI_COOKIE:
-            headers["Cookie"] = Config.LLM_OPENAI_COOKIE
-
-        request = urllib.request.Request(
-            Config.LLM_OPENAI_API,
-            data=data,
-            headers=headers,
-            method="POST",
-        )
-
-        with urllib.request.urlopen(request, timeout=60) as response:
-            status = getattr(response, "status", response.getcode())
-            if status >= 300:
-                return []
-            raw = response.read().decode("utf-8")
-        
-        print(f"RAW API RESPONSE:\n{raw}")
-            
-        payload = json.loads(raw)
+        payload = _request_chat_completion(body)
         content = payload["choices"][0]["message"]["content"]
         
         print(f"LLM MAGIC ASSERTIONS RAW CONTENT:\n{content}")
@@ -181,6 +208,9 @@ def generate_magic_assertions(response_data: dict) -> list[dict]:
         assertions = parsed.get("assertions", [])
         if isinstance(assertions, list):
             return assertions
+        return []
+    except LLMEndpointError as e:
+        print(f"Magic assertions unavailable: {e}")
         return []
     except Exception as e:
         print(f"Failed to generate magic assertions: {e}")
