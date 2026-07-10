@@ -1,35 +1,84 @@
 html, body, #root { height: 100%; margin: 0; }
 body {
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: "Inter Variable", Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
-  background: #f5f7fb;
+  background: #f7f8fa;
 }
 
+/* Numeric-heavy surfaces use tabular figures so digits don't jitter on refresh. */
+.ant-table, .ant-statistic-content, .qtp-statcard, .qtp-code,
+.ant-descriptions-item-content, time, .qtp-tabular {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+/* Fallback values; the live values are set from tokens.ts via cssVars.ts on <html>.
+   Kept in sync with frontend/src/theme/tokens.ts (light). */
 :root {
-  --qtp-content-bg: #f5f7fb;
+  --qtp-content-bg: #f7f8fa;
   --qtp-surface-bg: #ffffff;
-  --qtp-surface-border: rgba(148, 163, 184, 0.24);
-  --qtp-surface-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 4px 16px rgba(15, 23, 42, 0.05);
-  --qtp-surface-shadow-hover: 0 2px 6px rgba(15, 23, 42, 0.08), 0 12px 28px rgba(15, 23, 42, 0.10);
-  --qtp-code-bg: #f8fafc;
-  --qtp-code-border: #dbe3ee;
-  --qtp-sidebar-bg: #0f172a;
-  --qtp-header-border: rgba(148, 163, 184, 0.22);
+  --qtp-surface: #ffffff;
+  --qtp-subtle-bg: #f2f4f7;
+  --qtp-surface-border: #e7e9ee;
+  --qtp-surface-border-strong: #d5d9e0;
+  --qtp-surface-shadow: 0 1px 2px rgba(16, 24, 40, 0.06);
+  --qtp-surface-shadow-hover: 0 8px 24px rgba(16, 24, 40, 0.12);
+  --qtp-code-bg: #f2f4f7;
+  --qtp-code-border: #e7e9ee;
+  --qtp-sidebar-bg: #12141a;
+  --qtp-header-border: #e7e9ee;
   --qtp-scroll-thumb: rgba(148, 163, 184, 0.5);
+  --qtp-brand: #4f46e5;
+  --qtp-brand-hover: #4338ca;
+  --qtp-brand-tint: #eef2ff;
+  --qtp-text: #191b21;
+  --qtp-text-secondary: #5a6472;
+  --qtp-text-tertiary: #8b93a1;
+  --qtp-status-pass: #16a34a;
+  --qtp-status-fail: #e5484d;
+  --qtp-status-error: #ea580c;
+  --qtp-status-timeout: #d97706;
+  --qtp-status-running: #4f46e5;
+  --qtp-status-queued: #0891b2;
+  --qtp-status-neutral: #64748b;
 }
 
+/* Kept in sync with frontend/src/theme/tokens.ts (dark). */
 :root[data-theme="dark"] {
-  --qtp-content-bg: #0b1220;
-  --qtp-surface-bg: #0f172a;
-  --qtp-surface-border: rgba(71, 85, 105, 0.55);
-  --qtp-surface-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 4px 16px rgba(0, 0, 0, 0.35);
-  --qtp-surface-shadow-hover: 0 2px 8px rgba(0, 0, 0, 0.4), 0 14px 30px rgba(0, 0, 0, 0.5);
-  --qtp-code-bg: #111827;
-  --qtp-code-border: #334155;
-  --qtp-sidebar-bg: #060b16;
-  --qtp-header-border: rgba(71, 85, 105, 0.6);
-  --qtp-scroll-thumb: rgba(100, 116, 139, 0.55);
+  --qtp-content-bg: #0b0c0e;
+  --qtp-surface-bg: #151619;
+  --qtp-surface: #151619;
+  --qtp-subtle-bg: #1c1e22;
+  --qtp-surface-border: #26292e;
+  --qtp-surface-border-strong: #34383f;
+  --qtp-surface-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --qtp-surface-shadow-hover: 0 8px 24px rgba(0, 0, 0, 0.55);
+  --qtp-code-bg: #1c1e22;
+  --qtp-code-border: #26292e;
+  --qtp-sidebar-bg: #0e0f12;
+  --qtp-header-border: #26292e;
+  --qtp-scroll-thumb: rgba(120, 128, 140, 0.45);
+  --qtp-brand: #6366f1;
+  --qtp-brand-hover: #7c7cf0;
+  --qtp-brand-tint: rgba(99, 102, 241, 0.16);
+  --qtp-text: #e7e9ec;
+  --qtp-text-secondary: #9aa1ab;
+  --qtp-text-tertiary: #6b7280;
+  --qtp-status-pass: #3fb950;
+  --qtp-status-fail: #f76c6c;
+  --qtp-status-error: #fb8c3d;
+  --qtp-status-timeout: #f0a92c;
+  --qtp-status-running: #6366f1;
+  --qtp-status-queued: #2bb8cf;
+  --qtp-status-neutral: #8b93a1;
+}
+
+/* Visible keyboard focus (was nearly invisible). */
+:where(a, button, .ant-btn, [role="button"], input, .ant-select-selector, .ant-input):focus-visible {
+  outline: 2px solid var(--qtp-brand);
+  outline-offset: 1px;
+  border-radius: 6px;
 }
 
 .qtp-shell { height: 100vh; overflow: hidden; }
@@ -89,8 +138,8 @@ body {
   width: 34px;
   height: 34px;
   border-radius: 9px;
-  background: linear-gradient(135deg, #3b82f6, #2563eb);
-  box-shadow: 0 6px 18px rgba(37, 99, 235, 0.45);
+  background: linear-gradient(135deg, #6366f1, #4f46e5);
+  box-shadow: 0 6px 18px rgba(79, 70, 229, 0.45);
   font-weight: 800;
   font-size: 17px;
   flex-shrink: 0;
@@ -117,7 +166,7 @@ body {
   bottom: 8px;
   width: 3px;
   border-radius: 0 3px 3px 0;
-  background: #3b82f6;
+  background: #6366f1;
 }
 .qtp-sider .ant-menu-item { transition: background 0.15s ease; }
 
@@ -169,6 +218,40 @@ body {
   animation: qtp-scrim-in 0.2s ease;
 }
 @keyframes qtp-scrim-in { from { opacity: 0; } to { opacity: 1; } }
+
+/* ── Page header (breadcrumb + title + actions) ───────────────────────── */
+.qtp-page-header { margin-bottom: 20px; }
+.qtp-crumbs { margin-bottom: 6px; font-size: 12.5px; }
+.qtp-page-header-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.qtp-page-header-titles { min-width: 0; }
+.qtp-page-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font-size: 19px;
+  font-weight: 650;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+  color: var(--qtp-text);
+}
+.qtp-page-subtitle {
+  margin-top: 3px;
+  font-size: 13px;
+  color: var(--qtp-text-secondary);
+}
+.qtp-page-actions { flex-shrink: 0; }
+
+/* App-bar breadcrumb (top rail) */
+.qtp-appbar-crumbs { font-size: 13px; font-weight: 500; }
+.qtp-appbar-crumbs .ant-breadcrumb-link a { color: var(--qtp-text-secondary); }
+.qtp-appbar-crumbs .ant-breadcrumb li:last-child .ant-breadcrumb-link { color: var(--qtp-text); font-weight: 600; }
 
 /* ── Surfaces / cards ─────────────────────────────────────────────────── */
 .qtp-page-heading {

@@ -11,6 +11,7 @@ import StepTree from "../components/StepTree";
 import RunComments from "../components/RunComments";
 import { formatLocalTime } from "../components/tags";
 import { AuditTable } from "../components/AuditTable";
+import { PageHeader } from "../components/PageHeader";
 
 const DEFECTS = ["product_bug", "automation_bug", "system_issue", "to_investigate", "no_defect"];
 const ACTIVE_RUN_REFETCH_MS = 1000;
@@ -77,15 +78,18 @@ export default function RunDetailPage() {
 
   return (
     <div>
-      <Space style={{ marginBottom: 12 }}>
-        <Button icon={<ArrowLeftOutlined />} onClick={() => nav("/runs")}>Runs</Button>
-        <Button icon={<ExperimentOutlined />} onClick={() => nav(`/scenarios/${run.scenario_id}`)}>Open scenario</Button>
-        {active(run.status) && <Button danger icon={<StopOutlined />} loading={cancel.isPending} onClick={() => cancel.mutate()}>Cancel</Button>}
-        {run.status !== "passed" && !active(run.status) && <Button type="primary" icon={<PlayCircleOutlined />} loading={rerun.isPending} onClick={() => rerun.mutate()}>Re-run</Button>}
-      </Space>
-      <Typography.Title level={3}>
-        {run.test_name || "Run"} <StatusTag status={run.status} />
-      </Typography.Title>
+      <PageHeader
+        breadcrumb={[{ label: "Runs", to: "/runs" }, { label: run.test_name || "Run" }]}
+        title={run.test_name || "Run"}
+        tag={<StatusTag status={run.status} />}
+        actions={
+          <>
+            <Button icon={<ExperimentOutlined />} onClick={() => nav(`/scenarios/${run.scenario_id}`)}>Open scenario</Button>
+            {active(run.status) && <Button danger icon={<StopOutlined />} loading={cancel.isPending} onClick={() => cancel.mutate()}>Cancel</Button>}
+            {run.status !== "passed" && !active(run.status) && <Button type="primary" icon={<PlayCircleOutlined />} loading={rerun.isPending} onClick={() => rerun.mutate()}>Re-run</Button>}
+          </>
+        }
+      />
 
       <Card size="small" style={{ marginBottom: 16 }}>
         <Descriptions column={{ xs: 1, sm: 2, md: 3 }} size="small">

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { App as AntApp, Avatar, Button, ConfigProvider, Dropdown, Grid, Layout, Menu, Space, Tooltip, Typography, theme } from "antd";
+import { App as AntApp, Avatar, Breadcrumb, Button, ConfigProvider, Dropdown, Grid, Layout, Menu, Space, Tooltip, Typography, theme } from "antd";
 import type { MenuProps } from "antd";
 import {
   DashboardOutlined, ExperimentOutlined, SendOutlined, PlayCircleOutlined,
@@ -11,6 +11,9 @@ import { useQuery } from "@tanstack/react-query";
 
 import { keycloak } from "./keycloak";
 import { qtp } from "./api/qtp";
+import { buildAntdTheme } from "./theme/antdTheme";
+import { applyCssVars } from "./theme/cssVars";
+import { ModeContext } from "./theme/mode";
 import OverviewPage from "./pages/OverviewPage";
 import CatalogPage from "./pages/CatalogPage";
 import ScenarioDetailPage from "./pages/ScenarioDetailPage";
@@ -168,14 +171,15 @@ function AppShell({ mode, setMode }: { mode: ThemeMode; setMode: (mode: ThemeMod
                 onClick={() => setMobileNavOpen(true)}
               />
             )}
-            <div className="qtp-header-title">
-              <Typography.Text strong style={{ fontSize: 16 }}>
-                {NAV.find((n) => n.key === selectedKey)?.label || "Overview"}
-              </Typography.Text>
-              <Typography.Text type="secondary" style={{ fontSize: 12.5 }}>
-                {PAGE_META[selectedKey] || "Automation testing control plane"}
-              </Typography.Text>
-            </div>
+            <Breadcrumb
+              className="qtp-appbar-crumbs"
+              items={[
+                ...(NAV_GROUPS.find((g) => g.children.some((c) => c.key === selectedKey))
+                  ? [{ title: NAV_GROUPS.find((g) => g.children.some((c) => c.key === selectedKey))!.label }]
+                  : []),
+                { title: NAV.find((n) => n.key === selectedKey)?.label || "Overview" },
+              ]}
+            />
           </div>
           <Space size={10}>
             <Tooltip title={darkMode ? "Switch to light mode" : "Switch to dark mode"}>
@@ -246,80 +250,18 @@ export default function QtpApp() {
   useEffect(() => {
     window.localStorage.setItem(THEME_STORAGE_KEY, mode);
     document.documentElement.dataset.theme = mode;
+    applyCssVars(mode);
   }, [mode]);
 
-  const appTheme = useMemo(() => {
-    const dark = mode === "dark";
-    return {
-      algorithm: dark ? theme.darkAlgorithm : theme.defaultAlgorithm,
-      token: {
-        colorPrimary: "#2563eb",
-        colorInfo: "#2563eb",
-        colorSuccess: "#16a34a",
-        colorError: "#dc2626",
-        colorWarning: "#d97706",
-        borderRadius: 8,
-        borderRadiusLG: 12,
-        borderRadiusSM: 6,
-        wireframe: false,
-        fontFamily: "Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
-        fontSize: 14,
-        controlHeight: 36,
-        colorBgLayout: dark ? "#0b1220" : "#f5f7fb",
-        boxShadowSecondary: dark
-          ? "0 6px 20px rgba(0, 0, 0, 0.45)"
-          : "0 6px 20px rgba(15, 23, 42, 0.06)",
-      },
-      components: {
-        Layout: {
-          headerHeight: 64,
-          headerPadding: "0 20px",
-          headerBg: dark ? "#0f172a" : "#ffffff",
-          bodyBg: "transparent",
-        },
-        Menu: {
-          itemBorderRadius: 8,
-          itemMarginInline: 8,
-          itemHeight: 40,
-          darkItemBg: "transparent",
-          darkSubMenuItemBg: "transparent",
-          darkItemSelectedBg: "rgba(37, 99, 235, 0.20)",
-          darkItemHoverBg: "rgba(148, 163, 184, 0.10)",
-          darkItemColor: "rgba(226, 232, 240, 0.72)",
-          darkItemSelectedColor: "#ffffff",
-        },
-        Card: {
-          borderRadiusLG: 12,
-          paddingLG: 20,
-        },
-        Table: {
-          headerBg: dark ? "#111827" : "#f8fafc",
-          headerColor: dark ? "#94a3b8" : "#475569",
-          headerSplitColor: "transparent",
-          rowHoverBg: dark ? "rgba(37, 99, 235, 0.10)" : "rgba(37, 99, 235, 0.04)",
-          cellPaddingBlock: 12,
-          borderColor: dark ? "#1f2937" : "#eef2f7",
-        },
-        Button: {
-          fontWeight: 500,
-          primaryShadow: "none",
-          defaultShadow: "none",
-        },
-        Segmented: {
-          trackBg: dark ? "#1e293b" : "#eef2f7",
-        },
-        Statistic: {
-          titleFontSize: 13,
-        },
-      },
-    };
-  }, [mode]);
+  const appTheme = useMemo(() => buildAntdTheme(mode), [mode]);
 
   return (
     <ConfigProvider theme={appTheme}>
-      <AntApp>
-        <AppShell mode={mode} setMode={setMode} />
-      </AntApp>
+      <ModeContext.Provider value={mode}>
+        <AntApp>
+          <AppShell mode={mode} setMode={setMode} />
+        </AntApp>
+      </ModeContext.Provider>
     </ConfigProvider>
   );
 }

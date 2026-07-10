@@ -1,4 +1,5 @@
 import { formatLocalTime } from "../components/tags";
+import { PageHeader } from "../components/PageHeader";
 import { Table, Typography, Button, Space, Modal, Form, Select, Input, InputNumber, Switch, App, Tag } from "antd";
 import { PlusOutlined } from "@ant-design/icons";
 import { useState } from "react";
@@ -33,10 +34,11 @@ export default function SchedulesPage() {
 
   return (
     <div>
-      <Space style={{ marginBottom: 16, justifyContent: "space-between", width: "100%" }}>
-        <Typography.Title level={3} style={{ margin: 0 }}>Schedules</Typography.Title>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => setOpen(true)}>New schedule</Button>
-      </Space>
+      <PageHeader
+        title="Schedules"
+        subtitle="Automated run triggers and cadences"
+        actions={<Button type="primary" icon={<PlusOutlined />} onClick={() => setOpen(true)}>New schedule</Button>}
+      />
       <Table
         rowKey="id"
         loading={isLoading}

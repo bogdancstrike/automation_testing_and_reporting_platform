@@ -1,4 +1,5 @@
 import { Table, Typography, Button, Space, Modal, Form, Input, App, Tag, Dropdown } from "antd";
+import { PageHeader } from "../components/PageHeader";
 import { PlusOutlined, PlayCircleOutlined, MoreOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -39,13 +40,11 @@ export default function TargetsPage() {
 
   return (
     <div>
-      <Space style={{ marginBottom: 16, justifyContent: "space-between", width: "100%" }}>
-        <div>
-          <Typography.Title level={3} style={{ margin: 0 }}>Targets</Typography.Title>
-          <Typography.Text type="secondary">Applications under test. Click a target for tests, runs, ratios, and charts.</Typography.Text>
-        </div>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditTarget(null); form.resetFields(); setOpen(true); }}>New target</Button>
-      </Space>
+      <PageHeader
+        title="Targets"
+        subtitle="Applications under test. Click a target for tests, runs, ratios, and charts."
+        actions={<Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditTarget(null); form.resetFields(); setOpen(true); }}>New target</Button>}
+      />
       <Table
         rowKey="id"
         loading={isLoading}

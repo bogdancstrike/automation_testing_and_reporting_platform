@@ -8,6 +8,7 @@ import { StatusTag, TypeTag } from "../components/tags";
 import { antSortOrder, menuFilter, nextTableParams, textFilter } from "../components/remoteTable";
 import type { QueryParams } from "../api/types";
 import { formatLocalTime } from "../components/tags";
+import { PageHeader } from "../components/PageHeader";
 
 function displayDate(value?: string) { return value ? formatLocalTime(value) : "—"; }
 
@@ -33,18 +34,17 @@ export default function CatalogPage() {
 
   return (
     <div>
-      <Space style={{ marginBottom: 16, justifyContent: "space-between", width: "100%" }}>
-        <div>
-          <Typography.Title level={3} style={{ margin: 0 }}>Scenarios</Typography.Title>
-          <Typography.Text type="secondary">Backend-driven search, filters, sorting, and pagination.</Typography.Text>
-        </div>
-        <Button icon={<ReloadOutlined />} loading={discover.isPending} onClick={() => discover.mutate()}>Discover code scenarios</Button>
-      </Space>
-
-      <Row gutter={12} style={{ marginBottom: 16 }}>
-        <Col xs={12} md={12}><Card size="small"><Statistic title="Matching tests" value={page?.total || 0} /></Card></Col>
-        <Col xs={12} md={12}><Card size="small"><Statistic title="Current page" value={tests.length} /></Card></Col>
-      </Row>
+      <PageHeader
+        title="Scenarios"
+        subtitle={
+          <>
+            <strong style={{ color: "var(--qtp-text)" }}>{page?.total ?? 0}</strong> test definitions · backend-driven search, filters &amp; sorting
+          </>
+        }
+        actions={
+          <Button icon={<ReloadOutlined />} loading={discover.isPending} onClick={() => discover.mutate()}>Discover code scenarios</Button>
+        }
+      />
 
       <Table
         rowKey="id"

@@ -1,4 +1,5 @@
 import { Row, Col, Card, Typography, Tag, Space, Badge, Statistic, Empty, Skeleton } from "antd";
+import { PageHeader } from "../components/PageHeader";
 import { DesktopOutlined, NodeIndexOutlined, FieldTimeOutlined, CheckCircleOutlined } from "@ant-design/icons";
 import { useQuery } from "@tanstack/react-query";
 import { qtp } from "../api/qtp";
@@ -16,16 +17,16 @@ export default function WorkersPage() {
 
   return (
     <div>
-      <Space style={{ marginBottom: 24, justifyContent: "space-between", width: "100%" }}>
-        <div>
-          <Typography.Title level={3} style={{ margin: 0 }}>Workers Cluster</Typography.Title>
-          <Typography.Text type="secondary">Monitor your active test execution nodes and agent fleets.</Typography.Text>
-        </div>
-        <Space size="large">
-          <Statistic title="Active Nodes" value={activeWorkers} suffix={`/ ${workers.length}`} />
-          <Statistic title="Total Runs Processed" value={totalRuns} />
-        </Space>
-      </Space>
+      <PageHeader
+        title="Workers"
+        subtitle="Execution workers, capabilities, and health"
+        actions={
+          <Space size="large">
+            <Statistic title="Active Nodes" value={activeWorkers} suffix={`/ ${workers.length}`} />
+            <Statistic title="Total Runs Processed" value={totalRuns} />
+          </Space>
+        }
+      />
 
       {isLoading ? (
         <Row gutter={[16, 16]}>

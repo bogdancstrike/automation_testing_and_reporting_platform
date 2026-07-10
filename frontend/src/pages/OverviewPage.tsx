@@ -11,6 +11,9 @@ import dayjs from "dayjs";
 import { qtp } from "../api/qtp";
 import { StatusTag, DefectTag, formatDurationMs } from "../components/tags";
 import { StatCard } from "../components/StatCard";
+import { PageHeader } from "../components/PageHeader";
+import { useMode } from "../theme/mode";
+import { chartThemeName, chartStatusColor } from "../theme/chartTheme";
 import { apiSortOrder, menuFilter, textFilter } from "../components/remoteTable";
 import type { QueryParams } from "../api/types";
 import { useNavigate } from "react-router-dom";
@@ -65,10 +68,14 @@ export default function OverviewPage() {
   const { data: ov } = useQuery({ queryKey: ["overview", timeRange, customRange, targetTableParams], queryFn: () => qtp.overview(overviewParams), refetchInterval: 5000 });
   const { data: fail } = useQuery({ queryKey: ["failures", timeRange, customRange, failureTableParams], queryFn: () => qtp.failures(failureParams), refetchInterval: 8000 });
 
+  const mode = useMode();
+  const echartTheme = chartThemeName(mode);
   const totals = ov?.totals || {};
   const trend = ov?.trend || [];
   const statuses = ["passed", "failed", "error", "timeout", "running"];
-  const colors: Record<string, string> = { passed: "#52c41a", failed: "#ff4d4f", error: "#fa541c", timeout: "#faad14", running: "#2563eb" };
+  const colors: Record<string, string> = Object.fromEntries(
+    statuses.map((s) => [s, chartStatusColor(mode, s)]),
+  );
 
   const trendOption = {
     tooltip: { trigger: "axis" },
@@ -106,32 +113,33 @@ export default function OverviewPage() {
 
   return (
     <div>
-      <Space style={{ marginBottom: 16, justifyContent: "space-between", width: "100%" }} wrap>
-        <Typography.Title level={3} style={{ margin: 0 }}>
-          Operational Overview
-        </Typography.Title>
-        <Space wrap>
-          <Radio.Group value={timeRange} onChange={e => setTimeRange(e.target.value)} buttonStyle="solid">
-            <Radio.Button value="1h">Last 1h</Radio.Button>
-            <Radio.Button value="8h">Last 8h</Radio.Button>
-            <Radio.Button value="24h">Last 24h</Radio.Button>
-            <Radio.Button value="7d">Last 7d</Radio.Button>
-            <Radio.Button value="30d">Last 30d</Radio.Button>
-            <Radio.Button value="custom">Custom</Radio.Button>
-          </Radio.Group>
-          {timeRange === "custom" && (
-            <RangePicker
-              showTime
-              format="YYYY-MM-DD HH:mm"
-              presets={[
-                { label: 'Now', value: [dayjs(), dayjs()] }
-              ]}
-              value={customRange as any}
-              onChange={(dates) => setCustomRange(dates as [dayjs.Dayjs, dayjs.Dayjs])}
-            />
-          )}
-        </Space>
-      </Space>
+      <PageHeader
+        title="Overview"
+        subtitle="Operational metrics and recent activity"
+        actions={
+          <>
+            <Radio.Group value={timeRange} onChange={e => setTimeRange(e.target.value)} buttonStyle="solid">
+              <Radio.Button value="1h">Last 1h</Radio.Button>
+              <Radio.Button value="8h">Last 8h</Radio.Button>
+              <Radio.Button value="24h">Last 24h</Radio.Button>
+              <Radio.Button value="7d">Last 7d</Radio.Button>
+              <Radio.Button value="30d">Last 30d</Radio.Button>
+              <Radio.Button value="custom">Custom</Radio.Button>
+            </Radio.Group>
+            {timeRange === "custom" && (
+              <RangePicker
+                showTime
+                format="YYYY-MM-DD HH:mm"
+                presets={[
+                  { label: 'Now', value: [dayjs(), dayjs()] }
+                ]}
+                value={customRange as any}
+                onChange={(dates) => setCustomRange(dates as [dayjs.Dayjs, dayjs.Dayjs])}
+              />
+            )}
+          </>
+        }
+      />
 
       <Row gutter={[16, 16]}>
         <Col xs={12} md={6}><StatCard label="Total runs" value={totals.total_runs || 0} icon={<PlayCircleOutlined />} accent="#2563eb" onClick={() => nav("/runs")} /></Col>
@@ -149,12 +157,12 @@ export default function OverviewPage() {
       <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
         <Col xs={24} lg={16}>
           <Card title="Run execution trend" size="small">
-            {trend.length ? <ReactECharts option={trendOption} style={{ height: 280 }} /> : <Empty description="No runs yet" />}
+            {trend.length ? <ReactECharts option={trendOption} theme={echartTheme} style={{ height: 280 }} /> : <Empty description="No runs yet" />}
           </Card>
         </Col>
         <Col xs={24} lg={8}>
           <Card title="Defect distribution" size="small">
-            {Object.keys(defectDist).length ? <ReactECharts option={pieOption} style={{ height: 280 }} /> : <Empty description="No failures" />}
+            {Object.keys(defectDist).length ? <ReactECharts option={pieOption} theme={echartTheme} style={{ height: 280 }} /> : <Empty description="No failures" />}
           </Card>
         </Col>
       </Row>
@@ -162,7 +170,7 @@ export default function OverviewPage() {
       <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
         <Col xs={24} lg={12}>
           <Card title="Runs by target" size="small">
-            {perTarget.length ? <ReactECharts option={targetBarOption} style={{ height: 280 }} /> : <Empty description="No target runs" />}
+            {perTarget.length ? <ReactECharts option={targetBarOption} theme={echartTheme} style={{ height: 280 }} /> : <Empty description="No target runs" />}
           </Card>
         </Col>
         <Col xs={24} lg={12}>

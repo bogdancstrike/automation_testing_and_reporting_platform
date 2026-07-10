@@ -1,17 +1,10 @@
-import { Button, Space, Typography, Card } from 'antd'
-import { ReloadOutlined } from '@ant-design/icons'
+import { PageHeader } from '../components/PageHeader'
 import { AuditTable } from '../components/AuditTable'
 
 export default function AuditExplorerPage() {
   return (
     <div>
-      <Space style={{ marginBottom: 16, justifyContent: "space-between", width: "100%" }}>
-        <div>
-          <Typography.Title level={3} style={{ margin: 0 }}>Audit Explorer</Typography.Title>
-          <Typography.Text type="secondary">Global event ledger across the system</Typography.Text>
-        </div>
-      </Space>
-
+      <PageHeader title="Audit" subtitle="Global event ledger across the system" />
       <AuditTable />
     </div>
   )

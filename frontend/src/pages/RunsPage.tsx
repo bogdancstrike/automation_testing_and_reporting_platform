@@ -7,6 +7,7 @@ import { StatusTag, DefectTag, Duration } from "../components/tags";
 import { antSortOrder, menuFilter, nextTableParams, textFilter } from "../components/remoteTable";
 import type { QueryParams } from "../api/types";
 import { formatLocalTime } from "../components/tags";
+import { PageHeader } from "../components/PageHeader";
 
 export default function RunsPage() {
   const nav = useNavigate();
@@ -131,18 +132,18 @@ export default function RunsPage() {
 
   return (
     <div>
-      <Space style={{ marginBottom: 16, justifyContent: "space-between", width: "100%" }}>
-        <div>
-          <Typography.Title level={3} style={{ margin: 0 }}>Runs</Typography.Title>
-          <Typography.Text type="secondary">Search, filters, sorting, and pagination are executed by the backend.</Typography.Text>
-        </div>
-        <Space>
-          <Button danger onClick={confirmDeleteAll} loading={deleteAllRuns.isPending}>Delete All Runs</Button>
-          <Button onClick={() => rerunQueued.mutate()} loading={rerunQueued.isPending}>Re-run all queued</Button>
-          <Button onClick={() => restartFailed.mutate()} loading={restartFailed.isPending}>Re-run all failed/errors</Button>
-          <span>Live <Switch size="small" checked={live} onChange={setLive} /></span>
-        </Space>
-      </Space>
+      <PageHeader
+        title="Runs"
+        subtitle="Execution history across every scenario — searched, filtered, and sorted server-side."
+        actions={
+          <>
+            <Button danger onClick={confirmDeleteAll} loading={deleteAllRuns.isPending}>Delete All Runs</Button>
+            <Button onClick={() => rerunQueued.mutate()} loading={rerunQueued.isPending}>Re-run all queued</Button>
+            <Button onClick={() => restartFailed.mutate()} loading={restartFailed.isPending}>Re-run all failed/errors</Button>
+            <span>Live <Switch size="small" checked={live} onChange={setLive} /></span>
+          </>
+        }
+      />
       {overview && (
         <Space size="large" style={{ marginBottom: 16, padding: "8px 16px", background: "var(--qtp-surface-bg)", borderRadius: 4, border: "1px solid var(--qtp-surface-border)", width: "100%" }}>
           <Typography.Link onClick={() => setParams(p => ({ ...p, status: undefined, page: 1 }))}>
