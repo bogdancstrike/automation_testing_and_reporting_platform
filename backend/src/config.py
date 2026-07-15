@@ -63,6 +63,9 @@ class Config:
         f"{KEYCLOAK_INTERNAL_URL.rstrip('/')}/realms/{KEYCLOAK_REALM}/protocol/openid-connect/certs",
     )
     JWKS_CACHE_TTL = _int("JWKS_CACHE_TTL", 3600)
+    # Disable only when Keycloak uses a self-signed certificate that the
+    # container is intentionally not configured to trust.
+    KEYCLOAK_TLS_VERIFY = _bool("KEYCLOAK_TLS_VERIFY", False)
     # When true, /api/me and auth are bypassed with a synthetic admin principal.
     # Handy for local API smoke tests without Keycloak. Never enable in prod.
     AUTH_DISABLED = _bool("AUTH_DISABLED", False)

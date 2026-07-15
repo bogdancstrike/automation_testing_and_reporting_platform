@@ -34,7 +34,11 @@ class _JwksCache:
 
     def _refresh(self) -> None:
         try:
-            r = requests.get(Config.KEYCLOAK_JWKS_URL, timeout=5)
+            r = requests.get(
+                Config.KEYCLOAK_JWKS_URL,
+                timeout=5,
+                verify=Config.KEYCLOAK_TLS_VERIFY,
+            )
             r.raise_for_status()
             self._keys = {k["kid"]: k for k in r.json().get("keys", [])}
             self._fetched_at = time.time()

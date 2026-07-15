@@ -57,6 +57,13 @@ def run_scheduler() -> None:
                                 log.info(f"scheduler reaped {reaped} stale run(s)")
                             if dropped:
                                 log.info(f"scheduler dropped {dropped} dead worker(s)")
+                        except Exception:
+                            # A statement error leaves PostgreSQL's transaction
+                            # aborted. Roll it back before issuing the unlock so
+                            # the original failure is preserved and the
+                            # session-level advisory lock is always released.
+                            db.rollback()
+                            raise
                         finally:
                             db.execute(
                                 text("SELECT pg_advisory_unlock(:k)"),
